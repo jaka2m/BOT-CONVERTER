@@ -1,0 +1,8 @@
+name = "v2ray-config-bot"
+compatibility_date = "2023-08-01"
+account_id = "dcb5cb4caca718bf2af71c10267ac007"  # Replace with your Cloudflare account ID
+workers_dev = true
+main = "src/worker.js"
+
+[vars]
+TELEGRAM_BOT_TOKEN = "7626291818:AAG7dEWhfWZ4u8j9i7JWQ71vzNpz9h7UZq1"  # Will be overridden by GitHub Secrets
