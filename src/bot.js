@@ -31,35 +31,33 @@ export default class TelegramBot {
 
     // /converter
     if (text.startsWith('/converter')) {
-      const welcomeMessage =
-        'ðŸ¤– Stupid World Converter Bot\n\n' +
-        'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format Singbox, Nekobox, dan Clash.\n\n' +
-        'Contoh:\n' +
-        'vless://...\n' +
-        'Catatan:\n' +
-        '- Maksimal 10 link atau IP per permintaan.';
-      await this.sendMessage(chatId, welcomeMessage);
+      const infoMessage =
+        'ðŸ¤– *Stupid World Converter Bot*\n\n' +
+        'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
+        '- Singbox\n- Nekobox\n- Clash\n\n' +
+        '*Contoh:*\n' +
+        '`vless://...`\n\n' +
+        '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
+      await this.sendMessage(chatId, infoMessage);
       return new Response('OK', { status: 200 });
     }
 
-    // Regex validasi IP atau IP:PORT
+    // Validasi input
     const ipPortRegex = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
-    // Regex validasi URL proxy (vless, vmess, trojan, ss)
     const proxyUrlRegex = /^(vless|vmess|trojan|ss):\/\/.+$/i;
 
-    // Ambil maksimal 10 baris teks yang tidak kosong
-    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0).slice(0, 10);
-
-    // Pisahkan antara IP/IP:PORT dan URL proxy
+    const lines = text.split('\n').map(line => line.trim()).filter(Boolean).slice(0, 10);
     const ipLines = lines.filter(line => ipPortRegex.test(line));
     const proxyUrls = lines.filter(line => proxyUrlRegex.test(line));
 
-    // Jika ada IP/IP:PORT, lakukan cek IP
+    // Proses IP Check
     if (ipLines.length > 0) {
+      const loadingMsg = await this.sendMessageWithDelete(chatId, '_Sedang memeriksa IP..._');
+
       try {
         const checkResults = await Promise.all(ipLines.map(ip => checkProxyIP(ip)));
 
-        let statusReport = '\`\`\`INFORMATION\n';
+        let statusReport = '```INFORMATION\n';
         for (const r of checkResults) {
           statusReport +=
             `IP       : ${r.ip}:${r.port}\n` +
@@ -71,17 +69,23 @@ export default class TelegramBot {
             `Region   : ${r.regionName}\n` +
             `ASN      : ${r.asn}\n` +
             `Timezone : ${r.timezone}\n` +
-            `Org      : ${r.org}
-            \`\`\``;
+            `Org      : ${r.org}\n\n`;
         }
+        statusReport += '```';
+
         await this.sendMessage(chatId, statusReport);
       } catch (error) {
         console.error('Error checking IP:', error);
         await this.sendMessage(chatId, `Terjadi kesalahan saat cek IP: ${error.message}`);
       }
+
+      // Hapus pesan loading
+      if (loadingMsg && loadingMsg.message_id) {
+        await this.deleteMessage(chatId, loadingMsg.message_id);
+      }
     }
 
-    // Jika ada proxy URL, generate config
+    // Generate Config jika ada proxy URL
     if (proxyUrls.length > 0) {
       try {
         const clashConfig = generateClashConfig(proxyUrls, true);
@@ -97,11 +101,6 @@ export default class TelegramBot {
       }
     }
 
-    // Jika input bukan IP/IP:PORT atau URL proxy, abaikan tanpa balasan
-    if (ipLines.length === 0 && proxyUrls.length === 0) {
-      return new Response('OK', { status: 200 });
-    }
-
     return new Response('OK', { status: 200 });
   }
 
@@ -114,6 +113,29 @@ export default class TelegramBot {
         chat_id: chatId,
         text: text,
         parse_mode: 'Markdown'
+      })
+    });
+    return response.json();
+  }
+
+  async sendMessageWithDelete(chatId, text) {
+    try {
+      const res = await this.sendMessage(chatId, text);
+      return res.result;
+    } catch (e) {
+      console.error('Gagal mengirim pesan loading:', e);
+      return null;
+    }
+  }
+
+  async deleteMessage(chatId, messageId) {
+    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId
       })
     });
     return response.json();
