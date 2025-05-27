@@ -1,5 +1,3 @@
-// bot.js
-
 import { randomip, getIpDetail, getFlagEmoji } from './randomip.js';
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
 
@@ -19,10 +17,12 @@ export default class TelegramBot {
       const text = message.text || '';
 
       if (text.startsWith('/start')) {
-        await this.sendMessage(chatId, 'ðŸ¤– Stupid World Converter Bot\n\nKirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox,Nekobox Dan Clash.\n\nContoh:\nvless://...\nvmess://...\ntrojan://...\nss://...\n\nCatatan:\n- Maksimal 10 link per permintaan.\n- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.\n\nbaca baik-baik dulu sebelum nanya.');
+        await this.sendMessage(chatId,
+          '🤖 Stupid World Converter Bot\n\nKirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox dan Clash.\n\nContoh:\nvless://...\nvmess://...\ntrojan://...\nss://...\n\nCatatan:\n- Maksimal 10 link per permintaan.\n- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.\n\nBaca baik-baik dulu sebelum nanya.'
+        );
       } else if (text.startsWith('/randomip')) {
-        const loading = await this.sendMessage(chatId, '⏳ Mengambil IP proxy acak...');
-        const { text: resultText, buttons } = await randomip(userId);
+        await this.sendMessage(chatId, '⏳ Mengambil IP proxy acak...');
+        const { text: resultText, buttons } = await randomip(userId, 1);
         await this.sendMessage(chatId, resultText, {
           parse_mode: 'Markdown',
           reply_markup: { inline_keyboard: buttons }
@@ -65,6 +65,13 @@ export default class TelegramBot {
 
         const detailText = `*Detail IP dari ${code} ${getFlagEmoji(code)}:*\n\n${detailList.join('\n\n')}`;
         await this.sendMessage(message.chat.id, detailText, { parse_mode: 'Markdown' });
+        await this.answerCallback(callbackId);
+      } else if (data.startsWith('PAGE_')) {
+        const page = parseInt(data.split('_')[1], 10);
+        const { text, buttons } = await randomip(from.id, page);
+
+        // Edit pesan inline keyboard (paging)
+        await this.editMessageReplyMarkup(message.chat.id, message.message_id, buttons);
         await this.answerCallback(callbackId);
       }
     }
@@ -112,5 +119,20 @@ export default class TelegramBot {
         show_alert: false
       })
     });
+  }
+
+  async editMessageReplyMarkup(chatId, messageId, inlineKeyboard) {
+    const url = `${this.apiUrl}/bot${this.token}/editMessageReplyMarkup`;
+    const payload = {
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: { inline_keyboard: inlineKeyboard }
+    };
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return response.json();
   }
 }
