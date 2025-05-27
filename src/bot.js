@@ -81,7 +81,7 @@ if (text.startsWith('/randomconfig')) {
 }
 
 // Handler untuk command /listwildcard
-if (text.startsWith('/listwildcard ')) {
+if (text.startsWith('/listwildcard')) {
   try {
     const wildcards = [
       "ava.game.naver.com",
