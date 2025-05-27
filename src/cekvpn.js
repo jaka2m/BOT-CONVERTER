@@ -88,7 +88,6 @@ export function generateConfig(config, protocol, DEFAULT_HOST, wildcardKey = nul
   const ispEncoded = encodeURIComponent(config.isp);
   let qrUrl = "";
 
-  // VMess Config
   if (protocol === "VMESS") {
     const vmessTLS = {
       v: "2",
@@ -134,7 +133,6 @@ ${configStringNTLS}
 `;
   }
 
-  // VLESS Config
   if (protocol === "VLESS") {
     const vlessTLS = `vless://${uuid}@${host}:443?encryption=none&security=tls&sni=${sni}&fp=randomized&type=ws&host=${host}&path=${path}#${ispEncoded}`;
     const vlessNTLS = `vless://${uuid}@${host}:80?path=${path}&security=none&encryption=none&host=${host}&fp=randomized&type=ws&sni=${host}#${ispEncoded}`;
@@ -178,88 +176,54 @@ ${configString2}
   }
 
   if (protocol === "SHADOWSOCKS") {
-    const configString1 = `ss://${toBase64(`none:${uuid}`)}@${host}:443?encryption=none&type=ws&host=${host}&path=${path}&security=tls&sni=${sni}#${ispEncoded}`;
-    const configString2 = `ss://${toBase64(`none:${uuid}`)}@${host}:80?encryption=none&type=ws&host=${host}&path=${path}&security=none&sni=${sni}#${ispEncoded}`;
+    const configString1 = `ss://${toBase64(`none:${uuid}`)}@${host}:443?encryption=none&type=ws&host=${host}&path=${path}#${ispEncoded}`;
+    const configString2 = `ss://${toBase64(`none:${uuid}`)}@${host}:80?encryption=none&type=ws&host=${host}&path=${path}#${ispEncoded}`;
 
     qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configString1)}&size=200x200`;
 
     return `
 \`\`\`SHADOWSOCKS-TLS
 ${configString1}
-\`\`\`\`\`\`SHADOWSOCKS-NTLS
+\`\`\`
+\`\`\`SHADOWSOCKS-NTLS
 ${configString2}
 \`\`\`
-               👉 [QR Code URL](${qrUrl})
-               
-           🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
-           
-    👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
-  `;
+
+👉 [QR Code URL](${qrUrl})
+
+🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
+
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+`;
   }
 
-  return "❌ Unknown protocol!";
+  return "Protocol tidak dikenali.";
 }
 
 export async function handleIpMessage({ chatId, text, send, edit, API_URL, DEFAULT_HOST }) {
-  const trimmedText = text?.trim();
-  const ipPortRegex = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+  const ipPortPattern = /^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/;
+  const match = text.match(ipPortPattern);
 
-  if (!ipPortRegex.test(trimmedText)) return;
+  if (match) {
+    const ip = match[1];
+    const port = match[2];
 
-  const [ip, portStr] = trimmedText.split(":");
-  const port = portStr || "443";
-
-  if (!ip || isNaN(port) || port <= 0 || port > 65535) {
-    await send("⚠️ Port tidak valid. Pastikan nilainya antara 1-65535.", { parse_mode: "Markdown" });
-    return;
-  }
-
-  let loadingMessage;
-  try {
-    loadingMessage = await send("⏳");
+    if (tempData[chatId]) {
+      // Jika sudah ada data sebelumnya, hapus dulu agar tidak bentrok
+      delete tempData[chatId];
+    }
 
     const data = await fetchIPData(ip, port, API_URL);
-    if (!data) {
-      await edit("⚠️ Tidak dapat mengambil data IP.", loadingMessage.message_id);
+    if (!data || data.status !== "success") {
+      await send(chatId, "❌ IP/Port tidak valid atau API gagal merespon.");
       return;
     }
 
-    tempData = {
-      ip,
-      port,
-      isp: data.isp,
-      latitude: data.latitude,
-      longitude: data.longitude
-    };
-
-    const status = data.status === "ACTIVE" ? "✅ ACTIVE" : "❌ DEAD";
-
-    if (data.status === "ACTIVE") {
-      const info = `IP PORT : \`${data.ip}:${data.port}\`
-\`\`\`INFORMATION
- ISP     : ${data.isp}
- COUNTRY : ${data.country}
- DELAY   : ${data.delay}
- STATUS  : ${status}
-\`\`\``;
-
-      await edit(info, loadingMessage.message_id, {
-        parse_mode: "Markdown",
-        reply_markup: createProtocolInlineKeyboard(ip, port),
-      });
-    } else {
-      await edit("IP ❌ DEAD", loadingMessage.message_id, { parse_mode: "Markdown" });
-    }
-
-    if (data.latitude && data.longitude) {
-      console.log(`Latitude: ${data.latitude}, Longitude: ${data.longitude}`);
-    }
-  } catch (error) {
-    console.error("Error in handleIpMessage:", error);
-    if (loadingMessage?.message_id) {
-      await edit("❌ Terjadi kesalahan saat mengambil data. Coba lagi nanti.", loadingMessage.message_id, {
-        parse_mode: "Markdown"
-      });
-    }
+    tempData[chatId] = data;
+    await send(chatId, `Pilih protocol:`, {
+      reply_markup: createProtocolInlineKeyboard(ip, port)
+    });
   }
 }
+
+export { tempData, WILDCARD_MAP };
