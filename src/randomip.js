@@ -46,10 +46,12 @@ export async function randomip(userId, page = 1) {
     // Simpan ke map untuk user
     ipDetailsMap.set(userId, detailsByCountry);
 
-    // Buat tombol per negara, 3 per baris, maksimal 12 tombol per halaman (4 baris)
+    // Buat tombol per negara, 3 per baris
     const countryCodes = Object.keys(detailsByCountry).sort();
-    const buttonsPerPage = 12; // 3 tombol x 4 baris
+    const buttonsPerPage = 30; // 10 baris * 3 tombol per baris
     const totalPages = Math.ceil(countryCodes.length / buttonsPerPage);
+
+    // Validasi page
     if (page < 1) page = 1;
     if (page > totalPages) page = totalPages;
 
@@ -67,15 +69,22 @@ export async function randomip(userId, page = 1) {
       buttons.push(row);
     }
 
-    // Tombol navigasi Prev/Next di baris baru
+    // Tombol navigasi Prev / Next selalu tampil
     const navButtons = [];
-    if (page > 1) {
-      navButtons.push({ text: '⬅️ Prev', callback_data: `PAGE_${page - 1}` });
-    }
+    // Tombol Prev selalu muncul, tapi callback ke halaman minimal 1
+    navButtons.push({
+      text: '⬅️ Prev',
+      callback_data: `PAGE_${page > 1 ? page - 1 : 1}`
+    });
+    // Tombol Next muncul hanya jika belum di halaman terakhir
     if (page < totalPages) {
-      navButtons.push({ text: 'Next ➡️', callback_data: `PAGE_${page + 1}` });
+      navButtons.push({
+        text: 'Next ➡️',
+        callback_data: `PAGE_${page + 1}`
+      });
     }
-    if (navButtons.length) buttons.push(navButtons);
+
+    buttons.push(navButtons);
 
     const text = `🔑 *Here are ${totalIPs} random Proxy IPs:*\n\nTekan bendera untuk detail:\nHalaman ${page} dari ${totalPages}`;
     return { text, buttons };
