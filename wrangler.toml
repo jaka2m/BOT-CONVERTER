@@ -1,6 +1,6 @@
 name = "v2ray-config-bot"
 compatibility_date = "2023-08-01"
-account_id = "dcb5cb4caca718bf2af71c10267ac007"  # Replace with your Cloudflare account ID
+account_id = "e9930d5ca683b0461f73477050fee0c7"  # Replace with your Cloudflare account ID
 workers_dev = true
 main = "src/worker.js"
 
