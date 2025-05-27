@@ -59,7 +59,7 @@ export default class TelegramBot {
       try {
         const checkResults = await Promise.all(ipLines.map(ip => checkProxyIP(ip)));
 
-        let statusReport = '\`\`\`INFORMATION';
+        let statusReport = '\`\`\`INFORMATION\n';
         for (const r of checkResults) {
           statusReport +=
             `IP       : ${r.ip}:${r.port}\n` +
