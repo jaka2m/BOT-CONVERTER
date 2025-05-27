@@ -46,9 +46,9 @@ export async function randomip(userId, page = 1) {
     // Simpan ke map untuk user
     ipDetailsMap.set(userId, detailsByCountry);
 
-    // Buat tombol per negara, 5 per baris
+    // Buat tombol per negara, 3 per baris, maksimal 12 tombol per halaman (4 baris)
     const countryCodes = Object.keys(detailsByCountry).sort();
-    const buttonsPerPage = 25; // 5 baris * 5 tombol
+    const buttonsPerPage = 12; // 3 tombol x 4 baris
     const totalPages = Math.ceil(countryCodes.length / buttonsPerPage);
     if (page < 1) page = 1;
     if (page > totalPages) page = totalPages;
@@ -57,17 +57,17 @@ export async function randomip(userId, page = 1) {
     const end = start + buttonsPerPage;
     const pageCountries = countryCodes.slice(start, end);
 
-    // Tombol negara 5 per baris
+    // Tombol negara 3 per baris
     const buttons = [];
-    for (let i = 0; i < pageCountries.length; i += 5) {
-      const row = pageCountries.slice(i, i + 5).map(code => ({
+    for (let i = 0; i < pageCountries.length; i += 3) {
+      const row = pageCountries.slice(i, i + 3).map(code => ({
         text: getFlagEmoji(code) + ' ' + code,
         callback_data: `DETAIL_${code}`
       }));
       buttons.push(row);
     }
 
-    // Tambahkan tombol Prev/Next jika lebih dari 1 halaman
+    // Tombol navigasi Prev/Next di baris baru
     const navButtons = [];
     if (page > 1) {
       navButtons.push({ text: '⬅️ Prev', callback_data: `PAGE_${page - 1}` });
