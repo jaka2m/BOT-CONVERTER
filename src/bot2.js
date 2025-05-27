@@ -1,6 +1,5 @@
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
 import { checkProxyIP, randomconfig } from './checkip.js';
-import { uu } from './randomip.js';
 import { rotateconfig } from './config.js';
 
 export default class TelegramBot {
@@ -135,25 +134,7 @@ if (text.startsWith('/listwildcard')) {
       return new Response('OK', { status: 200 });
     }
 
-    // /randomip command
-    if (text.startsWith('/uu')) {
-      const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Mengambil IP proxy acak...');
-
-      try {
-        const randomIPText = await randomip();
-        await this.sendMessage(chatId, randomIPText, { parse_mode: 'Markdown' });
-      } catch (error) {
-        console.error('Error getting random IPs:', error);
-        await this.sendMessage(chatId, `Terjadi kesalahan: ${error.message}`);
-      }
-
-      if (loadingMsg && loadingMsg.message_id) {
-        await this.deleteMessage(chatId, loadingMsg.message_id);
-      }
-
-      return new Response('OK', { status: 200 });
-    }
-
+    
     // Regex validasi IP:PORT dan proxy URL
     const ipPortRegex = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
     const proxyUrlRegex = /^(vless|vmess|trojan|ss):\/\/.+$/i;
