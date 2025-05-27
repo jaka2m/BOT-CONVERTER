@@ -63,13 +63,23 @@ export default class TelegramBot {
         }
 
         // Cek IP satu per satu
-        const checkResults = await Promise.all(links.map(link => checkProxyIP(link)));
+const checkResults = await Promise.all(links.map(link => checkProxyIP(link)));
 
-        let statusReport = '*Status Proxy:*\n';
-        for (const r of checkResults) {
-          statusReport += `- ${r.ip}:${r.port} (${r.country}) — *${r.status}*, Delay: ${r.delay}\n`;
-        }
-        await this.sendMessage(chatId, statusReport);
+let statusReport = '*Status Proxy:*\n\n';
+for (const r of checkResults) {
+  statusReport +=
+    `*IP:* ${r.ip}:${r.port}\n` +
+    `*Status:* ${r.status}\n` +
+    `*Delay:* ${r.delay}\n` +
+    `*Country:* ${r.country} ${r.flag || ''}\n` +
+    `*City:* ${r.city}\n` +
+    `*ISP:* ${r.isp}\n` +
+    `*Region:* ${r.regionName}\n` +
+    `*ASN:* ${r.asn}\n` +
+    `*Timezone:* ${r.timezone}\n` +
+    `*Org:* ${r.org}\n\n`;
+}
+await this.sendMessage(chatId, statusReport);
 
         // Hanya generate config jika URI (bukan IP:PORT saja)
         const hasURI = links.some(link => link.includes('://'));
