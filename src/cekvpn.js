@@ -1,9 +1,9 @@
-const WILDCARD_MAP = {
+export const WILDCARD_MAP = {
   ava: "ava.game.naver.com",
   api: "api.midtrans.com"
 };
 
-const WILDCARD_OPTIONS = Object.entries(WILDCARD_MAP).map(([value, text]) => ({ text, value }));
+export const WILDCARD_OPTIONS = Object.entries(WILDCARD_MAP).map(([value, text]) => ({ text, value }));
 
 let tempData = {};
 
@@ -167,28 +167,6 @@ ${configString1}
 \`\`\`\`\`\`TROJAN-NTLS
 ${configString2}
 \`\`\`
-               👉 [QR Code URL](${qrUrl})
-               
-           🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
-           
-    👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
-  `;
-  }
-
-  if (protocol === "SHADOWSOCKS") {
-    const configString1 = `ss://${toBase64(`none:${uuid}`)}@${host}:443?encryption=none&type=ws&host=${host}&path=${path}#${ispEncoded}`;
-    const configString2 = `ss://${toBase64(`none:${uuid}`)}@${host}:80?encryption=none&type=ws&host=${host}&path=${path}#${ispEncoded}`;
-
-    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configString1)}&size=200x200`;
-
-    return `
-\`\`\`SHADOWSOCKS-TLS
-${configString1}
-\`\`\`
-\`\`\`SHADOWSOCKS-NTLS
-${configString2}
-\`\`\`
-
 👉 [QR Code URL](${qrUrl})
 
 🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
@@ -197,33 +175,66 @@ ${configString2}
 `;
   }
 
-  return "Protocol tidak dikenali.";
+  if (protocol === "SHADOWSOCKS") {
+    const configString1 = `ss://${toBase64(`none:${uuid}`)}@${host}:443?encryption=none&type=ws&host=${host}&path=${path}&security=tls&sni=${sni}#${ispEncoded}`;
+    const configString2 = `ss://${toBase64(`none:${uuid}`)}@${host}:80?encryption=none&type=ws&host=${host}&path=${path}&security=none&sni=${sni}#${ispEncoded}`;
+
+    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configString1)}&size=200x200`;
+
+    return `
+\`\`\`SHADOWSOCKS-TLS
+${configString1}
+\`\`\`\`\`\`SHADOWSOCKS-NTLS
+${configString2}
+\`\`\`
+👉 [QR Code URL](${qrUrl})
+
+🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
+
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+`;
+  }
+
+  return "❌ Unknown protocol!";
 }
 
 export async function handleIpMessage({ chatId, text, send, edit, API_URL, DEFAULT_HOST }) {
-  const ipPortPattern = /^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/;
-  const match = text.match(ipPortPattern);
+  const trimmedText = text?.trim();
+  const ipPortRegex = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
 
-  if (match) {
-    const ip = match[1];
-    const port = match[2];
+  if (!ipPortRegex.test(trimmedText)) return;
 
-    if (tempData[chatId]) {
-      // Jika sudah ada data sebelumnya, hapus dulu agar tidak bentrok
-      delete tempData[chatId];
-    }
+  const [ip, portStr] = trimmedText.split(":");
+  const port = portStr || "443";
 
-    const data = await fetchIPData(ip, port, API_URL);
-    if (!data || data.status !== "success") {
-      await send(chatId, "❌ IP/Port tidak valid atau API gagal merespon.");
-      return;
-    }
-
-    tempData[chatId] = data;
-    await send(chatId, `Pilih protocol:`, {
-      reply_markup: createProtocolInlineKeyboard(ip, port)
-    });
+  if (!ip || isNaN(port) || port <= 0 || port > 65535) {
+    await send("⚠️ Port tidak valid. Harus angka antara 1 - 65535");
+    return;
   }
-}
 
-export { tempData, WILDCARD_MAP };
+  await send("🔄 Sedang memeriksa IP...");
+
+  const data = await fetchIPData(ip, port, API_URL);
+
+  if (!data || !data.status) {
+    await send("❌ Gagal memeriksa IP");
+    return;
+  }
+
+  if (data.status === 0) {
+    await send(`❌ IP ${ip} ${port} tidak dapat digunakan!`);
+    return;
+  }
+
+  // Simpan sementara
+  tempData[chatId] = { ip, port, data };
+
+  await send(
+    `✔️ IP: ${ip}\n` +
+    `📍 Lokasi: ${data.country}, ${data.city}\n` +
+    `🏢 ISP: ${data.isp}\n` +
+    `⌚ Delay: ${data.delay} ms\n\n` +
+    "Pilih protocol:",
+    createProtocolInlineKeyboard(ip, port)
+  );
+}
