@@ -43,62 +43,63 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Deteksi apakah teks berisi URI atau IP:PORT
-    const isProxyFormat = text.includes('://') || /^\d{1,3}(\.\d{1,3}){3}:\d+/.test(text);
+    // Regex validasi IP atau IP:PORT
+    const ipPortRegex = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
+    // Regex validasi URL proxy (vless, vmess, trojan, ss)
+    const proxyUrlRegex = /^(vless|vmess|trojan|ss):\/\/.+$/i;
 
-    if (isProxyFormat) {
+    // Ambil maksimal 10 baris teks yang tidak kosong
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0).slice(0, 10);
+
+    // Pisahkan antara IP/IP:PORT dan URL proxy
+    const ipLines = lines.filter(line => ipPortRegex.test(line));
+    const proxyUrls = lines.filter(line => proxyUrlRegex.test(line));
+
+    // Jika ada IP/IP:PORT, lakukan cek IP
+    if (ipLines.length > 0) {
       try {
-        // Ambil hingga 10 baris proxy yang valid
-        const links = text
-          .split('\n')
-          .map(line => line.trim())
-          .filter(line =>
-            line.includes('://') || /^\d{1,3}(\.\d{1,3}){3}:\d+/.test(line)
-          )
-          .slice(0, 10);
+        const checkResults = await Promise.all(ipLines.map(ip => checkProxyIP(ip)));
 
-        if (links.length === 0) {
-          await this.sendMessage(chatId, 'Tidak ditemukan link/IP yang valid. Gunakan format VMess/VLESS/Trojan/SS atau IP:PORT.');
-          return new Response('OK', { status: 200 });
+        let statusReport = '*Status Proxy:*\n\n';
+        for (const r of checkResults) {
+          statusReport +=
+            `*IP:* ${r.ip}:${r.port}\n` +
+            `*Status:* ${r.status}\n` +
+            `*Delay:* ${r.delay}\n` +
+            `*Country:* ${r.country} ${r.flag || ''}\n` +
+            `*City:* ${r.city}\n` +
+            `*ISP:* ${r.isp}\n` +
+            `*Region:* ${r.regionName}\n` +
+            `*ASN:* ${r.asn}\n` +
+            `*Timezone:* ${r.timezone}\n` +
+            `*Org:* ${r.org}\n\n`;
         }
-
-        // Cek IP satu per satu
-const checkResults = await Promise.all(links.map(link => checkProxyIP(link)));
-
-let statusReport = '*Status Proxy:*\n\n';
-for (const r of checkResults) {
-  statusReport +=
-    `*IP:* ${r.ip}:${r.port}\n` +
-    `*Status:* ${r.status}\n` +
-    `*Delay:* ${r.delay}\n` +
-    `*Country:* ${r.country} ${r.flag || ''}\n` +
-    `*City:* ${r.city}\n` +
-    `*ISP:* ${r.isp}\n` +
-    `*Region:* ${r.regionName}\n` +
-    `*ASN:* ${r.asn}\n` +
-    `*Timezone:* ${r.timezone}\n` +
-    `*Org:* ${r.org}\n\n`;
-}
-await this.sendMessage(chatId, statusReport);
-
-        // Hanya generate config jika URI (bukan IP:PORT saja)
-        const hasURI = links.some(link => link.includes('://'));
-        if (hasURI) {
-          const clashConfig = generateClashConfig(links, true);
-          const nekoboxConfig = generateNekoboxConfig(links, true);
-          const singboxConfig = generateSingboxConfig(links, true);
-
-          await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
-          await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
-          await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
-        }
-
+        await this.sendMessage(chatId, statusReport);
       } catch (error) {
-        console.error('Error processing links:', error);
-        await this.sendMessage(chatId, `Terjadi kesalahan: ${error.message}`);
+        console.error('Error checking IP:', error);
+        await this.sendMessage(chatId, `Terjadi kesalahan saat cek IP: ${error.message}`);
       }
-    } else {
-      await this.sendMessage(chatId, 'Silakan kirim link VMess/VLESS/Trojan/SS atau format IP:PORT untuk dicek.');
+    }
+
+    // Jika ada proxy URL, generate config
+    if (proxyUrls.length > 0) {
+      try {
+        const clashConfig = generateClashConfig(proxyUrls, true);
+        const nekoboxConfig = generateNekoboxConfig(proxyUrls, true);
+        const singboxConfig = generateSingboxConfig(proxyUrls, true);
+
+        await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
+        await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
+        await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
+      } catch (error) {
+        console.error('Error generating config:', error);
+        await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi: ${error.message}`);
+      }
+    }
+
+    // Jika input bukan IP/IP:PORT atau URL proxy, abaikan tanpa balasan
+    if (ipLines.length === 0 && proxyUrls.length === 0) {
+      return new Response('OK', { status: 200 });
     }
 
     return new Response('OK', { status: 200 });
