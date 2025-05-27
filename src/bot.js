@@ -59,19 +59,19 @@ export default class TelegramBot {
       try {
         const checkResults = await Promise.all(ipLines.map(ip => checkProxyIP(ip)));
 
-        let statusReport = '\`\`\`Status-Proxy';
+        let statusReport = '\`\`\`INFORMATION';
         for (const r of checkResults) {
           statusReport +=
-            `IP: ${r.ip}:${r.port}\n` +
-            `Status: ${r.status}\n` +
-            `Delay: ${r.delay}\n` +
-            `Country: ${r.country} ${r.flag || ''}\n` +
-            `City: ${r.city}\n` +
-            `ISP: ${r.isp}\n` +
-            `Region: ${r.regionName}\n` +
-            `ASN: ${r.asn}\n` +
-            `Timezone: ${r.timezone}\n` +
-            `Org: ${r.org}
+            `IP       : ${r.ip}:${r.port}\n` +
+            `Status   : ${r.status}\n` +
+            `Delay    : ${r.delay}\n` +
+            `Country  : ${r.country}\n` +
+            `City     : ${r.city}\n` +
+            `ISP      : ${r.isp}\n` +
+            `Region   : ${r.regionName}\n` +
+            `ASN      : ${r.asn}\n` +
+            `Timezone : ${r.timezone}\n` +
+            `Org      : ${r.org}
             \`\`\``;
         }
         await this.sendMessage(chatId, statusReport);
