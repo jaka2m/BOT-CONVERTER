@@ -5,20 +5,12 @@ import { handleCommand } from './commandHandler.js';
 import { handleCallback, answerCallback, editMessageReplyMarkup } from './callbackHandler.js';
 import { randomip } from './randomip.js';
 
-const HOSTKU = 'example.com'; // Sesuaikan sesuai kebutuhan
+const HOSTKU = 'example.com';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
-
-    // Bind methods supaya bisa dipakai di callback tanpa kehilangan konteks this
-    this.sendMessage = this.sendMessage.bind(this);
-    this.sendMessageWithDelete = this.sendMessageWithDelete.bind(this);
-    this.deleteMessage = this.deleteMessage.bind(this);
-    this.sendDocument = this.sendDocument.bind(this);
-    this.answerCallback = answerCallback.bind(this);
-    this.editMessageReplyMarkup = editMessageReplyMarkup.bind(this);
   }
 
   async handleUpdate(request) {
@@ -31,8 +23,8 @@ export default class TelegramBot {
     const text = message?.text || '';
 
     if (text) {
-      // Command handling
-      // START command
+      // Command handling (gabungan dari kode kamu yang sebelumnya)
+      // Contoh /start
       if (text.startsWith('/start')) {
         const startMessage =
           'Selamat datang di *Stupid World Converter Bot!*\n\n' +
@@ -45,7 +37,7 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-      // /config command
+      // /config
       if (text.startsWith('/config')) {
         await this.sendMessage(
           chatId,
@@ -69,16 +61,15 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      // /rotate command
+      // /rotate
       if (text.startsWith('/rotate ')) {
         await rotateconfig.call(this, chatId, text);
         return new Response('OK', { status: 200 });
       }
 
-      // /randomconfig command
+      // /randomconfig
       if (text.startsWith('/randomconfig')) {
         const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
-
         try {
           const configText = await randomconfig();
           await this.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
@@ -86,15 +77,13 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
           console.error('Error generating random config:', error);
           await this.sendMessage(chatId, `⚠️ Terjadi kesalahan saat generate konfigurasi acak:\n${error.message}`);
         }
-
         if (loadingMsg && loadingMsg.message_id) {
           await this.deleteMessage(chatId, loadingMsg.message_id);
         }
-
         return new Response('OK', { status: 200 });
       }
 
-      // /listwildcard command
+      // /listwildcard
       if (text.startsWith('/listwildcard')) {
         try {
           const wildcards = [
@@ -132,11 +121,10 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
           console.error('Error in /listwildcard:', error);
           await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
         }
-
         return new Response('OK', { status: 200 });
       }
 
-      // /converter command
+      // /converter
       if (text.startsWith('/converter')) {
         const infoMessage =
           '🧠 *Stupid World Converter Bot*\n\n' +
@@ -205,96 +193,77 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
           await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
         } catch (error) {
           console.error('Error generating config:', error);
-          await this.sendMessage(chatId, `⚠️ Terjadi kesalahan saat generate konfigurasi:\n${error.message}`);
+          await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi: ${error.message}`);
         }
       }
 
-      return new Response('OK', { status: 200 });
-    }
-
-    if (callback) {
-      // Callback handler
+    } else if (callback) {
+      // Callback query handling
       await handleCallback({
         callback,
-        sendMessage: this.sendMessage,
-        answerCallback: this.answerCallback,
-        editMessageReplyMarkup: this.editMessageReplyMarkup,
+        sendMessage: this.sendMessage.bind(this),
+        answerCallback: answerCallback.bind(this),
+        editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
         token: this.token,
         apiUrl: this.apiUrl
       });
-
-      return new Response('OK', { status: 200 });
     }
 
     return new Response('OK', { status: 200 });
   }
 
-  // contoh implementasi sederhana sendMessage
+  // Helper: send message
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const body = {
       chat_id: chatId,
       text,
-      ...options
+      ...options,
     };
-
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
+    return res.json();
+  }
 
-    if (!res.ok) {
-      console.error('sendMessage failed', await res.text());
+  // Helper: send message with auto delete
+  async sendMessageWithDelete(chatId, text, timeoutMs = 8000) {
+    const msg = await this.sendMessage(chatId, text);
+    if (msg.ok && msg.result && msg.result.message_id) {
+      setTimeout(() => {
+        this.deleteMessage(chatId, msg.result.message_id).catch(console.error);
+      }, timeoutMs);
     }
-
-    return await res.json();
+    return msg.result;
   }
 
-  // Kirim pesan yang akan dihapus setelah beberapa detik
-  async sendMessageWithDelete(chatId, text, options = {}, delay = 5000) {
-    const message = await this.sendMessage(chatId, text, options);
-
-    setTimeout(() => {
-      this.deleteMessage(chatId, message.message_id).catch(console.error);
-    }, delay);
-
-    return message;
-  }
-
-  // Hapus pesan
+  // Helper: delete message
   async deleteMessage(chatId, messageId) {
     const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
-    const body = {
-      chat_id: chatId,
-      message_id: messageId
-    };
-
-    const res = await fetch(url, {
+    const body = { chat_id: chatId, message_id: messageId };
+    await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
-
-    if (!res.ok) {
-      console.error('deleteMessage failed', await res.text());
-    }
-
-    return await res.json();
   }
 
-  // Kirim file dokumen (misal config)
+  // Helper: send document/file
   async sendDocument(chatId, content, filename, mimeType) {
-    const url = `${this.apiUrl}/bot${this.token}/sendDocument`;
+    // Telegram API expects multipart/form-data for sending files,
+    // but if content is string, we can send as InputFile by base64 or via Buffer.
+    // Here, assume we use fetch + FormData (in node or environment with FormData)
 
-    // Telegram Bot API tidak support kirim file langsung dari string lewat API biasa,
-    // biasanya pakai multipart/form-data dengan file atau URL.
-    // Alternatif: simpan dulu ke penyimpanan, upload dari URL, atau kirim sebagai teks biasa.
-    // Di sini kita asumsikan file bisa dikirim sebagai teks biasa (bisa disesuaikan).
+    const formData = new FormData();
+    const blob = new Blob([content], { type: mimeType });
+    formData.append('chat_id', chatId);
+    formData.append('document', blob, filename);
 
-    // Kirim sebagai teks dengan message biasa jika tidak memungkinkan.
-    // Kalau mau kirim file asli, perlu upload multipart/form-data.
-
-    return this.sendMessage(chatId, `File *${filename}*:\n\`\`\`\n${content}\n\`\`\``, { parse_mode: 'Markdown' });
+    await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+      method: 'POST',
+      body: formData,
+    });
   }
 }
