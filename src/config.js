@@ -65,8 +65,9 @@ export async function rotateconfig(chatId, text) {
       const v = c === "x" ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
-    const toBase64 = (str) => Buffer.from(str, 'utf-8').toString('base64');
-
+    
+    const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+    
     // Ganti dengan hostname server kamu
     const HOSTKU = "example.com";
 
