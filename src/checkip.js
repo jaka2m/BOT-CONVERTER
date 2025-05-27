@@ -1,7 +1,13 @@
 // Fungsi cek IP proxy dengan API checker-ip.web.id
 export async function checkProxyIP(link) {
   try {
-    let [ip, port = '443'] = link.trim().split(':');
+    let ip = '';
+    let port = '443';
+
+    const clean = link.trim();
+    [ip, port = '443'] = clean.split(':');
+
+    // Validasi IP format
     const isValidIP = ip.match(/^(\d{1,3}\.){3}\d{1,3}$/);
     if (!isValidIP) throw new Error('Invalid IP format');
 
@@ -22,7 +28,7 @@ export async function checkProxyIP(link) {
       timezone: data.timezone || '-',
       org: data.org || '-'
     };
-  } catch {
+  } catch (error) {
     return {
       ip: '-',
       port: '-',
@@ -59,43 +65,11 @@ function generateUUID() {
   });
 }
 
-// Base64 encoder universal
-function toBase64(str) {
-  if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
-  else return Buffer.from(str, 'utf-8').toString('base64');
-}
-
-// Ambil list random IP proxy
-export async function randomip() {
-  const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/main/cek/proxyList.txt');
-  const ipText = await response.text();
-  const ipList = ipText
-    .split('\n')
-    .map(line => line.trim())
-    .filter(line => line !== '');
-
-  if (ipList.length === 0) {
-    return 'No proxy IPs found.';
-  }
-
-  const shuffled = ipList.sort(() => 0.5 - Math.random());
-  const selectedIPs = shuffled.slice(0, 20);
-
-  let resultText = `🔑 *Here are ${selectedIPs.length} random Proxy IPs:*\n\n`;
-  selectedIPs.forEach(line => {
-    const [ip, port, code, isp] = line.split(',');
-    resultText += `📍 *IP:PORT* : \`${ip}:${port}\`\n`;
-    resultText += `🌐 *Country* : ${code} ${getFlagEmoji(code)}\n`;
-    resultText += `💻 *ISP* : ${isp}\n\n`;
-  });
-
-  return resultText;
-}
-
 // Fungsi utama generate config proxy random
 export async function randomconfig() {
   const HOSTKU = 'joss.checker-ip.xyz'; // Ganti dengan host kamu
 
+  // Ambil list proxy dari file txt
   const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/main/cek/proxyList.txt');
   const ipText = await response.text();
   const ipList = ipText.split('\n').filter(line => line.trim() !== '');
@@ -104,6 +78,7 @@ export async function randomconfig() {
 
   if (!ip || !port) return '⚠️ Data IP tidak lengkap.';
 
+  // Cek status IP
   const data = await checkProxyIP(`${ip}:${port}`);
   if (data.status?.toUpperCase() !== 'ACTIVE') {
     return `⚠️ IP ${ip}:${port} tidak aktif.`;
@@ -113,6 +88,12 @@ export async function randomconfig() {
   const status = "✅ ACTIVE";
   const path = `/Geo-Project/${ip}-${port}`;
   const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1'; // UUID tetap
+
+  // Base64 encoder yang support Node & Browser
+  const toBase64 = (str) => {
+    if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
+    else return Buffer.from(str, 'utf-8').toString('base64');
+  };
 
   const infoMessage = `
 IP       : ${data.ip}
@@ -125,6 +106,7 @@ ASN      : ${data.asn}
 ORG      : ${data.org}
 `;
 
+  // VMess TLS config
   const vmessTLS = {
     v: "2",
     ps: `${country} - ${provider} [VMess-TLS]`,
@@ -142,14 +124,21 @@ ORG      : ${data.org}
   };
   const vmesstls = `vmess://${toBase64(JSON.stringify(vmessTLS))}`;
 
+  // UUID untuk VLess, Trojan, SS
   const vlessUUID = generateUUID();
   const trojanUUID = generateUUID();
   const ssUUID = generateUUID();
 
+  // VLess TLS config
   const vlesstls = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}#${provider}%20${country}`;
+
+  // Trojan TLS config
   const trojantls = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}#${provider}%20${country}`;
+
+  // Shadowsocks TLS config
   const ssntls = `ss://${toBase64(`none:${ssUUID}`)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}&security=tls&sni=${HOSTKU}#${provider}%20${country}`;
 
+  // Format output final
   const configText = `
 \`\`\`INFORMATION
 ${infoMessage}
@@ -169,4 +158,43 @@ ${ssntls}
 `;
 
   return configText;
+}
+
+export async function randomip() {
+  try {
+    const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
+    const ipText = await response.text();
+    const ipList = ipText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '');
+
+    if (ipList.length === 0) {
+      return '❌ Tidak ada IP yang tersedia.';
+    }
+
+    // Ambil maksimal 20 IP secara acak
+    const shuffled = ipList.sort(() => 0.5 - Math.random());
+    const selectedIPs = shuffled.slice(0, 20);
+
+    let resultText = `🔑 *Here are ${selectedIPs.length} random Proxy IPs:*\n\n`;
+    selectedIPs.forEach(line => {
+      const [ip, port, code, isp] = line.split(',');
+      resultText += `📍 *IP:PORT* : \`${ip}:${port}\`\n`;
+      resultText += `🌐 *Country* : ${code} ${getFlagEmoji(code)}\n`;
+      resultText += `💻 *ISP* : ${isp}\n\n`;
+    });
+
+    return resultText;
+  } catch (error) {
+    return '❌ Gagal mengambil data IP.';
+  }
+}
+
+// Fungsi tambahan untuk mengubah kode negara jadi emoji bendera
+function getFlagEmoji(countryCode = '') {
+  const code = countryCode.trim().toUpperCase();
+  return code.length === 2
+    ? String.fromCodePoint(...[...code].map(c => 0x1f1e6 + c.charCodeAt(0) - 65))
+    : '';
 }
