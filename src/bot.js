@@ -1,8 +1,11 @@
-import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
-import { checkProxyIP, randomconfig } from './checkip.js';
-import { randomip } from './randomip.js';
-import { rotateconfig } from './config.js';
-import { handleIpMessage } from './cekvpn.js';
+import {
+  vpncf,
+  createProtocolInlineKeyboard,
+  createInitialWildcardInlineKeyboard,
+  createWildcardOptionsInlineKeyboard,
+  generateConfig,
+  handleIpMessage
+} from './cekvpn.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
@@ -11,235 +14,185 @@ export default class TelegramBot {
   }
 
   async handleUpdate(update) {
+    if (update.callback_query) {
+      return this.handleCallbackQuery(update.callback_query);
+    }
+
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    const HOSTKU = 'example.com';
-
-    // Panggil fungsi dari cekvpn.js
-    await handleIpMessage({
-      chatId,
-      text,
-      send: (msg, opts) => this.sendMessage(chatId, msg, opts),
-      edit: (msg, messageId, opts) => this.editMessage(msg, chatId, messageId, opts),
-      API_URL: 'https://api.checker-ip.web.id/check?ip=',
-      DEFAULT_HOST: 'mangan.com',
-    });
-
-    // /start command
-    if (text.startsWith('/start')) {
-      const startMessage =
-        'Selamat datang di *Stupid World Converter Bot!*\n\n' +
-        'Gunakan perintah:\n' +
-        '• `/converter` — untuk mengubah link proxy ke format:\n' +
-        '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
-        '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
-        'Ketik `/converter` untuk info lebih lanjut.';
-      await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
-      return new Response('OK', { status: 200 });
-    }
-
-    // /config command
-    if (text.startsWith('/config')) {
-      await this.sendMessage(chatId,
-        `🌟 *PANDUAN CONFIG ROTATE* 🌟
-
-Ketik perintah berikut untuk mendapatkan config rotate berdasarkan negara:
-
-\`/rotate + kode_negara\`
-
-Negara tersedia:
-id, sg, my, us, ca, in, gb, ir, ae, fi, tr, md, tw, ch, se, nl, es, ru, ro, pl, al, nz, mx, it, de, fr, am, cy, dk, br, kr, vn, th, hk, cn, jp.
-
-Contoh:
-\`/rotate id\`
-\`/rotate sg\`
-\`/rotate my\`
-
-Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.`,
-        { parse_mode: 'Markdown' }
-      );
-      return new Response('OK', { status: 200 });
-    }
-
-    // /rotate command
-    if (text.startsWith('/rotate ')) {
-      await rotateconfig.call(this, chatId, text);
-      return new Response('OK', { status: 200 });
-    }
-
-    // /randomconfig command
-    if (text.startsWith('/randomconfig')) {
-      const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
-      try {
-        const configText = await randomconfig();
-        await this.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
-      } catch (error) {
-        console.error('Error generating random config:', error);
-        await this.sendMessage(chatId, `⚠️ Terjadi kesalahan saat generate konfigurasi acak:\n${error.message}`);
+    if (text.startsWith('/check')) {
+      const parts = text.split(' ');
+      if (parts.length < 3) {
+        return this.sendMessage(chatId, "Format: /check <ip> <port>");
       }
+      const ip = parts[1];
+      const port = parts[2];
+      const API_URL = 'https://ip-api.com/json/'; // Ganti sesuai API Anda
 
-      if (loadingMsg && loadingMsg.message_id) {
-        await this.deleteMessage(chatId, loadingMsg.message_id);
-      }
-
-      return new Response('OK', { status: 200 });
+      const responseText = await handleIpMessage(ip, port, API_URL);
+      return this.sendMessage(chatId, responseText);
     }
 
-    // /listwildcard command
-    if (text.startsWith('/listwildcard')) {
-      try {
-        const wildcards = [
-          "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com",
-          "graph.instagram.com", "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us",
-          "blog.webex.com", "investors.spotify.com", "cache.netflix.com",
-          "zaintest.vuclip.com", "io.ruangguru.com", "api.midtrans.com",
-          "investor.fb.com", "bakrie.ac.id"
-        ];
-
-        let configText = `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n`;
-        wildcards.forEach((domain, index) => {
-          configText += `*${index + 1}.* \`${domain}.${HOSTKU}\`\n`;
-        });
-
-        configText += `\n📦 *Total:* ${wildcards.length} wildcard\n`;
-        configText += `\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
-
-        await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
-      } catch (error) {
-        console.error('Error in /listwildcard:', error);
-        await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
-      }
-
-      return new Response('OK', { status: 200 });
-    }
-
-    // /converter command
-    if (text.startsWith('/converter')) {
-      const infoMessage =
-        '🧠 *Stupid World Converter Bot*\n\n' +
-        'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
-        '- Singbox\n- Nekobox\n- Clash\n\n' +
-        '*Contoh:*\n' +
-        '`vless://...`\n' +
-        '`104.21.75.43:443`\n\n' +
-        '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
-      await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
-      return new Response('OK', { status: 200 });
-    }
-
-    // /randomip command
-    if (text.startsWith('/randomip')) {
-      const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Mengambil IP proxy acak...');
-      try {
-        const randomIPText = await randomip();
-        await this.sendMessage(chatId, randomIPText, { parse_mode: 'Markdown' });
-      } catch (error) {
-        console.error('Error getting random IPs:', error);
-        await this.sendMessage(chatId, `Terjadi kesalahan: ${error.message}`);
-      }
-
-      if (loadingMsg && loadingMsg.message_id) {
-        await this.deleteMessage(chatId, loadingMsg.message_id);
-      }
-
-      return new Response('OK', { status: 200 });
-    }
-
-    // Cek dan parsing IP/URL Proxy
-    const ipPortRegex = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
-    const proxyUrlRegex = /^(vless|vmess|trojan|ss):\/\/.+$/i;
-    const lines = text.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 10);
-    const ipLines = lines.filter(l => ipPortRegex.test(l));
-    const proxyUrls = lines.filter(l => proxyUrlRegex.test(l));
-
-    if (ipLines.length > 0) {
-      const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Cek IP sedang berlangsung...');
-      try {
-        const results = await Promise.all(ipLines.map(ip => checkProxyIP(ip)));
-        let report = '```INFORMATION\n';
-        for (const r of results) {
-          report +=
-            `IP       : ${r.ip}:${r.port}\n` +
-            `Status   : ${r.status}\n` +
-            `Delay    : ${r.delay}\n` +
-            `Country  : ${r.country}\n` +
-            `City     : ${r.city}\n` +
-            `ISP      : ${r.isp}\n` +
-            `Region   : ${r.regionName}\n` +
-            `ASN      : ${r.asn}\n` +
-            `Timezone : ${r.timezone}\n` +
-            `Org      : ${r.org}\n\n`;
-        }
-        report += '```';
-        await this.sendMessage(chatId, report, { parse_mode: 'Markdown' });
-      } catch (error) {
-        console.error('IP Check Error:', error);
-        await this.sendMessage(chatId, `Terjadi kesalahan saat cek IP: ${error.message}`);
-      }
-
-      if (loadingMsg && loadingMsg.message_id) {
-        await this.deleteMessage(chatId, loadingMsg.message_id);
-      }
-    }
-
-    if (proxyUrls.length > 0) {
-      try {
-        const clashConfig = generateClashConfig(proxyUrls, true);
-        const nekoboxConfig = generateNekoboxConfig(proxyUrls, true);
-        const singboxConfig = generateSingboxConfig(proxyUrls, true);
-
-        await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
-        await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
-        await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
-      } catch (error) {
-        console.error('Error generating config:', error);
-        await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi: ${error.message}`);
-      }
-    }
-
-    return new Response('OK', { status: 200 });
+    return this.sendMessage(chatId, "Perintah tidak dikenali.");
   }
 
-  async sendMessage(chatId, text, options = {}) {
+  async handleCallbackQuery(callbackQuery) {
+    const { id, data, message } = callbackQuery;
+    const chatId = message.chat.id;
+
+    // Format data callback: PROTOCOL|VLESS|ip|port, WILDCARD|VLESS|ip|port|wildcard, etc
+    const parts = data.split('|');
+    const action = parts[0];
+
+    switch (action) {
+      case 'PROTOCOL': {
+        // User pilih protocol
+        // data format: PROTOCOL|<protocol>|<ip>|<port>
+        const protocol = parts[1];
+        const ip = parts[2];
+        const port = parts[3];
+
+        // Tampilkan pilihan wildcard
+        const keyboard = createInitialWildcardInlineKeyboard(ip, port, protocol);
+
+        await this.editMessage(chatId, message.message_id, `Pilih opsi wildcard untuk protokol *${protocol}*`, keyboard);
+        return this.answerCallbackQuery(id);
+      }
+      case 'SHOW_WILDCARD': {
+        // Tampilkan list wildcard
+        const protocol = parts[1];
+        const ip = parts[2];
+        const port = parts[3];
+
+        const keyboard = createWildcardOptionsInlineKeyboard(ip, port, protocol);
+        await this.editMessage(chatId, message.message_id, 'Pilih wildcard:', keyboard);
+        return this.answerCallbackQuery(id);
+      }
+      case 'WILDCARD': {
+        // User pilih wildcard tertentu
+        // WILDCARD|protocol|ip|port|wildcardKey
+        const protocol = parts[1];
+        const ip = parts[2];
+        const port = parts[3];
+        const wildcardKey = parts[4];
+
+        const API_URL = 'https://ip-api.com/json/'; // Ganti sesuai API Anda
+        const configData = await vpncf(ip, port, API_URL);
+
+        if (!configData) {
+          await this.answerCallbackQuery(id, { text: "Gagal mengambil data IP." });
+          return;
+        }
+
+        const configText = generateConfig(configData, protocol, 'example.com', wildcardKey);
+
+        // Kirim config baru sebagai pesan, hapus pesan sebelumnya
+        await this.sendMessage(chatId, configText);
+        await this.deleteMessage(chatId, message.message_id);
+
+        return this.answerCallbackQuery(id);
+      }
+      case 'NOWILDCARD': {
+        // User pilih tanpa wildcard
+        // NOWILDCARD|protocol|ip|port
+        const protocol = parts[1];
+        const ip = parts[2];
+        const port = parts[3];
+
+        const API_URL = 'https://ip-api.com/json/'; // Ganti sesuai API Anda
+        const configData = await vpncf(ip, port, API_URL);
+
+        if (!configData) {
+          await this.answerCallbackQuery(id, { text: "Gagal mengambil data IP." });
+          return;
+        }
+
+        const configText = generateConfig(configData, protocol, 'example.com');
+
+        await this.sendMessage(chatId, configText);
+        await this.deleteMessage(chatId, message.message_id);
+
+        return this.answerCallbackQuery(id);
+      }
+      case 'BACK': {
+        // Kembali ke pilihan protokol
+        const ip = parts[1];
+        const port = parts[2];
+
+        const keyboard = createProtocolInlineKeyboard(ip, port);
+        await this.editMessage(chatId, message.message_id, 'Pilih protokol:', keyboard);
+        return this.answerCallbackQuery(id);
+      }
+      default:
+        return this.answerCallbackQuery(id, { text: 'Aksi tidak dikenali.' });
+    }
+  }
+
+  async sendMessage(chatId, text, extra = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const payload = { chat_id: chatId, text, ...options };
-    const response = await fetch(url, {
+    const body = {
+      chat_id: chatId,
+      text,
+      parse_mode: 'Markdown',
+      ...extra
+    };
+
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body)
     });
-    return response.json();
+    return res.json();
   }
 
-  async sendMessageWithDelete(chatId, text) {
-    try {
-      const res = await this.sendMessage(chatId, text);
-      return res.result;
-    } catch (e) {
-      console.error('sendMessageWithDelete error:', e);
-      return null;
-    }
+  async editMessage(chatId, messageId, text, replyMarkup = null) {
+    const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
+    const body = {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: 'Markdown',
+      reply_markup: replyMarkup
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return res.json();
   }
 
   async deleteMessage(chatId, messageId) {
     const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
-    const payload = { chat_id: chatId, message_id: messageId };
-    await fetch(url, {
+    const body = {
+      chat_id: chatId,
+      message_id: messageId
+    };
+
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body)
     });
+    return res.json();
   }
 
-  async sendDocument(chatId, content, filename, mimeType) {
-    const formData = new FormData();
-    formData.append('chat_id', chatId);
-    formData.append('document', new Blob([content], { type: mimeType }), filename);
+  async answerCallbackQuery(callbackQueryId, options = {}) {
+    const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
+    const body = {
+      callback_query_id: callbackQueryId,
+      ...options
+    };
 
-    const url = `${this.apiUrl}/bot${this.token}/sendDocument`;
-    await fetch(url, { method: 'POST', body: formData });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return res.json();
   }
 }
