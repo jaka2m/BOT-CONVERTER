@@ -22,14 +22,24 @@ export default class TelegramBot {
           parse_mode: 'Markdown',
           reply_markup: { inline_keyboard: buttons }
         });
-      } else {
-        await this.sendMessage(chatId, 'Gunakan perintah /randomip untuk mengambil IP proxy acak.');
       }
 
     } else if (callback) {
       const { data, message, from, id: callbackId } = callback;
 
-      if (data.startsWith('PAGE_')) {
+      if (data.startsWith('DETAIL_')) {
+        const code = data.split('_')[1];
+        const detailList = getIpDetail(from.id, code);
+
+        if (!detailList) {
+          await this.answerCallback(callbackId, 'Data tidak ditemukan.');
+          return;
+        }
+
+        const detailText = `*Detail IP dari ${code} ${getFlagEmoji(code)}:*\n\n${detailList.join('\n\n')}`;
+        await this.sendMessage(message.chat.id, detailText, { parse_mode: 'Markdown' });
+        await this.answerCallback(callbackId);
+      } else if (data.startsWith('PAGE_')) {
         const page = parseInt(data.split('_')[1], 10);
         const { text, buttons } = await randomip(from.id, page);
 
