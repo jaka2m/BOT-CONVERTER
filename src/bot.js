@@ -59,7 +59,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
     }
 
     // Contoh definisi HOSTKU (sesuaikan dengan konfigurasi kamu)
-     const HOSTKU = 'example.com';
+const HOSTKU = 'example.com';
 
 // Handler untuk command /randomconfig
 if (text.startsWith('/randomconfig')) {
@@ -118,6 +118,8 @@ if (text.startsWith('/listwildcard ')) {
     console.error('Error in /listwildcard:', error);
     await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
   }
+}
+
 
     // /converter command
     if (text.startsWith('/converter')) {
