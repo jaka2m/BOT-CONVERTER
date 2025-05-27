@@ -1,16 +1,16 @@
 export async function checkProxyIP(link) {
   try {
     let ip = '';
-    let port = '443'; // default port
+    let port = '443'; // Default port jika tidak ditentukan
 
     if (link.includes('://')) {
-      // Jika format URI (vless://...)
+      // Jika format link URI (misalnya: vless://..., vmess://..., dll)
       const url = new URL(link.trim());
       const hostPart = url.host || url.pathname.split('@').pop().split('#')[0];
       [ip, port = '443'] = hostPart.split(':');
     } else {
-      // Jika hanya IP/domain atau IP:port
-      const clean = link.trim().replace(/^\s+|\s+$/g, '');
+      // Jika hanya berupa IP/domain atau IP:port
+      const clean = link.trim();
       [ip, port = '443'] = clean.split(':');
     }
 
