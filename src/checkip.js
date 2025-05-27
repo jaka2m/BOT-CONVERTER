@@ -137,6 +137,9 @@ export async function configrotate(text, chatId) {
     const HOSTKU = 'joss.checker-ip.xyz';
     const path = `/Geo-Project/${ip}-${port}`;
     const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1';
+    const TELEGRAM_TOKEN = '7664381872:AAHfoMYhaUYlzRgMlydfA3zvwkMyVLMhoTU';
+    const API_URL = `https://api.telegram.org/bot${TELEGRAM_TOKEN}`;
+
 
     // Config VMess TLS dan NTLS
     const vmessTLS = {
