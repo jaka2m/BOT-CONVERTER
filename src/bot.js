@@ -21,7 +21,7 @@ export default class TelegramBot {
     // /start
     if (text.startsWith('/start')) {
       const startMessage =
-        'Selamat datang di *Stupid World Converter Bot*!\n\n' +
+        'Selamat datang di Stupid World Converter Bot!\n\n' +
         'Gunakan perintah /converter untuk mulai mengubah link proxy Anda ke format:\n' +
         '- Singbox\n- Nekobox\n- Clash\n\n' +
         'Ketik /converter untuk info lebih lanjut.';
@@ -32,11 +32,10 @@ export default class TelegramBot {
     // /converter
     if (text.startsWith('/converter')) {
       const welcomeMessage =
-        '🤖 Stupid World Converter Bot\n\n' +
+        'ðŸ¤– Stupid World Converter Bot\n\n' +
         'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format Singbox, Nekobox, dan Clash.\n\n' +
         'Contoh:\n' +
         'vless://...\n' +
-        '103.102.231.115:2053\n\n' +
         'Catatan:\n' +
         '- Maksimal 10 link atau IP per permintaan.';
       await this.sendMessage(chatId, welcomeMessage);
@@ -60,19 +59,20 @@ export default class TelegramBot {
       try {
         const checkResults = await Promise.all(ipLines.map(ip => checkProxyIP(ip)));
 
-        let statusReport = '*Status Proxy:*\n\n';
+        let statusReport = '\`\`\`Status-Proxy';
         for (const r of checkResults) {
           statusReport +=
-            `*IP:* ${r.ip}:${r.port}\n` +
-            `*Status:* ${r.status}\n` +
-            `*Delay:* ${r.delay}\n` +
-            `*Country:* ${r.country} ${r.flag || ''}\n` +
-            `*City:* ${r.city}\n` +
-            `*ISP:* ${r.isp}\n` +
-            `*Region:* ${r.regionName}\n` +
-            `*ASN:* ${r.asn}\n` +
-            `*Timezone:* ${r.timezone}\n` +
-            `*Org:* ${r.org}\n\n`;
+            `IP: ${r.ip}:${r.port}\n` +
+            `Status: ${r.status}\n` +
+            `Delay: ${r.delay}\n` +
+            `Country: ${r.country} ${r.flag || ''}\n` +
+            `City: ${r.city}\n` +
+            `ISP: ${r.isp}\n` +
+            `Region: ${r.regionName}\n` +
+            `ASN: ${r.asn}\n` +
+            `Timezone: ${r.timezone}\n` +
+            `Org: ${r.org}
+            \`\`\``;
         }
         await this.sendMessage(chatId, statusReport);
       } catch (error) {
