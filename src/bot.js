@@ -1,5 +1,4 @@
 import { randomip, getIpDetail, getFlagEmoji } from './randomip.js';
-import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
@@ -16,7 +15,7 @@ export default class TelegramBot {
       const userId = message.from.id;
       const text = message.text || '';
 
-      if (text.startsWith('/start')) {
+      if (text.startsWith('/uuu')) {
         await this.sendMessage(chatId,
           '🤖 Stupid World Converter Bot\n\nKirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox dan Clash.\n\nContoh:\nvless://...\nvmess://...\ntrojan://...\nss://...\n\nCatatan:\n- Maksimal 10 link per permintaan.\n- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.\n\nBaca baik-baik dulu sebelum nanya.'
         );
