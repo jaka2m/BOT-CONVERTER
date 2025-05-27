@@ -27,8 +27,9 @@ export default class TelegramBot {
       await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
       return new Response('OK', { status: 200 });
     }
-    
-    if (text.startsWith("/config")) {
+
+    // /config command
+    if (text.startsWith('/config')) {
       await this.sendMessage(
         chatId,
         `🌟 *PANDUAN CONFIG ROTATE* 🌟
@@ -46,37 +47,35 @@ Contoh:
 \`/rotate my\`
 
 Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.`,
-        { parse_mode: "Markdown" }
+        { parse_mode: 'Markdown' }
       );
       return new Response('OK', { status: 200 });
     }
 
-    if (text.startsWith("/rotate ")) {
+    // /rotate command
+    if (text.startsWith('/rotate ')) {
       await rotateconfig.call(this, chatId, text);
       return new Response('OK', { status: 200 });
     }
 
-    return new Response('OK', { status: 200 });
-  }
+    // /randomconfig command
+    if (text.startsWith('/randomconfig')) {
+      const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
 
-    // Di dalam handleUpdate, sebelum return Response
-if (text.startsWith('/randomconfig')) {
-  const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
+      try {
+        const configText = await randomconfig(); // pastikan fungsi ini mengembalikan konfigurasi proxy dalam format teks
+        await this.sendMessage(chatId, `Berikut konfigurasi acak:\n\n${configText}`, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.error('Error generating random config:', error);
+        await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi acak: ${error.message}`);
+      }
 
-  try {
-    const configText = await randomconfig(); // pastikan fungsi ini mengembalikan konfigurasi proxy dalam format teks
-    await this.sendMessage(chatId, `Berikut konfigurasi acak:\n\n${configText}`, { parse_mode: 'Markdown' });
-  } catch (error) {
-    console.error('Error generating random config:', error);
-    await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi acak: ${error.message}`);
-  }
+      if (loadingMsg && loadingMsg.message_id) {
+        await this.deleteMessage(chatId, loadingMsg.message_id);
+      }
 
-  if (loadingMsg && loadingMsg.message_id) {
-    await this.deleteMessage(chatId, loadingMsg.message_id);
-  }
-
-  return new Response('OK', { status: 200 });
-}
+      return new Response('OK', { status: 200 });
+    }
 
     // /converter command
     if (text.startsWith('/converter')) {
