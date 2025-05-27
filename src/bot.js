@@ -18,69 +18,77 @@ export default class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    // Pesan sambutan saat user mengirim /start
+    // /start
     if (text.startsWith('/start')) {
       const startMessage =
         'Selamat datang di *Stupid World Converter Bot*!\n\n' +
-        'Gunakan perintah /converter untuk memulai mengubah link proxy Anda ke format:\n' +
+        'Gunakan perintah /converter untuk mulai mengubah link proxy Anda ke format:\n' +
         '- Singbox\n- Nekobox\n- Clash\n\n' +
-        'Bot ini mendukung format VMess, VLESS, Trojan, dan Shadowsocks.\n\n' +
         'Ketik /converter untuk info lebih lanjut.';
       await this.sendMessage(chatId, startMessage);
       return new Response('OK', { status: 200 });
     }
 
+    // /converter
     if (text.startsWith('/converter')) {
-      const welcomeMessage = 
+      const welcomeMessage =
         '🤖 Stupid World Converter Bot\n\n' +
-        'Kirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox, dan Clash.\n\n' +
+        'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format Singbox, Nekobox, dan Clash.\n\n' +
         'Contoh:\n' +
         'vless://...\n' +
-        'vmess://...\n' +
-        'trojan://...\n' +
-        'ss://...\n\n' +
+        '103.102.231.115:2053\n\n' +
         'Catatan:\n' +
-        '- Maksimal 10 link per permintaan.\n' +
-        '- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.\n\n' +
-        'Baca baik-baik dulu sebelum nanya.';
+        '- Maksimal 10 link atau IP per permintaan.';
       await this.sendMessage(chatId, welcomeMessage);
+      return new Response('OK', { status: 200 });
+    }
 
-    } else if (text.includes('://')) {
+    // Deteksi apakah teks berisi URI atau IP:PORT
+    const isProxyFormat = text.includes('://') || /^\d{1,3}(\.\d{1,3}){3}:\d+/.test(text);
+
+    if (isProxyFormat) {
       try {
+        // Ambil hingga 10 baris proxy yang valid
         const links = text
           .split('\n')
           .map(line => line.trim())
-          .filter(line => line.includes('://'))
-          .slice(0, 10);  // batasi max 10
+          .filter(line =>
+            line.includes('://') || /^\d{1,3}(\.\d{1,3}){3}:\d+/.test(line)
+          )
+          .slice(0, 10);
 
         if (links.length === 0) {
-          await this.sendMessage(chatId, 'Tidak ditemukan link valid. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
+          await this.sendMessage(chatId, 'Tidak ditemukan link/IP yang valid. Gunakan format VMess/VLESS/Trojan/SS atau IP:PORT.');
           return new Response('OK', { status: 200 });
         }
 
+        // Cek IP satu per satu
         const checkResults = await Promise.all(links.map(link => checkProxyIP(link)));
 
-        let statusReport = 'Status Proxy:\n';
+        let statusReport = '*Status Proxy:*\n';
         for (const r of checkResults) {
-          statusReport += `- ${r.ip} (${r.country}): ${r.status}, Delay: ${r.delay}, ISP: ${r.isp}\n`;
+          statusReport += `- ${r.ip}:${r.port} (${r.country}) — *${r.status}*, Delay: ${r.delay}\n`;
         }
         await this.sendMessage(chatId, statusReport);
 
-        const clashConfig = generateClashConfig(links, true);
-        const nekoboxConfig = generateNekoboxConfig(links, true);
-        const singboxConfig = generateSingboxConfig(links, true);
+        // Hanya generate config jika URI (bukan IP:PORT saja)
+        const hasURI = links.some(link => link.includes('://'));
+        if (hasURI) {
+          const clashConfig = generateClashConfig(links, true);
+          const nekoboxConfig = generateNekoboxConfig(links, true);
+          const singboxConfig = generateSingboxConfig(links, true);
 
-        await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
-        await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
-        await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
+          await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
+          await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
+          await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
+        }
 
       } catch (error) {
         console.error('Error processing links:', error);
         await this.sendMessage(chatId, `Terjadi kesalahan: ${error.message}`);
       }
-
     } else {
-      await this.sendMessage(chatId, 'Silakan kirim link VMess, VLESS, Trojan, atau Shadowsocks untuk dikonversi.');
+      await this.sendMessage(chatId, 'Silakan kirim link VMess/VLESS/Trojan/SS atau format IP:PORT untuk dicek.');
     }
 
     return new Response('OK', { status: 200 });
