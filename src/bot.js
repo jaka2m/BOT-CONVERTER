@@ -20,7 +20,7 @@ export default class TelegramBot {
       const userId = message.from.id;
       const text = message.text || '';
 
-      // /start command
+      // Handle /start command
       if (text.startsWith('/start')) {
         const startMessage =
           'Selamat datang di *Stupid World Converter Bot!*\n\n' +
@@ -33,7 +33,7 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-      // /config command
+      // Handle /config command
       if (text.startsWith('/config')) {
         await this.sendMessage(
           chatId,
@@ -57,17 +57,21 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      // /rotate command
+      // Handle /rotate command
       if (text.startsWith('/rotate ')) {
         await rotateconfig.call(this, chatId, text);
         return new Response('OK', { status: 200 });
       }
 
-      // Handler untuk command /randomconfig
+      // Definisi HOSTKU (sesuaikan)
+      const HOSTKU = 'example.com';
+
+      // Handle /randomconfig command
       if (text.startsWith('/randomconfig')) {
         const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
+
         try {
-          const configText = await randomconfig();
+          const configText = await randomconfig(); // fungsi randomconfig() sudah return string konfigurasi
           await this.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
         } catch (error) {
           console.error('Error generating random config:', error);
@@ -81,16 +85,29 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      // Handler untuk command /listwildcard
+      // Handle /listwildcard command
       if (text.startsWith('/listwildcard')) {
         try {
-          const HOSTKU = 'example.com';
           const wildcards = [
-            "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "ava.game.naver.com",
-            "graph.instagram.com", "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
-            "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
-            "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
+            "ava.game.naver.com",
+            "joss.checker-ip.xyz",
+            "business.blibli.com",
+            "ava.game.naver.com",
+            "graph.instagram.com",
+            "quiz.int.vidio.com",
+            "live.iflix.com",
+            "support.zoom.us",
+            "blog.webex.com",
+            "investors.spotify.com",
+            "cache.netflix.com",
+            "zaintest.vuclip.com",
+            "io.ruangguru.com",
+            "api.midtrans.com",
+            "investor.fb.com",
+            "bakrie.ac.id"
           ];
+
+          const total = wildcards.length;
 
           let configText = `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n`;
 
@@ -98,7 +115,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
             configText += `*${index + 1}.* \`${domain}.${HOSTKU}\`\n`;
           });
 
-          configText += `\n📦 *Total:* ${wildcards.length} wildcard\n`;
+          configText += `\n📦 *Total:* ${total} wildcard\n`;
           configText += `\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
 
           await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
@@ -106,11 +123,10 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
           console.error('Error in /listwildcard:', error);
           await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
         }
-
         return new Response('OK', { status: 200 });
       }
 
-      // /converter command
+      // Handle /converter command
       if (text.startsWith('/converter')) {
         const infoMessage =
           '🧠 *Stupid World Converter Bot*\n\n' +
@@ -133,6 +149,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
       const ipLines = lines.filter(line => ipPortRegex.test(line));
       const proxyUrls = lines.filter(line => proxyUrlRegex.test(line));
 
+      // Jika ada IP:PORT, cek info IP
       if (ipLines.length > 0) {
         const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Cek IP sedang berlangsung...');
 
@@ -166,6 +183,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         }
       }
 
+      // Jika ada proxy URLs, generate konfigurasi
       if (proxyUrls.length > 0) {
         try {
           const clashConfig = generateClashConfig(proxyUrls, true);
@@ -181,10 +199,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         }
       }
 
-      return new Response('OK', { status: 200 });
-    }
-
-    if (callback) {
+    } else if (callback) {
       await handleCallback({
         callback,
         sendMessage: this.sendMessage.bind(this),
@@ -198,19 +213,24 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
     return new Response('OK', { status: 200 });
   }
 
+  // Kirim pesan teks ke chat
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const payload = { chat_id: chatId, text, ...options };
+    const payload = {
+      chat_id: chatId,
+      text,
+      ...options
+    };
 
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-
     return response.json();
   }
 
+  // Kirim pesan dan kembalikan hasilnya untuk bisa dihapus
   async sendMessageWithDelete(chatId, text) {
     try {
       const res = await this.sendMessage(chatId, text);
@@ -221,17 +241,21 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
     }
   }
 
+  // Hapus pesan
   async deleteMessage(chatId, messageId) {
     const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, message_id: messageId })
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId
+      })
     });
-
     return response.json();
   }
 
+  // Kirim dokumen (file konfigurasi)
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
