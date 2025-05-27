@@ -1,44 +1,49 @@
 export async function checkProxyIP(link) {
   try {
     let ip = '';
-    let port = '443'; // Default port jika tidak ditentukan
+    let port = '443'; // default port
 
-    if (link.includes('://')) {
-      // Jika format link URI (misalnya: vless://..., vmess://..., dll)
-      const url = new URL(link.trim());
-      const hostPart = url.host || url.pathname.split('@').pop().split('#')[0];
-      [ip, port = '443'] = hostPart.split(':');
-    } else {
-      // Jika hanya berupa IP/domain atau IP:port
-      const clean = link.trim();
-      [ip, port = '443'] = clean.split(':');
+    // Format hanya menerima IP atau IP:PORT
+    const clean = link.trim();
+    [ip, port = '443'] = clean.split(':');
+
+    // Validasi sederhana: IP harus punya 4 bagian numerik
+    const isValidIP = ip.match(/^(\d{1,3}\.){3}\d{1,3}$/);
+    if (!isValidIP) {
+      throw new Error('Invalid IP format');
     }
 
     const res = await fetch(`https://api.checker-ip.web.id/check?ip=${ip}:${port}`);
     const data = await res.json();
 
     return {
-      status: data.status || 'UNKNOWN',
       ip: data.ip || ip,
       port: data.port || port,
+      status: data.status || 'UNKNOWN',
+      delay: data.delay || '-',
       country: data.country || '-',
       flag: data.flag || '',
       city: data.city || '-',
       isp: data.isp || '-',
-      delay: data.delay || '-',
-      org: data.org || '-',
+      regionName: data.regionName || '-',
+      asn: data.asn ? `AS${data.asn}` : '-',
+      timezone: data.timezone || '-',
+      org: data.org || '-'
     };
   } catch (error) {
     return {
-      status: 'ERROR',
       ip: '-',
       port: '-',
+      status: 'ERROR',
+      delay: '-',
       country: '-',
       flag: '',
       city: '-',
       isp: '-',
-      delay: '-',
-      org: '-',
+      regionName: '-',
+      asn: '-',
+      timezone: '-',
+      org: '-'
     };
   }
 }
