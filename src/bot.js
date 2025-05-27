@@ -13,82 +13,92 @@ export default class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    // /start
-    if (text.startsWith('/start')) {
-      const startMessage =
-        'Selamat datang di Stupid World Converter Bot!\n\n' +
-        'Gunakan perintah /converter untuk mulai mengubah link proxy Anda ke format:\n' +
-        '- Singbox\n- Nekobox\n- Clash\n\n' +
-        'Ketik /converter untuk info lebih lanjut.';
-      await this.sendMessage(chatId, startMessage);
-      return new Response('OK', { status: 200 });
+   // /start
+  if (text.startsWith('/start')) {
+    const startMessage =
+      'Selamat datang di *Stupid World Converter Bot!*\n\n' +
+      'Gunakan perintah:\n' +
+      '• `/converter` — untuk mengubah link proxy ke format:\n' +
+      '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
+      '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
+      'Ketik `/converter` untuk info lebih lanjut.';
+    await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
+    return new Response('OK', { status: 200 });
+  }
+
+  // /converter
+  if (text.startsWith('/converter')) {
+    const infoMessage =
+      '🧠 *Stupid World Converter Bot*\n\n' +
+      'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
+      '- Singbox\n- Nekobox\n- Clash\n\n' +
+      '*Contoh:*\n' +
+      '`vless://...`\n' +
+      '`104.21.75.43:443`\n\n' +
+      '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
+    await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
+    return new Response('OK', { status: 200 });
+  }
+
+  // /randomip
+  if (text.startsWith('/randomip')) {
+    const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Mengambil IP proxy acak...');
+
+    try {
+      const randomIPText = await randomip();
+      await this.sendMessage(chatId, randomIPText, { parse_mode: 'Markdown' });
+    } catch (error) {
+      console.error('Error getting random IPs:', error);
+      await this.sendMessage(chatId, `Terjadi kesalahan: ${error.message}`);
     }
 
-    // /randomconfig
-    if (text.startsWith('/randomconfig')) {
-      try {
-        const result = await randomconfig();
-        await this.sendMessage(chatId, result);
-      } catch (e) {
-        await this.sendMessage(chatId, `⚠️ Error: ${e.message}`);
-      }
-      return new Response('OK', { status: 200 });
+    if (loadingMsg && loadingMsg.message_id) {
+      await this.deleteMessage(chatId, loadingMsg.message_id);
     }
 
-    // /converter
-    if (text.startsWith('/converter')) {
-      const infoMessage =
-        '🤖 *Stupid World Converter Bot*\n\n' +
-        'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
-        '- Singbox\n- Nekobox\n- Clash\n\n' +
-        '*Contoh:*\n' +
-        '`vless://...`\n\n' +
-        '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
-      await this.sendMessage(chatId, infoMessage);
-      return new Response('OK', { status: 200 });
+    return new Response('OK', { status: 200 });
+  }
+
+  // Validasi input umum
+  const ipPortRegex = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
+  const proxyUrlRegex = /^(vless|vmess|trojan|ss):\/\/.+$/i;
+
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean).slice(0, 10);
+  const ipLines = lines.filter(line => ipPortRegex.test(line));
+  const proxyUrls = lines.filter(line => proxyUrlRegex.test(line));
+
+  // Cek IP:PORT
+  if (ipLines.length > 0) {
+    const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Cek IP sedang berlangsung...');
+
+    try {
+      const results = await Promise.all(ipLines.map(ip => checkProxyIP(ip)));
+
+      let report = '```INFORMATION\n';
+      for (const r of results) {
+        report +=
+          `IP       : ${r.ip}:${r.port}\n` +
+          `Status   : ${r.status}\n` +
+          `Delay    : ${r.delay}\n` +
+          `Country  : ${r.country}\n` +
+          `City     : ${r.city}\n` +
+          `ISP      : ${r.isp}\n` +
+          `Region   : ${r.regionName}\n` +
+          `ASN      : ${r.asn}\n` +
+          `Timezone : ${r.timezone}\n` +
+          `Org      : ${r.org}\n\n`;
+      }
+      report += '```';
+
+      await this.sendMessage(chatId, report, { parse_mode: 'Markdown' });
+    } catch (error) {
+      console.error('IP Check Error:', error);
+      await this.sendMessage(chatId, `Terjadi kesalahan saat cek IP: ${error.message}`);
     }
 
-    // Validasi input
-    const ipPortRegex = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
-    const proxyUrlRegex = /^(vless|vmess|trojan|ss):\/\/.+$/i;
-
-    const lines = text.split('\n').map(line => line.trim()).filter(Boolean).slice(0, 10);
-    const ipLines = lines.filter(line => ipPortRegex.test(line));
-    const proxyUrls = lines.filter(line => proxyUrlRegex.test(line));
-
-    // Proses IP Check
-    if (ipLines.length > 0) {
-      const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳');
-
-      try {
-        const checkResults = await Promise.all(ipLines.map(ip => checkProxyIP(ip)));
-
-        let statusReport = '```INFORMATION\n';
-        for (const r of checkResults) {
-          statusReport +=
-            `IP       : ${r.ip}:${r.port}\n` +
-            `Status   : ${r.status}\n` +
-            `Delay    : ${r.delay}\n` +
-            `Country  : ${r.country}\n` +
-            `City     : ${r.city}\n` +
-            `ISP      : ${r.isp}\n` +
-            `Region   : ${r.regionName}\n` +
-            `ASN      : ${r.asn}\n` +
-            `Timezone : ${r.timezone}\n` +
-            `Org      : ${r.org}\n\n`;
-        }
-        statusReport += '```';
-
-        await this.sendMessage(chatId, statusReport);
-      } catch (error) {
-        console.error('Error checking IP:', error);
-        await this.sendMessage(chatId, `Terjadi kesalahan saat cek IP: ${error.message}`);
-      }
-
-      // Hapus pesan loading
-      if (loadingMsg && loadingMsg.message_id) {
-        await this.deleteMessage(chatId, loadingMsg.message_id);
-      }
+    if (loadingMsg && loadingMsg.message_id) {
+      await this.deleteMessage(chatId, loadingMsg.message_id);
+    }
     }
 
     // Generate Config jika ada proxy URL
