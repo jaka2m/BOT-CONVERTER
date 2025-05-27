@@ -1,5 +1,4 @@
 import {
-  vpncf,
   createProtocolInlineKeyboard,
   createInitialWildcardInlineKeyboard,
   createWildcardOptionsInlineKeyboard,
