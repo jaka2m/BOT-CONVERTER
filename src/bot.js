@@ -52,7 +52,7 @@ export default class TelegramBot {
 
     // Proses IP Check
     if (ipLines.length > 0) {
-      const loadingMsg = await this.sendMessageWithDelete(chatId, '_⏳_');
+      const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳');
 
       try {
         const checkResults = await Promise.all(ipLines.map(ip => checkProxyIP(ip)));
