@@ -1,5 +1,3 @@
-// randomip.js
-
 const ipDetailsMap = new Map();
 
 export function getFlagEmoji(countryCode = '') {
@@ -9,7 +7,13 @@ export function getFlagEmoji(countryCode = '') {
     : '';
 }
 
-export async function randomip(userId) {
+/**
+ * Menghasilkan teks dan tombol dengan paging.
+ * @param {string|number} userId 
+ * @param {number} page - halaman mulai 1
+ * @returns {Promise<{text:string, buttons:Array}>}
+ */
+export async function randomip(userId, page = 1) {
   try {
     const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
     const ipText = await response.text();
@@ -22,17 +26,16 @@ export async function randomip(userId) {
       return { text: '❌ Tidak ada IP yang tersedia.', buttons: [] };
     }
 
+    // Ambil 100 IP random supaya paging lebih berasa (atau bisa sesuai kebutuhan)
     const shuffled = ipList.sort(() => 0.5 - Math.random());
-    const selectedIPs = shuffled.slice(0, 20);
+    const totalIPs = Math.min(100, shuffled.length);
+    const selectedIPs = shuffled.slice(0, totalIPs);
 
-    let text = `🔑 *Here are ${selectedIPs.length} random Proxy IPs:*\n\nTekan bendera untuk detail:\n`;
-    const buttons = [];
+    // Kelompokkan detail by country code
     const detailsByCountry = {};
-
     selectedIPs.forEach(line => {
       const [ip, port, code, isp] = line.split(',');
       const flag = getFlagEmoji(code);
-
       const detail = `📍 *IP:PORT*: \`${ip}:${port}\`\n🌐 *Country*: ${code} ${flag}\n💻 *ISP*: ${isp}`;
       if (!detailsByCountry[code]) {
         detailsByCountry[code] = [];
@@ -40,15 +43,41 @@ export async function randomip(userId) {
       detailsByCountry[code].push(detail);
     });
 
-    for (const code in detailsByCountry) {
-      buttons.push([{
-        text: getFlagEmoji(code),
-        callback_data: `DETAIL_${code}`
-      }]);
-    }
-
+    // Simpan ke map untuk user
     ipDetailsMap.set(userId, detailsByCountry);
 
+    // Buat tombol per negara, 5 per baris
+    const countryCodes = Object.keys(detailsByCountry).sort();
+    const buttonsPerPage = 25; // 5 baris * 5 tombol
+    const totalPages = Math.ceil(countryCodes.length / buttonsPerPage);
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+
+    const start = (page - 1) * buttonsPerPage;
+    const end = start + buttonsPerPage;
+    const pageCountries = countryCodes.slice(start, end);
+
+    // Tombol negara 5 per baris
+    const buttons = [];
+    for (let i = 0; i < pageCountries.length; i += 5) {
+      const row = pageCountries.slice(i, i + 5).map(code => ({
+        text: getFlagEmoji(code) + ' ' + code,
+        callback_data: `DETAIL_${code}`
+      }));
+      buttons.push(row);
+    }
+
+    // Tambahkan tombol Prev/Next jika lebih dari 1 halaman
+    const navButtons = [];
+    if (page > 1) {
+      navButtons.push({ text: '⬅️ Prev', callback_data: `PAGE_${page - 1}` });
+    }
+    if (page < totalPages) {
+      navButtons.push({ text: 'Next ➡️', callback_data: `PAGE_${page + 1}` });
+    }
+    if (navButtons.length) buttons.push(navButtons);
+
+    const text = `🔑 *Here are ${totalIPs} random Proxy IPs:*\n\nTekan bendera untuk detail:\nHalaman ${page} dari ${totalPages}`;
     return { text, buttons };
   } catch (error) {
     return { text: '❌ Gagal mengambil data IP.', buttons: [] };
