@@ -64,7 +64,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
 
       try {
         const configText = await randomconfig(); // pastikan fungsi ini mengembalikan konfigurasi proxy dalam format teks
-        await this.sendMessage(chatId, `Berikut konfigurasi acak:\n\n${configText}`, { parse_mode: 'Markdown' });
+        await this.sendMessage(chatId, ` ${configText}`, { parse_mode: 'Markdown' });
       } catch (error) {
         console.error('Error generating random config:', error);
         await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi acak: ${error.message}`);
