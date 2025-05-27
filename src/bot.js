@@ -58,24 +58,66 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
       return new Response('OK', { status: 200 });
     }
 
-    // /randomconfig command
-    if (text.startsWith('/randomconfig')) {
-      const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
+    // Contoh definisi HOSTKU (sesuaikan dengan konfigurasi kamu)
+     const HOSTKU = 'example.com';
 
-      try {
-        const configText = await randomconfig(); // pastikan fungsi ini mengembalikan konfigurasi proxy dalam format teks
-        await this.sendMessage(chatId, ` ${configText}`, { parse_mode: 'Markdown' });
-      } catch (error) {
-        console.error('Error generating random config:', error);
-        await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi acak: ${error.message}`);
-      }
+// Handler untuk command /randomconfig
+if (text.startsWith('/randomconfig')) {
+  const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
 
-      if (loadingMsg && loadingMsg.message_id) {
-        await this.deleteMessage(chatId, loadingMsg.message_id);
-      }
+  try {
+    const configText = await randomconfig(); // fungsi randomconfig() sudah return string konfigurasi
+    await this.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
+  } catch (error) {
+    console.error('Error generating random config:', error);
+    await this.sendMessage(chatId, `⚠️ Terjadi kesalahan saat generate konfigurasi acak:\n${error.message}`);
+  }
 
-      return new Response('OK', { status: 200 });
-    }
+  if (loadingMsg && loadingMsg.message_id) {
+    await this.deleteMessage(chatId, loadingMsg.message_id);
+  }
+
+  return new Response('OK', { status: 200 });
+}
+
+// Handler untuk command /listwildcard
+if (text.startsWith('/listwildcard ')) {
+  try {
+    const wildcards = [
+      "ava.game.naver.com",
+      "joss.checker-ip.xyz",
+      "business.blibli.com",
+      "ava.game.naver.com",
+      "graph.instagram.com",
+      "quiz.int.vidio.com",
+      "live.iflix.com",
+      "support.zoom.us",
+      "blog.webex.com",
+      "investors.spotify.com",
+      "cache.netflix.com",
+      "zaintest.vuclip.com",
+      "io.ruangguru.com",
+      "api.midtrans.com",
+      "investor.fb.com",
+      "bakrie.ac.id"
+    ];
+
+    const total = wildcards.length;
+
+    let configText = `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n`;
+
+    wildcards.forEach((domain, index) => {
+      configText += `*${index + 1}.* \`${domain}.${HOSTKU}\`\n`;
+    });
+
+    configText += `\n📦 *Total:* ${total} wildcard\n`;
+    configText += `\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
+
+    await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
+  } catch (error) {
+    console.error('Error in /listwildcard:', error);
+    await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
+  }
 
     // /converter command
     if (text.startsWith('/converter')) {
