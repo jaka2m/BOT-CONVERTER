@@ -1,6 +1,6 @@
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
 import { checkProxyIP, randomconfig } from './checkip.js';
-import { randomip } from './randomip.js';
+import { uu } from './randomip.js';
 import { rotateconfig } from './config.js';
 
 export default class TelegramBot {
@@ -136,7 +136,7 @@ if (text.startsWith('/listwildcard')) {
     }
 
     // /randomip command
-    if (text.startsWith('/randomip')) {
+    if (text.startsWith('/uu')) {
       const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Mengambil IP proxy acak...');
 
       try {
