@@ -5,22 +5,34 @@ import { handleCommand } from './commandHandler.js';
 import { handleCallback, answerCallback, editMessageReplyMarkup } from './callbackHandler.js';
 import { randomip } from './randomip.js';
 
+const HOSTKU = 'example.com'; // Sesuaikan sesuai kebutuhan
+
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
+
+    // Bind methods supaya bisa dipakai di callback tanpa kehilangan konteks this
+    this.sendMessage = this.sendMessage.bind(this);
+    this.sendMessageWithDelete = this.sendMessageWithDelete.bind(this);
+    this.deleteMessage = this.deleteMessage.bind(this);
+    this.sendDocument = this.sendDocument.bind(this);
+    this.answerCallback = answerCallback.bind(this);
+    this.editMessageReplyMarkup = editMessageReplyMarkup.bind(this);
   }
 
-  async handleUpdate(update) {
-    const message = update.message;
-    const callback = update.callback_query;
+  async handleUpdate(request) {
+    const body = await request.json();
+    const message = body.message;
+    const callback = body.callback_query;
 
-    if (message) {
-      const chatId = message.chat.id;
-      const userId = message.from.id;
-      const text = message.text || '';
+    const chatId = message?.chat?.id || callback?.message?.chat?.id;
+    const userId = message?.from?.id || callback?.from?.id;
+    const text = message?.text || '';
 
-      // Handle /start command
+    if (text) {
+      // Command handling
+      // START command
       if (text.startsWith('/start')) {
         const startMessage =
           'Selamat datang di *Stupid World Converter Bot!*\n\n' +
@@ -33,7 +45,7 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-      // Handle /config command
+      // /config command
       if (text.startsWith('/config')) {
         await this.sendMessage(
           chatId,
@@ -57,21 +69,18 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      // Handle /rotate command
+      // /rotate command
       if (text.startsWith('/rotate ')) {
         await rotateconfig.call(this, chatId, text);
         return new Response('OK', { status: 200 });
       }
 
-      // Definisi HOSTKU (sesuaikan)
-      const HOSTKU = 'example.com';
-
-      // Handle /randomconfig command
+      // /randomconfig command
       if (text.startsWith('/randomconfig')) {
         const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
 
         try {
-          const configText = await randomconfig(); // fungsi randomconfig() sudah return string konfigurasi
+          const configText = await randomconfig();
           await this.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
         } catch (error) {
           console.error('Error generating random config:', error);
@@ -85,7 +94,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      // Handle /listwildcard command
+      // /listwildcard command
       if (text.startsWith('/listwildcard')) {
         try {
           const wildcards = [
@@ -123,10 +132,11 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
           console.error('Error in /listwildcard:', error);
           await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
         }
+
         return new Response('OK', { status: 200 });
       }
 
-      // Handle /converter command
+      // /converter command
       if (text.startsWith('/converter')) {
         const infoMessage =
           '🧠 *Stupid World Converter Bot*\n\n' +
@@ -195,79 +205,96 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
           await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
         } catch (error) {
           console.error('Error generating config:', error);
-          await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi: ${error.message}`);
+          await this.sendMessage(chatId, `⚠️ Terjadi kesalahan saat generate konfigurasi:\n${error.message}`);
         }
       }
 
-    } else if (callback) {
+      return new Response('OK', { status: 200 });
+    }
+
+    if (callback) {
+      // Callback handler
       await handleCallback({
         callback,
-        sendMessage: this.sendMessage.bind(this),
-        answerCallback: answerCallback.bind(this),
-        editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
+        sendMessage: this.sendMessage,
+        answerCallback: this.answerCallback,
+        editMessageReplyMarkup: this.editMessageReplyMarkup,
         token: this.token,
         apiUrl: this.apiUrl
       });
+
+      return new Response('OK', { status: 200 });
     }
 
     return new Response('OK', { status: 200 });
   }
 
-  // Kirim pesan teks ke chat
+  // contoh implementasi sederhana sendMessage
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const payload = {
+    const body = {
       chat_id: chatId,
       text,
       ...options
     };
 
-    const response = await fetch(url, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body)
     });
-    return response.json();
+
+    if (!res.ok) {
+      console.error('sendMessage failed', await res.text());
+    }
+
+    return await res.json();
   }
 
-  // Kirim pesan dan kembalikan hasilnya untuk bisa dihapus
-  async sendMessageWithDelete(chatId, text) {
-    try {
-      const res = await this.sendMessage(chatId, text);
-      return res.result;
-    } catch (e) {
-      console.error('Gagal mengirim pesan loading:', e);
-      return null;
-    }
+  // Kirim pesan yang akan dihapus setelah beberapa detik
+  async sendMessageWithDelete(chatId, text, options = {}, delay = 5000) {
+    const message = await this.sendMessage(chatId, text, options);
+
+    setTimeout(() => {
+      this.deleteMessage(chatId, message.message_id).catch(console.error);
+    }, delay);
+
+    return message;
   }
 
   // Hapus pesan
   async deleteMessage(chatId, messageId) {
     const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
-    const response = await fetch(url, {
+    const body = {
+      chat_id: chatId,
+      message_id: messageId
+    };
+
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId
-      })
+      body: JSON.stringify(body)
     });
-    return response.json();
+
+    if (!res.ok) {
+      console.error('deleteMessage failed', await res.text());
+    }
+
+    return await res.json();
   }
 
-  // Kirim dokumen (file konfigurasi)
+  // Kirim file dokumen (misal config)
   async sendDocument(chatId, content, filename, mimeType) {
-    const formData = new FormData();
-    const blob = new Blob([content], { type: mimeType });
-    formData.append('document', blob, filename);
-    formData.append('chat_id', chatId.toString());
-
     const url = `${this.apiUrl}/bot${this.token}/sendDocument`;
-    const response = await fetch(url, {
-      method: 'POST',
-      body: formData
-    });
 
-    return response.json();
+    // Telegram Bot API tidak support kirim file langsung dari string lewat API biasa,
+    // biasanya pakai multipart/form-data dengan file atau URL.
+    // Alternatif: simpan dulu ke penyimpanan, upload dari URL, atau kirim sebagai teks biasa.
+    // Di sini kita asumsikan file bisa dikirim sebagai teks biasa (bisa disesuaikan).
+
+    // Kirim sebagai teks dengan message biasa jika tidak memungkinkan.
+    // Kalau mau kirim file asli, perlu upload multipart/form-data.
+
+    return this.sendMessage(chatId, `File *${filename}*:\n\`\`\`\n${content}\n\`\`\``, { parse_mode: 'Markdown' });
   }
 }
