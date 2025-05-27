@@ -7,7 +7,7 @@ export async function checkProxyIP(link) {
     const clean = link.trim();
     [ip, port = '443'] = clean.split(':');
 
-    // Validasi IP format
+    // Validasi format IP
     const isValidIP = ip.match(/^(\d{1,3}\.){3}\d{1,3}$/);
     if (!isValidIP) throw new Error('Invalid IP format');
 
@@ -47,13 +47,11 @@ export async function checkProxyIP(link) {
 }
 
 // Helper untuk konversi kode negara jadi emoji bendera
-function getFlagEmoji(countryCode) {
-  if (!countryCode || countryCode.length !== 2) return '';
-  return countryCode
-    .toUpperCase()
-    .split('')
-    .map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65))
-    .join('');
+function getFlagEmoji(countryCode = '') {
+  const code = countryCode.trim().toUpperCase();
+  return code.length === 2
+    ? String.fromCodePoint(...[...code].map(c => 0x1f1e6 + c.charCodeAt(0) - 65))
+    : '';
 }
 
 // Simple UUID v4 generator
@@ -67,7 +65,7 @@ function generateUUID() {
 
 // Fungsi utama generate config proxy random
 export async function randomconfig() {
-  const HOSTKU = 'joss.checker-ip.xyz'; // Ganti dengan host kamu
+  const HOSTKU = 'example.com'; // Ganti dengan host kamu
 
   // Ambil list proxy dari file txt
   const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/main/cek/proxyList.txt');
@@ -160,6 +158,7 @@ ${ssntls}
   return configText;
 }
 
+// Fungsi mengambil 20 IP proxy random
 export async function randomip() {
   try {
     const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
@@ -189,12 +188,4 @@ export async function randomip() {
   } catch (error) {
     return '❌ Gagal mengambil data IP.';
   }
-}
-
-// Fungsi tambahan untuk mengubah kode negara jadi emoji bendera
-function getFlagEmoji(countryCode = '') {
-  const code = countryCode.trim().toUpperCase();
-  return code.length === 2
-    ? String.fromCodePoint(...[...code].map(c => 0x1f1e6 + c.charCodeAt(0) - 65))
-    : '';
 }
