@@ -1,5 +1,6 @@
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
-import { checkProxyIP, randomconfig, randomip } from './checkip.js';
+import { checkProxyIP, randomconfig } from './checkip.js';
+import { randomip } from './randomip.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
