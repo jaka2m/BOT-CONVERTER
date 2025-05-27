@@ -5,4 +5,4 @@ workers_dev = true
 main = "src/worker.js"
 
 [vars]
-TELEGRAM_BOT_TOKEN = "7626291818:AAG7dEWhfWZ4u8j9i7JWQ71vzNpz9h7UZq1"  # Will be overridden by GitHub Secrets
+TELEGRAM_BOT_TOKEN = "7664381872:AAHfoMYhaUYlzRgMlydfA3zvwkMyVLMhoTU"  # Will be overridden by GitHub Secrets
