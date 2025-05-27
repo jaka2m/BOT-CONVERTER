@@ -71,18 +71,16 @@ export async function randomip(userId, page = 1) {
 
     // Tombol navigasi Prev / Next selalu tampil
     const navButtons = [];
-    // Tombol Prev selalu muncul, tapi callback ke halaman minimal 1
+    // Tombol Prev selalu muncul, callback ke minimal 1
     navButtons.push({
       text: '⬅️ Prev',
       callback_data: `PAGE_${page > 1 ? page - 1 : 1}`
     });
-    // Tombol Next muncul hanya jika belum di halaman terakhir
-    if (page < totalPages) {
-      navButtons.push({
-        text: 'Next ➡️',
-        callback_data: `PAGE_${page + 1}`
-      });
-    }
+    // Tombol Next selalu muncul, callback ke maksimal totalPages
+    navButtons.push({
+      text: 'Next ➡️',
+      callback_data: `PAGE_${page < totalPages ? page + 1 : totalPages}`
+    });
 
     buttons.push(navButtons);
 
