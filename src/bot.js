@@ -1,4 +1,10 @@
-import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
+import {
+  generateClashConfig,
+  generateNekoboxConfig,
+  generateSingboxConfig
+} from './configGenerators.js';
+
+import { checkProxyIP } from './checkip.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
@@ -12,33 +18,69 @@ export default class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
+    // Pesan sambutan saat user mengirim /start
     if (text.startsWith('/start')) {
-      await this.sendMessage(chatId, '🤖 Stupid World Converter Bot\n\nKirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox,Nekobox Dan Clash.\n\nContoh:\nvless://...\nvmess://...\ntrojan://...\nss://...\n\nCatatan:\n- Maksimal 10 link per permintaan.\n- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.\n\nbaca baik-baik dulu sebelum nanya.');
+      const startMessage =
+        'Selamat datang di *Stupid World Converter Bot*!\n\n' +
+        'Gunakan perintah /converter untuk memulai mengubah link proxy Anda ke format:\n' +
+        '- Singbox\n- Nekobox\n- Clash\n\n' +
+        'Bot ini mendukung format VMess, VLESS, Trojan, dan Shadowsocks.\n\n' +
+        'Ketik /converter untuk info lebih lanjut.';
+      await this.sendMessage(chatId, startMessage);
+      return new Response('OK', { status: 200 });
+    }
+
+    if (text.startsWith('/converter')) {
+      const welcomeMessage = 
+        '🤖 Stupid World Converter Bot\n\n' +
+        'Kirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox, dan Clash.\n\n' +
+        'Contoh:\n' +
+        'vless://...\n' +
+        'vmess://...\n' +
+        'trojan://...\n' +
+        'ss://...\n\n' +
+        'Catatan:\n' +
+        '- Maksimal 10 link per permintaan.\n' +
+        '- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.\n\n' +
+        'Baca baik-baik dulu sebelum nanya.';
+      await this.sendMessage(chatId, welcomeMessage);
+
     } else if (text.includes('://')) {
       try {
-        const links = text.split('\n').filter(line => line.trim().includes('://'));
-        
+        const links = text
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.includes('://'))
+          .slice(0, 10);  // batasi max 10
+
         if (links.length === 0) {
-          await this.sendMessage(chatId, 'No valid links found. Please send VMess, VLESS, Trojan, or Shadowsocks links.');
+          await this.sendMessage(chatId, 'Tidak ditemukan link valid. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
           return new Response('OK', { status: 200 });
         }
 
-        // Generate configurations
+        const checkResults = await Promise.all(links.map(link => checkProxyIP(link)));
+
+        let statusReport = 'Status Proxy:\n';
+        for (const r of checkResults) {
+          statusReport += `- ${r.ip} (${r.country}): ${r.status}, Delay: ${r.delay}, ISP: ${r.isp}\n`;
+        }
+        await this.sendMessage(chatId, statusReport);
+
         const clashConfig = generateClashConfig(links, true);
         const nekoboxConfig = generateNekoboxConfig(links, true);
         const singboxConfig = generateSingboxConfig(links, true);
 
-        // Send files
         await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
         await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
         await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
 
       } catch (error) {
         console.error('Error processing links:', error);
-        await this.sendMessage(chatId, `Error: ${error.message}`);
+        await this.sendMessage(chatId, `Terjadi kesalahan: ${error.message}`);
       }
+
     } else {
-      await this.sendMessage(chatId, 'Please send VMess, VLESS, Trojan, or Shadowsocks links for conversion.');
+      await this.sendMessage(chatId, 'Silakan kirim link VMess, VLESS, Trojan, atau Shadowsocks untuk dikonversi.');
     }
 
     return new Response('OK', { status: 200 });
@@ -51,7 +93,8 @@ export default class TelegramBot {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: text
+        text: text,
+        parse_mode: 'Markdown'
       })
     });
     return response.json();
@@ -63,12 +106,11 @@ export default class TelegramBot {
     formData.append('document', blob, filename);
     formData.append('chat_id', chatId.toString());
 
-    const response = await fetch(
-      `${this.apiUrl}/bot${this.token}/sendDocument`, {
-        method: 'POST',
-        body: formData
-      }
-    );
+    const url = `${this.apiUrl}/bot${this.token}/sendDocument`;
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
+    });
 
     return response.json();
   }
