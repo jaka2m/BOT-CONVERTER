@@ -1,4 +1,4 @@
-import { randomip } from './randomip.js';
+import { randomip, getIpDetail, getFlagEmoji } from './randomip.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
