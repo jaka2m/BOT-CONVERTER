@@ -28,15 +28,12 @@ export default class TelegramBot {
     // Susun reply dengan markdown (preformatted)
     let reply = `Status pengecekan untuk ${text.trim()}:\n\n`;
     reply += `Status: ${result.status}\n`;
-    reply += `Delay: ${result.delay}\n`;
-    reply += `Country: ${result.country}\n`;
-    reply += `ISP: ${result.isp}\n\n`;
-
+    
     if (result.status === 'ACTIVE' && result.configText) {
       reply += '```\n' + result.configText + '\n```';
     }
 
-    // Hapus pesan loading
+    // Hapus  loading
     await this.deleteMessage(chatId, loadingMsg.result.message_id);
 
     // Kirim hasil pengecekan
