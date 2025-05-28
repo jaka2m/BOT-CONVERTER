@@ -80,20 +80,6 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-// /converter command
-      if (text.startsWith('/converter')) {
-        const infoMessage =
-          '🧠 *Stupid World Converter Bot*\n\n' +
-          'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
-          '- Singbox\n- Nekobox\n- Clash\n\n' +
-          '*Contoh:*\n' +
-          '`vless://...`\n' +
-          '`104.21.75.43:443`\n\n' +
-          '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
-        await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
-        return new Response('OK', { status: 200 });
-      }
-
 // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
@@ -153,6 +139,20 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
           `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
 
         await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
+        return new Response('OK', { status: 200 });
+      }
+
+// /converter command
+      if (text.startsWith('/converter')) {
+        const infoMessage =
+          '🧠 *Stupid World Converter Bot*\n\n' +
+          'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
+          '- Singbox\n- Nekobox\n- Clash\n\n' +
+          '*Contoh:*\n' +
+          '`vless://...`\n' +
+          '`104.21.75.43:443`\n\n' +
+          '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
+        await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
         return new Response('OK', { status: 200 });
       }
 
@@ -230,40 +230,6 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
     };
   }
 
-// Buat file konfigurasi
-      if (proxyUrls.length > 0) {
-        try {
-          const clash = generateClashConfig(proxyUrls, true);
-          const neko = generateNekoboxConfig(proxyUrls, true);
-          const singbox = generateSingboxConfig(proxyUrls, true);
-
-          await this.sendDocument(chatId, clash, 'clash.yaml', 'text/yaml');
-          await this.sendDocument(chatId, neko, 'nekobox.json', 'application/json');
-          await this.sendDocument(chatId, singbox, 'singbox.bpf', 'application/json');
-        } catch (err) {
-          console.error('Error generating config:', err);
-          await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi: ${err.message}`);
-        }
-      }
-
-      // Handler command tambahan
-      await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
-    }
-
-    // Callback handler
-    if (callback) {
-      await handleCallback({
-        callback,
-        sendMessage: this.sendMessage.bind(this),
-        answerCallback: answerCallback.bind(this),
-        editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
-        token: this.token,
-        apiUrl: this.apiUrl
-      });
-    }
-
-    return new Response('OK', { status: 200 });
-  }
 
   async sendMessage(chatId, text, replyMarkup) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
