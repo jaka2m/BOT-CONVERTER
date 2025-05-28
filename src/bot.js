@@ -41,14 +41,7 @@ export default class TelegramBot {
       await this.editMessage(
         chatId,
         messageId,
-        ````INFORMATION
-             ${result.port}\n
-               ${result.ip}\n
-               ${result.isp}\n
-               ${result.country}\n
-               ${result.status}\n
-               ${result.delay}\n
-               ``` ` +
+        ````INFORMATION${ipPort}```\n\n` +
           '```TLS\n' +
           `${this.getTLSConfig(result, action)}\n` +
           '```\n' +
