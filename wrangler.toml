@@ -1,8 +1,5 @@
 name = "v2ray-config-bot"
 compatibility_date = "2023-08-01"
-account_id = ""  # Kosongkan, nanti dari ENV
 workers_dev = true
 main = "src/worker.js"
-
-[vars]
-# Jangan isi secrets disini, pakai wrangler secret saja
+# jangan isi account_id di sini jika sudah lewat env di workflow
