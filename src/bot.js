@@ -49,9 +49,9 @@ export default class TelegramBot {
         `STATUS   :${result.status}\n` +
         `DELAY    :${result.delay}\n` +
         '```' +
-          '```TLS' +
+          '```TLS\n' +
           `${this.getTLSConfig(result, action)}\n` +
-          '```\n' +
+          '```' +
           '```Non-TLS\n' +
           `${this.getNonTLSConfig(result, action)}\n` +
           '```',
