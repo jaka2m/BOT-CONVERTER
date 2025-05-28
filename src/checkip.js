@@ -51,41 +51,41 @@ export async function checkProxyIP(link) {
       result.flag = flag;
       const country = data.country || 'UNKNOWN';
       const provider = data.org || data.isp || 'UNKNOWN';
-      const HOSTKU = result.ip;
-      const path = `/Geo-Project/${ip}-${port}`;
+      const HOSTKU = 'joss.checker-ip.xyz;
+      const path = encodeURIComponent(`/Geo-Project/${ip}-${port}`);
 
       const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1'; // UUID tetap
       const vlessUUID = generateUUID();
       const trojanUUID = generateUUID();
       const ssPassword = generateUUID();
 
-      // VMess TLS
       const vmessTLS = {
-        v: "2",
-        ps: `${country} - ${provider} [VMess-TLS]`,
-        add: HOSTKU,
-        port: "443",
-        id: uuid1,
-        aid: "0",
-        net: "ws",
-        type: "none",
-        host: HOSTKU,
-        path: path,
-        tls: "tls",
-        sni: HOSTKU,
-        scy: "zero"
-      };
+      v: "2", ps: `${country} - ${provider} [VMess-TLS]`,
+      add: HOSTKU, port: "443", id: uuid1, aid: "0",
+      net: "ws", type: "none", host: HOSTKU, path: path,
+      tls: "tls", sni: HOSTKU, scy: "zero"
+    };
+
+    const vmessNTLS = {
+      ...vmessTLS,
+      ps: `${country} - ${provider} [VMess-NTLS]`,
+      port: "80", tls: "none"
+    };
+
       const vmessTLSLink = `vmess://${toBase64(JSON.stringify(vmessTLS))}`;
+      const vmessNTLSLink = `vmess://${toBase64(JSON.stringify(vmessNTLS))}`;
 
       // VLESS TLS
-      const vlessTLSLink = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+      const vlessTLSLink = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#${provider}`;
+      const vlessNTLSLink = `vless://${vlessUUID}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#${provider}`;
 
-      // TROJAN TLS
-      const trojanTLSLink = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+      // TROJAN
+      const trojanTLSLink = `trojan://${trojanUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#${provider}`;
+      const trojanNTLSLink = `trojan://${trojanUUID}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#${prov}`;      
 
-      // SHADOWSOCKS TLS
-      const ssConfig = `none:${ssPassword}`;
-      const ssTLSLink = `ss://${toBase64(ssConfig)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+      // SHADOWSOCKS
+      const ssTLSLink = `ss://${toBase64(`none:${uuid}`)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=tls&sni=${HOSTKU}#${provider}`;
+      const ssNTLSLink = `ss://${toBase64(`none:${uuid}`)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=tls&sni=${HOSTKU}#${provider}`;
 
       // Informasi lengkap
       const infoMessage = `
@@ -105,14 +105,25 @@ ${infoMessage.trim()}
 \`\`\`\`\`\`VMESS-TLS
 ${vmessTLSLink}
 \`\`\`\`\`\`
+\`\`\`\`\`\`VMESS-NTLS
+${vmessNTLSLink}
+\`\`\`\`\`\`
 \`\`\`\`\`\`VLESS-TLS
 ${vlessTLSLink}
+\`\`\`\`\`\`
+\`\`\`\`\`\`VLESS-NTLS
+${vlessNTLSLink}
 \`\`\`\`\`\`
 \`\`\`\`\`\`TROJAN-TLS
 ${trojanTLSLink}
 \`\`\`\`\`\`
+\`\`\`\`\`\`TROJAN-NTLS
+\`\`\`\`\`\`
 \`\`\`\`\`\`SHADOWSOCKS-TLS
-${ssTLSLink}\n\n
+${ssTLSLink}
+\`\`\`\`\`\`
+\`\`\`\`\`\`SHADOWSOCKS-NTLS
+${ssNTLSLink}
 \`\`\`\`\`\`
 \`\`\`👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
 \`\`\`
