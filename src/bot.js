@@ -52,7 +52,7 @@ export default class TelegramBot {
           '```TLS' +
           `${this.getTLSConfig(result, action)}\n` +
           '```\n' +
-          '```Non-TLS' +
+          '```Non-TLS\n' +
           `${this.getNonTLSConfig(result, action)}\n` +
           '```',
         this.getConfigKeyboard(ipPort)
