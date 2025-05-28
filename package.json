@@ -4,12 +4,9 @@
   "description": "Telegram bot to convert V2Ray configurations",
   "type": "module",
   "scripts": {
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy --account-id $CLOUDFLARE_ACCOUNT_ID"
   },
   "dependencies": {
     "wrangler": "^3.21.0"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240401.0"
   }
 }
