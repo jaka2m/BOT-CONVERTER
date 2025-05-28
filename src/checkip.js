@@ -26,15 +26,21 @@ export async function checkProxyIP(link) {
       timezone: data.timezone || '-',
       org: data.org || '-',
       configText: '',
+      vmessTLSLink: '',
+      vmessNTLSLink: '',
+      vlessTLSLink: '',
+      vlessNTLSLink: '',
+      trojanTLSLink: '',
+      trojanNTLSLink: '',
+      ssTLSLink: '',
+      ssNTLSLink: ''
     };
 
-    // Helper: Base64 encode universal
     const toBase64 = (str) => {
       if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
       return Buffer.from(str, 'utf-8').toString('base64');
     };
 
-    // Helper: Flag emoji by country code
     const getFlagEmoji = (countryCode) => {
       if (!countryCode) return '';
       return countryCode
@@ -42,7 +48,6 @@ export async function checkProxyIP(link) {
         .replace(/./g, char => String.fromCodePoint(127397 + char.charCodeAt()));
     };
 
-    // Dummy UUID generator
     const generateUUID = () =>
       crypto.randomUUID?.() || '11111111-1111-1111-1111-111111111111';
 
@@ -64,7 +69,7 @@ export async function checkProxyIP(link) {
       const trojanUUID = generateUUID();
       const ssPassword = generateUUID();
 
-      // VMess TLS config
+      // VMess
       const vmessTLS = {
         v: "2",
         ps: `${country} - ${provider} [VMess-TLS]`,
@@ -81,7 +86,6 @@ export async function checkProxyIP(link) {
         scy: "zero"
       };
 
-      // VMess non-TLS config
       const vmessNTLS = {
         ...vmessTLS,
         ps: `${country} - ${provider} [VMess-NTLS]`,
@@ -89,51 +93,69 @@ export async function checkProxyIP(link) {
         tls: "none"
       };
 
-      // Build links
-      const vmessTLSLink = `vmess://${toBase64(JSON.stringify(vmessTLS))}`;
-      const vmessNTLSLink = `vmess://${toBase64(JSON.stringify(vmessNTLS))}`;
+      result.vmessTLSLink = `vmess://${toBase64(JSON.stringify(vmessTLS))}`;
+      result.vmessNTLSLink = `vmess://${toBase64(JSON.stringify(vmessNTLS))}`;
 
-      const vlessTLSLink = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#${provider}`;
-      const vlessNTLSLink = `vless://${vlessUUID}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#${provider}`;
+      // VLESS
+      result.vlessTLSLink = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#${provider}`;
+      result.vlessNTLSLink = `vless://${vlessUUID}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#${provider}`;
 
-      const trojanTLSLink = `trojan://${trojanUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#${provider}`;
-      const trojanNTLSLink = `trojan://${trojanUUID}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#${provider}`;
+      // Trojan
+      result.trojanTLSLink = `trojan://${trojanUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#${provider}`;
+      result.trojanNTLSLink = `trojan://${trojanUUID}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#${provider}`;
 
+      // Shadowsocks
       const ssBase = toBase64(`none:${ssPassword}`);
-      const ssTLSLink = `ss://${ssBase}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=tls&sni=${HOSTKU}#${provider}`;
-      const ssNTLSLink = `ss://${ssBase}@${HOSTKU}:80?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=none#${provider}`;
+      result.ssTLSLink = `ss://${ssBase}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=tls&sni=${HOSTKU}#${provider}`;
+      result.ssNTLSLink = `ss://${ssBase}@${HOSTKU}:80?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=none#${provider}`;
 
-      // Buat tombol (inline keyboard)
-      const buttons = [
-        [{ text: 'VLESS TLS', callback_data: `vless_tls|${vlessTLSLink}` }],
-        [{ text: 'VLESS Non-TLS', callback_data: `vless_ntls|${vlessNTLSLink}` }],
-        [{ text: 'Trojan TLS', callback_data: `trojan_tls|${trojanTLSLink}` }],
-        [{ text: 'Trojan Non-TLS', callback_data: `trojan_ntls|${trojanNTLSLink}` }],
-        [{ text: 'VMess TLS', callback_data: `vmess_tls|${vmessTLSLink}` }],
-        [{ text: 'VMess Non-TLS', callback_data: `vmess_ntls|${vmessNTLSLink}` }],
-        [{ text: 'Shadowsocks TLS', callback_data: `ss_tls|${ssTLSLink}` }],
-        [{ text: 'Shadowsocks Non-TLS', callback_data: `ss_ntls|${ssNTLSLink}` }],
-        [{ text: 'Back', callback_data: 'back' }]
-      ];
-
-      result.buttons = buttons;
-      result.flag = flag;
-
-      // Informasi lengkap (opsional)
+      // Informasi lengkap
       const infoMessage = `
 IP      : ${result.ip}
 Port    : ${result.port}
 ISP     : ${result.isp}
-Country : ${result.country} ${flag}
+Country : ${result.country}
 Delay   : ${result.delay}
 Status  : ✅ ${result.status}
-      `.trim();
+`;
 
-      result.infoMessage = infoMessage;
+      const configText = `
+\`\`\`INFORMATION
+${infoMessage.trim()}
+\`\`\`
+\`\`\`VMESS-TLS
+${result.vmessTLSLink}
+\`\`\`
+\`\`\`VMESS-NTLS
+${result.vmessNTLSLink}
+\`\`\`
+\`\`\`VLESS-TLS
+${result.vlessTLSLink}
+\`\`\`
+\`\`\`VLESS-NTLS
+${result.vlessNTLSLink}
+\`\`\`
+\`\`\`TROJAN-TLS
+${result.trojanTLSLink}
+\`\`\`
+\`\`\`TROJAN-NTLS
+${result.trojanNTLSLink}
+\`\`\`
+\`\`\`SHADOWSOCKS-TLS
+${result.ssTLSLink}
+\`\`\`
+\`\`\`SHADOWSOCKS-NTLS
+${result.ssNTLSLink}
+\`\`\`
+\`\`\`
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+\`\`\`
+`.trim();
+
+      result.configText = configText;
     }
 
     return result;
-
   } catch (error) {
     return {
       ip: '-',
@@ -149,7 +171,14 @@ Status  : ✅ ${result.status}
       timezone: '-',
       org: '-',
       configText: '',
-      buttons: []
+      vmessTLSLink: '',
+      vmessNTLSLink: '',
+      vlessTLSLink: '',
+      vlessNTLSLink: '',
+      trojanTLSLink: '',
+      trojanNTLSLink: '',
+      ssTLSLink: '',
+      ssNTLSLink: ''
     };
   }
 }
