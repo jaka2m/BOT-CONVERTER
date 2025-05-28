@@ -53,13 +53,13 @@ export async function checkProxyIP(link) {
       result.flag = flag;
 
       const rawCountry = data.country || 'UNKNOWN';
-const rawProvider = data.org || data.isp || 'UNKNOWN';
+      const rawProvider = data.org || data.isp || 'UNKNOWN';
 
-const country = encodeURIComponent(rawCountry);
-const provider = encodeURIComponent(rawProvider);
+     const country = encodeURIComponent(rawCountry);
+     const provider = encodeURIComponent(rawProvider);
 
-const HOSTKU = 'joss.checker-ip.xyz';
-const path = encodeURIComponent(`/Geo-Project/${ip}-${port}`);
+     const HOSTKU = 'joss.checker-ip.xyz';
+     const path = encodeURIComponent(`/Geo-Project/${ip}-${port}`);
 
       const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1';
       const vlessUUID = generateUUID();
@@ -108,12 +108,13 @@ const path = encodeURIComponent(`/Geo-Project/${ip}-${port}`);
 
       // Informasi lengkap
       const infoMessage = `
-ISP: ${provider}
-IP: ${ip}
-Port: ${port}
-Country: ${result.country}
-Ping: ${result.delay}
-Status: ✅ ACTIVE
+ISP     : ${result.isp}
+IP      : ${result.ip}
+Proxy   : ${result.proxy}
+Port    : ${result.port}
+Country : ${result.country}
+Delay   : ${result.delay}
+Status  : ✅ ${result.status}
 `;
 
       const configText = `
