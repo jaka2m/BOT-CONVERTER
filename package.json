@@ -10,8 +10,6 @@
     "wrangler": "^4.17.0"
   },
   "dependencies": {
-    // tambahkan dependencies bot kamu jika ada, misal:
-    // "telegraf": "^4.12.0"
   },
   "engines": {
     "node": ">=16"
