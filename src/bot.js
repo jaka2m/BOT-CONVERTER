@@ -251,6 +251,26 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
     return response.json();
   }
 
+async sendMessageWithDelete(chatId, text) {
+    try {
+      const res = await this.sendMessage(chatId, text);
+      return res.result;
+    } catch (e) {
+      console.error('Gagal mengirim pesan loading:', e);
+      return null;
+    }
+  }
+
+  async deleteMessage(chatId, messageId) {
+    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId })
+    });
+    return res.json();
+  }
+
   async answerCallback(callbackQueryId, text = '') {
     const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
     const body = {
