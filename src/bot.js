@@ -79,167 +79,165 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-// /converter command
-      if (text.startsWith('/converter')) {
-        const infoMessage =
-          '🧠 *Stupid World Converter Bot*\n\n' +
-          'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
-          '- Singbox\n- Nekobox\n- Clash\n\n' +
-          '*Contoh:*\n' +
-          '`vless://...`\n' +
-          '`104.21.75.43:443`\n\n' +
-          '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
-        await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
-        return new Response('OK', { status: 200 });
-      }
-
-    // Hanya lanjutkan jika input adalah IP atau IP:PORT
-    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-    if (!ipPortPattern.test(text)) {
-      // Abaikan tanpa membalas jika format salah
+    // Command /converter
+    if (text.startsWith('/converter')) {
+      const infoMessage =
+        '🧠 *Stupid World Converter Bot*\n\n' +
+        'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
+        '- Singbox\n- Nekobox\n- Clash\n\n' +
+        '*Contoh:*\n' +
+        '`vless://...`\n' +
+        '`104.21.75.43:443`\n\n' +
+        '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
+      await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
       return new Response('OK', { status: 200 });
     }
 
+    // Cek apakah input berupa IP atau IP:PORT
+    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+    if (!ipPortPattern.test(text)) {
+      // Abaikan jika bukan IP atau IP:PORT
+      return new Response('OK', { status: 200 });
+    }
+
+    // Kirim pesan loading
     const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-    await this.editMessage(chatId, loadingMsg.result.message_id,
+    // Edit pesan untuk pilih konfigurasi
+    await this.editMessage(
+      chatId,
+      loadingMsg.result.message_id,
       `Pilih konfigurasi untuk \`${text}\`:`,
       this.getMainKeyboard(text)
     );
 
     return new Response('OK', { status: 200 });
-  }
-
-  getTLSConfig(result, action) {
-    switch (action) {
-      case 'vless': return result.vlessTLSLink || '';
-      case 'trojan': return result.trojanTLSLink || '';
-      case 'vmess': return result.vmessTLSLink || '';
-      case 'ss': return result.ssTLSLink || '';
-      default: return '';
-    }
-  }
-
-  getNonTLSConfig(result, action) {
-    switch (action) {
-      case 'vless': return result.vlessNTLSLink || '';
-      case 'trojan': return result.trojanNTLSLink || '';
-      case 'vmess': return result.vmessNTLSLink || '';
-      case 'ss': return result.ssNTLSLink || '';
-      default: return '';
-    }
-  }
-
-  getMainKeyboard(ipPort) {
-    return {
-      inline_keyboard: [
-        [
-          { text: 'VLESS', callback_data: `vless|${ipPort}` },
-          { text: 'TROJAN', callback_data: `trojan|${ipPort}` }
-        ],
-        [
-          { text: 'VMESS', callback_data: `vmess|${ipPort}` },
-          { text: 'SHADOWSOCKS', callback_data: `ss|${ipPort}` }
-        ],
-        [
-          { text: 'BACK', callback_data: `back|${ipPort}` }
-        ]
-      ]
-    };
-  }
-
-  getConfigKeyboard(ipPort) {
-    return {
-      inline_keyboard: [
-        [
-          { text: 'Kembali ke menu', callback_data: `back|${ipPort}` }
-        ]
-      ]
-    };
-  }
-
-// Generate configurations
-        const clashConfig = generateClashConfig(links, true);
-        const nekoboxConfig = generateNekoboxConfig(links, true);
-        const singboxConfig = generateSingboxConfig(links, true);
-
-        // Send files
-        await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
-        await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
-        await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
-
-      } catch (error) {
-        console.error('Error processing links:', error);
-        await this.sendMessage(chatId, `Error: ${error.message}`);
-      }
-    } else {
-      await this.sendMessage(chatId, 'Please send VMess, VLESS, Trojan, or Shadowsocks links for conversion.');
-    }
-
+  } catch (error) {
+    console.error(error);
+    await this.sendMessage(chatId, `Error: ${error.message}`);
     return new Response('OK', { status: 200 });
   }
+}
 
-  async sendMessage(chatId, text, replyMarkup) {
-    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const body = {
-      chat_id: chatId,
-      text,
-      parse_mode: 'Markdown',
-    };
-    if (replyMarkup) body.reply_markup = replyMarkup;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
+// Keyboard untuk main menu pilihan protokol
+getMainKeyboard(ipPort) {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'VLESS', callback_data: `vless|${ipPort}` },
+        { text: 'TROJAN', callback_data: `trojan|${ipPort}` }
+      ],
+      [
+        { text: 'VMESS', callback_data: `vmess|${ipPort}` },
+        { text: 'SHADOWSOCKS', callback_data: `ss|${ipPort}` }
+      ],
+      [
+        { text: 'BACK', callback_data: `back|${ipPort}` }
+      ]
+    ]
+  };
+}
+
+// Keyboard konfigurasi untuk kembali ke menu
+getConfigKeyboard(ipPort) {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'Kembali ke menu', callback_data: `back|${ipPort}` }
+      ]
+    ]
+  };
+}
+
+// Mendapatkan konfigurasi TLS berdasarkan action
+getTLSConfig(result, action) {
+  switch (action) {
+    case 'vless': return result.vlessTLSLink || '';
+    case 'trojan': return result.trojanTLSLink || '';
+    case 'vmess': return result.vmessTLSLink || '';
+    case 'ss': return result.ssTLSLink || '';
+    default: return '';
   }
+}
 
-  async editMessage(chatId, messageId, text, replyMarkup) {
-    const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
-    const body = {
-      chat_id: chatId,
-      message_id: messageId,
-      text,
-      parse_mode: 'Markdown',
-    };
-    if (replyMarkup) body.reply_markup = replyMarkup;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
+// Mendapatkan konfigurasi Non-TLS berdasarkan action
+getNonTLSConfig(result, action) {
+  switch (action) {
+    case 'vless': return result.vlessNTLSLink || '';
+    case 'trojan': return result.trojanNTLSLink || '';
+    case 'vmess': return result.vmessNTLSLink || '';
+    case 'ss': return result.ssNTLSLink || '';
+    default: return '';
   }
+}
 
-  async answerCallback(callbackQueryId, text = '') {
-    const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
-    const body = {
-      callback_query_id: callbackQueryId,
-      text,
-      show_alert: !!text,
-    };
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
-  }
+// Kirim pesan text
+async sendMessage(chatId, text, replyMarkup) {
+  const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+  const body = {
+    chat_id: chatId,
+    text,
+    parse_mode: 'Markdown',
+  };
+  if (replyMarkup) body.reply_markup = replyMarkup;
 
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return response.json();
+}
+
+// Edit pesan text
+async editMessage(chatId, messageId, text, replyMarkup) {
+  const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
+  const body = {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    parse_mode: 'Markdown',
+  };
+  if (replyMarkup) body.reply_markup = replyMarkup;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return response.json();
+}
+
+// Jawab callback query
+async answerCallback(callbackQueryId, text = '') {
+  const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
+  const body = {
+    callback_query_id: callbackQueryId,
+    text,
+    show_alert: !!text,
+  };
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return response.json();
+}
+
+// Kirim file dokumen (contoh config)
 async sendDocument(chatId, content, filename, mimeType) {
-    const formData = new FormData();
-    const blob = new Blob([content], { type: mimeType });
-    formData.append('document', blob, filename);
-    formData.append('chat_id', chatId.toString());
+  const formData = new FormData();
+  const blob = new Blob([content], { type: mimeType });
+  formData.append('document', blob, filename);
+  formData.append('chat_id', chatId.toString());
 
-    const response = await fetch(
-      `${this.apiUrl}/bot${this.token}/sendDocument`, {
-        method: 'POST',
-        body: formData
-      }
-    );
+  const response = await fetch(
+    `${this.apiUrl}/bot${this.token}/sendDocument`, {
+      method: 'POST',
+      body: formData
+    }
+  );
 
-    return response.json();
-  }
+  return response.json();
+}
 }
 
