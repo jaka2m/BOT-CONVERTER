@@ -1,9 +1,9 @@
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
 import { checkProxyIP, randomconfig } from './checkip.js';
 import { rotateconfig } from './config.js';
-import { handleCommand } from './commandHandler.js';
-import { handleCallback, answerCallback, editMessageReplyMarkup } from './callbackHandler.js';
-import { randomip } from './randomip.js';
+import { handleCommand } from './randomip/commandHandler.js';
+import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
+import { randomip } from './randomip/randomip.js';
 
 const HOSTKU = 'example.com';
 
