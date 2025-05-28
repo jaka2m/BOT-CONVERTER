@@ -16,11 +16,11 @@ export default class TelegramBot {
     const inputs = text.split(/[\s\n]+/).filter(Boolean);
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
 
-    // Pisah valid dan invalid input
+    // Pisah input valid dan tidak valid
     const validInputs = inputs.filter(input => ipPortPattern.test(input));
     const invalidInputs = inputs.filter(input => !ipPortPattern.test(input));
 
-    // Kirim pesan kesalahan untuk input yang tidak valid
+    // Kirim pesan kesalahan untuk input tidak valid
     for (const invalid of invalidInputs) {
       await this.sendMessage(
         chatId,
@@ -33,21 +33,46 @@ export default class TelegramBot {
     }
 
     if (validInputs.length === 1) {
-      // Proses 1 input dan kirim hasil sekali
       const input = validInputs[0];
-      const loadingMsg = await this.sendMessage(chatId, `⏳ Memproses IP: ${input} ...`);
-      const result = await checkProxyIP(input);
-      await this.deleteMessage(chatId, loadingMsg.result.message_id);
+      console.log('Memulai proses untuk:', input);
 
-      if (result.status === 'ACTIVE') {
-        await this.sendMessage(chatId, result.configText);
-      } else if (result.status === 'ERROR') {
-        await this.sendMessage(chatId, `❌ Error cek IP: ${input}`);
-      } else {
-        await this.sendMessage(chatId, `⚠️ Proxy tidak aktif atau tidak valid: ${input}`);
+      let loadingMsg;
+      try {
+        loadingMsg = await this.sendMessage(chatId, `⏳ Memproses IP: ${input} ...`);
+        console.log('Loading message sent:', loadingMsg);
+      } catch (e) {
+        console.error('Error kirim pesan loading:', e);
       }
+
+      let result;
+      try {
+        result = await checkProxyIP(input);
+        console.log('Hasil checkProxyIP:', result);
+      } catch (e) {
+        console.error('Error cek IP:', e);
+      }
+
+      if (loadingMsg?.result?.message_id) {
+        try {
+          await this.deleteMessage(chatId, loadingMsg.result.message_id);
+          console.log('Pesan loading dihapus');
+        } catch (e) {
+          console.error('Gagal hapus pesan loading:', e);
+        }
+      }
+
+      if (result) {
+        if (result.status === 'ACTIVE') {
+          await this.sendMessage(chatId, result.configText);
+        } else if (result.status === 'ERROR') {
+          await this.sendMessage(chatId, `❌ Error cek IP: ${input}`);
+        } else {
+          await this.sendMessage(chatId, `⚠️ Proxy tidak aktif atau tidak valid: ${input}`);
+        }
+      }
+
     } else {
-      // Proses multiple input satu per satu
+      // Jika lebih dari satu input, proses satu per satu seperti sebelumnya
       for (const input of validInputs) {
         const loadingMsg = await this.sendMessage(chatId, `⏳ Memproses IP: ${input} ...`);
         const result = await checkProxyIP(input);
