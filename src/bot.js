@@ -49,10 +49,10 @@ export default class TelegramBot {
         `STATUS   :${result.status}\n` +
         `DELAY    :${result.delay}\n` +
         '```' +
-          '```TLS\n' +
+          '```TLS' +
           `${this.getTLSConfig(result, action)}\n` +
           '```\n' +
-          '```Non-TLS\n' +
+          '```Non-TLS' +
           `${this.getNonTLSConfig(result, action)}\n` +
           '```',
         this.getConfigKeyboard(ipPort)
