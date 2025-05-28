@@ -1,4 +1,4 @@
-import { getIpDetail, getFlagEmoji, randomip } from './randomip/randomip.js';
+import { getIpDetail, getFlagEmoji, randomip } from './randomip.js';
 
 export async function handleCallback({ callback, sendMessage, answerCallback, editMessageReplyMarkup }) {
   const { data, message, from, id: callbackId } = callback;
