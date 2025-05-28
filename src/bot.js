@@ -159,8 +159,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
 
   // Pola IP atau IP:PORT
   const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-  const proxyUrls = lines.filter(l => proxyUrlRegex.test(l));
-
+  
   // Kalau bukan IP atau IP:PORT, lanjut ke command handler
   if (!ipPortPattern.test(text)) {
     await handleCommand({
@@ -196,60 +195,26 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
     this.getMainKeyboard(text)
   );
 
-  // --- Misalnya di bagian lain kamu punya array proxyUrls yang terisi ---
-  if (proxyUrls.length > 0) {
-    try {
-      const clash = generateClashConfig(proxyUrls, true);
-      const neko = generateNekoboxConfig(proxyUrls, true);
-      const singbox = generateSingboxConfig(proxyUrls, true);
+  // Generate configurations
+        const clashConfig = generateClashConfig(links, true);
+        const nekoboxConfig = generateNekoboxConfig(links, true);
+        const singboxConfig = generateSingboxConfig(links, true);
 
-      await this.sendDocument(chatId, clash, 'clash.yaml', 'text/yaml');
-      await this.sendDocument(chatId, neko, 'nekobox.json', 'application/json');
-      await this.sendDocument(chatId, singbox, 'singbox.bpf', 'application/json');
-    } catch (err) {
-      console.error('Error generating config:', err);
-      await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi: ${err.message}`);
-    }
-  }
+        // Send files
+        await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
+        await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
+        await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
 
-  return new Response('OK', { status: 200 });
-}
-
-// Buat file konfigurasi
-      if (proxyUrls.length > 0) {
-        try {
-          const clash = generateClashConfig(proxyUrls, true);
-          const neko = generateNekoboxConfig(proxyUrls, true);
-          const singbox = generateSingboxConfig(proxyUrls, true);
-
-          await this.sendDocument(chatId, clash, 'clash.yaml', 'text/yaml');
-          await this.sendDocument(chatId, neko, 'nekobox.json', 'application/json');
-          await this.sendDocument(chatId, singbox, 'singbox.bpf', 'application/json');
-        } catch (err) {
-          console.error('Error generating config:', err);
-          await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi: ${err.message}`);
-        }
+      } catch (error) {
+        console.error('Error processing links:', error);
+        await this.sendMessage(chatId, `Error: ${error.message}`);
       }
-
-      // Handler command tambahan
-      await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
-    }
-
-    // Callback handler
-    if (callback) {
-      await handleCallback({
-        callback,
-        sendMessage: this.sendMessage.bind(this),
-        answerCallback: answerCallback.bind(this),
-        editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
-        token: this.token,
-        apiUrl: this.apiUrl
-      });
+    } else {
+      await this.sendMessage(chatId, 'Please send VMess, VLESS, Trojan, or Shadowsocks links for conversion.');
     }
 
     return new Response('OK', { status: 200 });
   }
-
 
   getTLSConfig(result, action) {
     switch (action) {
