@@ -11,19 +11,16 @@ export default class TelegramBot {
     if (!update.message && !update.callback_query) {
       return new Response('OK', { status: 200 });
     }
-    
-    // Jika callback query (tombol ditekan)
+
+    // ======= HANDLE CALLBACK (TOMBOL) =======
     if (update.callback_query) {
       const callback = update.callback_query;
       const chatId = callback.message.chat.id;
       const messageId = callback.message.message_id;
       const data = callback.data;
 
-      // Data format: "action|ipPort"
-      // contoh: "vless|1.2.3.4:443"
       const [action, ipPort] = data.split('|');
 
-      // Jika tombol back
       if (action === 'back') {
         await this.editMessage(
           chatId,
@@ -47,7 +44,7 @@ export default class TelegramBot {
         `Konfigurasi untuk \`${ipPort}\`:\n\n` +
           '```TLS\n' +
           `${this.getTLSConfig(result, action)}\n` +
-          '```' +
+          '```\n' +
           '```Non-TLS\n' +
           `${this.getNonTLSConfig(result, action)}\n` +
           '```',
@@ -58,29 +55,27 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-
-    // Jika pesan biasa (input IP)
+    // ======= HANDLE PESAN MASUK =======
     const chatId = update.message.chat.id;
-    const text = update.message.text || '';
+    const text = update.message.text?.trim() || '';
 
-    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-
-    if (!ipPortPattern.test(text.trim())) {
-      await this.sendMessage(chatId, 'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy.');
+    if (text === '/start') {
+      await this.sendMessage(chatId, 'Selamat datang!\n\nKirim IP atau IP:PORT untuk memeriksa status proxy dan memilih konfigurasi (VLESS, Trojan, VMess, Shadowsocks).');
       return new Response('OK', { status: 200 });
     }
 
-    // Kirim pesan loading
+    // Hanya lanjutkan jika input adalah IP atau IP:PORT
+    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+    if (!ipPortPattern.test(text)) {
+      // Abaikan tanpa membalas jika format salah
+      return new Response('OK', { status: 200 });
+    }
+
     const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-
-    // Tampilkan menu pilihan konfigurasi
-await this.editMessage(
-  chatId,
-  loadingMsg.result.message_id,
-  `Pilih konfigurasi untuk \`${text}\`:`,
-  this.getMainKeyboard(text)
-);
-
+    await this.editMessage(chatId, loadingMsg.result.message_id,
+      `Pilih konfigurasi untuk \`${text}\`:`,
+      this.getMainKeyboard(text)
+    );
 
     return new Response('OK', { status: 200 });
   }
@@ -171,7 +166,7 @@ await this.editMessage(
     const body = {
       callback_query_id: callbackQueryId,
       text,
-      show_alert: text ? true : false,
+      show_alert: !!text,
     };
     const response = await fetch(url, {
       method: 'POST',
