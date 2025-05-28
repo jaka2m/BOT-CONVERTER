@@ -44,7 +44,7 @@ export default class TelegramBot {
         '```INFORMATION\n' +
         `IP       :${result.ip}\n` +
         `PORT     :${result.port}\n` +
-        `ISP      : ${result.isp}\n` +
+        `ISP      :${result.isp}\n` +
         `COUNTRY  :${result.country}\n` +
         `STATUS   :${result.status}\n` +
         `DELAY    :${result.delay}\n` +
