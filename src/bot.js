@@ -7,104 +7,160 @@ export default class TelegramBot {
   }
 
   async handleUpdate(update) {
-    if (!update.message && !update.callback_query) {
-      return new Response('OK', { status: 200 });
-    }
+    if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
 
-    if (update.message) {
-      const chatId = update.message.chat.id;
-      const text = update.message.text || '';
-
-      const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-
-      if (!ipPortPattern.test(text.trim())) {
-        await this.sendMessage(chatId, 'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy.');
-        return new Response('OK', { status: 200 });
-      }
-
-      const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-
-      const result = await checkProxyIP(text.trim());
-
-      // Hapus loading
-      await this.deleteMessage(chatId, loadingMsg.result.message_id);
-
-      if (result.status === 'ACTIVE' && result.buttons && result.buttons.length > 0) {
-        // Kirim info + tombol inline
-        await this.sendMessage(chatId, result.infoMessage, {
-          reply_markup: {
-            inline_keyboard: result.buttons
-          }
-        });
-      } else {
-        // Jika error atau tidak aktif
-        await this.sendMessage(chatId, `Status: ${result.status}`);
-      }
-
-      return new Response('OK', { status: 200 });
-    }
-
+    // Jika callback query (tombol ditekan)
     if (update.callback_query) {
       const callback = update.callback_query;
       const chatId = callback.message.chat.id;
       const messageId = callback.message.message_id;
-      const [type, payload] = callback.data.split('|');
+      const data = callback.data;
 
-      if (type === 'back') {
-        // Hapus pesan tombol dan kirim pesan awal
-        await this.deleteMessage(chatId, messageId);
-        await this.sendMessage(chatId, 'Kirim IP atau IP:PORT untuk cek status proxy.');
+      // Data format: "action|ipPort"
+      // contoh: "vless|1.2.3.4:443"
+      const [action, ipPort] = data.split('|');
+
+      // Jika tombol back
+      if (action === 'back') {
+        // Kirim pesan instruksi awal
+        await this.editMessage(chatId, messageId, 'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.', this.getMainKeyboard(ipPort));
+        // Jawab callback agar loading hilang
+        await this.answerCallback(callback.id);
         return new Response('OK', { status: 200 });
       }
 
-      // Untuk semua jenis link (vless_tls, trojan_ntls, vmess_tls, ss_ntls, dll)
-      if (payload) {
-        await this.answerCallbackQuery(callback.id, `Config: ${type.toUpperCase().replace('_', ' ')}`);
-        // Kirim konfigurasi link
-        await this.sendMessage(chatId, payload);
+      // Jalankan cek proxy
+      const result = await checkProxyIP(ipPort);
+      if (result.status !== 'ACTIVE') {
+        await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
         return new Response('OK', { status: 200 });
       }
+
+      // Pilih config sesuai tombol
+      let config = '';
+      switch (action) {
+        case 'vless':
+          config = result.vlessTLSLink + '\n' + result.vlessNTLSLink;
+          break;
+        case 'trojan':
+          config = result.trojanTLSLink + '\n' + result.trojanNTLSLink;
+          break;
+        case 'vmess':
+          config = result.vmessTLSLink + '\n' + result.vmessNTLSLink;
+          break;
+        case 'ss':
+          config = result.ssTLSLink + '\n' + result.ssNTLSLink;
+          break;
+        default:
+          config = 'Unknown action';
+      }
+
+      // Kirim edit pesan dengan config (kode blok markdown)
+      await this.editMessage(chatId, messageId,
+        `Konfigurasi untuk \`${ipPort}\`:\n\n\`\`\`\n${config}\n\`\`\``,
+        this.getConfigKeyboard(ipPort)
+      );
+
+      // Jawab callback untuk hilangkan loading
+      await this.answerCallback(callback.id);
+      return new Response('OK', { status: 200 });
     }
+
+    // Jika pesan biasa (input IP)
+    const chatId = update.message.chat.id;
+    const text = update.message.text || '';
+
+    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+
+    if (!ipPortPattern.test(text.trim())) {
+      await this.sendMessage(chatId, 'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy.');
+      return new Response('OK', { status: 200 });
+    }
+
+    // Kirim pesan loading
+    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+
+    // Edit pesan loading ke menu tombol pilihan
+    await this.editMessage(chatId, loadingMsg.result.message_id,
+      `Pilih konfigurasi untuk \`${text.trim()}\`:`,
+      this.getMainKeyboard(text.trim())
+    );
+
+    return new Response('OK', { status: 200 });
   }
 
-  async sendMessage(chatId, text, extra = {}) {
+  getMainKeyboard(ipPort) {
+    return {
+      inline_keyboard: [
+        [
+          { text: 'VLESS', callback_data: `vless|${ipPort}` },
+          { text: 'TROJAN', callback_data: `trojan|${ipPort}` }
+        ],
+        [
+          { text: 'VMESS', callback_data: `vmess|${ipPort}` },
+          { text: 'SHADOWSOCKS', callback_data: `ss|${ipPort}` }
+        ],
+        [
+          { text: 'BACK', callback_data: `back|${ipPort}` }
+        ]
+      ]
+    };
+  }
+
+  getConfigKeyboard(ipPort) {
+    return {
+      inline_keyboard: [
+        [
+          { text: 'Kembali ke menu', callback_data: `back|${ipPort}` }
+        ]
+      ]
+    };
+  }
+
+  async sendMessage(chatId, text, replyMarkup) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+    const body = {
+      chat_id: chatId,
+      text,
+      parse_mode: 'Markdown',
+    };
+    if (replyMarkup) body.reply_markup = replyMarkup;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-        parse_mode: extra.parse_mode || 'Markdown',
-        reply_markup: extra.reply_markup || undefined
-      })
+      body: JSON.stringify(body)
     });
     return response.json();
   }
 
-  async deleteMessage(chatId, messageId) {
-    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+  async editMessage(chatId, messageId, text, replyMarkup) {
+    const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
+    const body = {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: 'Markdown',
+    };
+    if (replyMarkup) body.reply_markup = replyMarkup;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId
-      })
+      body: JSON.stringify(body)
     });
     return response.json();
   }
 
-  async answerCallbackQuery(callbackQueryId, text) {
+  async answerCallback(callbackQueryId, text = '') {
     const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
+    const body = {
+      callback_query_id: callbackQueryId,
+      text,
+      show_alert: text ? true : false,
+    };
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        callback_query_id: callbackQueryId,
-        text: text,
-        show_alert: false
-      })
+      body: JSON.stringify(body)
     });
     return response.json();
   }
