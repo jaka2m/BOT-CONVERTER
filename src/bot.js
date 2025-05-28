@@ -22,6 +22,19 @@ export default class TelegramBot {
       const userId = message.from.id;
       const text = message.text || '';
 
+      // /start command
+      if (text.startsWith('/start')) {
+        const startMessage =
+          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
+          'Gunakan perintah:\n' +
+          '• `/converter` — untuk mengubah link proxy ke format:\n' +
+          '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
+          '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
+          'Ketik `/converter` untuk info lebih lanjut.';
+        await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
+
       // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
@@ -84,50 +97,19 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      if (text.startsWith('/start')) {
-  const welcomeMessage = `
-━━━━━━━━━━━━━━━━━        
-≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡
-━━━━━━━━━━━━━━━━━
-» *Name:* ${msg.from.first_name}  
-» *Username:* @${msg.from.username || "Tidak Ada"}  
-» *User ID:* ${userId}  
-━━━━━━━━━━━━━━━━━
-🔍 *Cara Penggunaan:*
-1. Masukkan alamat IP dan port yang ingin Anda cek.
-2. Jika tidak memasukkan port, maka default adalah *443*.
-3. Tunggu beberapa detik untuk hasilnya
-
-💡KETIK /menu UNTUK MELIHAT COMMAND
-
-💡 *Format IP yang Diterima:*
-• \`176.97.78.80\`
-• \`176.97.78.80:2053\`
-
-👨‍💻 Modded By : [Geo Project](https://t.me/sampiiiiu)
-
-🌐 [WEB VPN TUNNEL](https://joss.checker-ip.web.id)
-📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
-👥 [Phreaker GROUP](${GROUP_LINK || "https://t.me/your_group_link"})
-`;
-
-  await this.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
-  return new Response('OK', { status: 200 });
-}
-
-if (text.startsWith('/converter')) {
-  const infoMessage =
-    '🧠 *Stupid World Converter Bot*\n\n' +
-    'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
-    '- Singbox\n- Nekobox\n- Clash\n\n' +
-    '*Contoh:*\n' +
-    '`vless://...`\n' +
-    '`104.21.75.43:443`\n\n' +
-    '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
-
-  await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
-  return new Response('OK', { status: 200 });
-}
+      // /converter command
+      if (text.startsWith('/converter')) {
+        const infoMessage =
+          '🧠 *Stupid World Converter Bot*\n\n' +
+          'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
+          '- Singbox\n- Nekobox\n- Clash\n\n' +
+          '*Contoh:*\n' +
+          '`vless://...`\n' +
+          '`104.21.75.43:443`\n\n' +
+          '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
+        await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
 
       // Regex validasi IP:PORT dan proxy URL
       const ipPortRegex = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
