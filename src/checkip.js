@@ -115,8 +115,8 @@ ${trojanTLSLink}
 ${ssTLSLink}
 \`\`\`\`\`\`
 
-👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
-
+\`👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+\`
 `.trim();
 
       result.configText = configText;
