@@ -40,14 +40,18 @@ export default class TelegramBot {
       }
 
       // Edit pesan untuk menampilkan konfigurasi dengan dua blok kode terpisah TLS dan Non-TLS
-      await this.editMessage(
-        chatId,
-        messageId,
-        `Konfigurasi untuk \`${ipPort}\`:\n\n` +
-        `--- TLS ---\n\`\`\`\n${this.getTLSConfig(result, action)}\n\`\`\`\n` +
-        `--- Non-TLS ---\n\`\`\`\n${this.getNonTLSConfig(result, action)}\n\`\`\``,
-        this.getConfigKeyboard(ipPort)
-      );
+await this.editMessage(
+  chatId,
+  messageId,
+  `Konfigurasi untuk \`${ipPort}\`:\n\n` +
+  '```TLS\n' +
+  `${this.getTLSConfig(result, action)}\n` +
+  '```\n\n' +
+  '```Non-TLS\n' +
+  `${this.getNonTLSConfig(result, action)}\n` +
+  '```',
+  this.getConfigKeyboard(ipPort)
+);
 
       // Jawab callback untuk hilangkan loading
       await this.answerCallback(callback.id);
