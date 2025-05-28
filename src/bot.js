@@ -42,12 +42,12 @@ export default class TelegramBot {
         chatId,
         messageId,
         '```INFORMATION\n' +
-        `${result.ip}\n` +
-        `${result.port}\n` +
-        `${result.isp}\n` +
-        `${result.country}\n` +
-        `${result.status}\n` +
-        `${result.delay}\n` +
+        `IP      : ${result.ip}\n` +
+        `PORT    :${result.port}\n` +
+        `ISP     : ${result.isp}\n` +
+        `COUNTRY : ${result.country}\n` +
+        `STATUS  : ${result.status}\n` +
+        `DELAY   : ${result.delay}\n` +
         '```' +
           '```TLS\n' +
           `${this.getTLSConfig(result, action)}\n` +
