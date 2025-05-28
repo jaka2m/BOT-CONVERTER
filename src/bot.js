@@ -73,11 +73,14 @@ export default class TelegramBot {
     // Kirim pesan loading
     const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
 
-    // Edit pesan loading ke menu tombol pilihan
-    await this.editMessage(chatId, loadingMsg.result.message_id,
-      `Pilih konfigurasi untuk \`${text.trim()}\`:`,
-      this.getMainKeyboard(text.trim())
-    );
+    // Tampilkan menu pilihan konfigurasi
+await this.editMessage(
+  chatId,
+  loadingMsg.result.message_id,
+  `Pilih konfigurasi untuk \`${text}\`:`,
+  this.getMainKeyboard(text)
+);
+
 
     return new Response('OK', { status: 200 });
   }
