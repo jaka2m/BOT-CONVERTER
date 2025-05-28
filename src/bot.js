@@ -13,24 +13,26 @@ export default class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text?.trim() || '';
 
-    // Split input berdasarkan spasi, koma, newline, tab
-    const inputs = text.split(/[\s,]+/).filter(Boolean);
+    // Pisah pesan per spasi atau newline
+    const inputs = text.split(/[\s\n]+/).filter(Boolean);
 
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
 
+    // Proses satu per satu
     for (const input of inputs) {
-      if (ipPortPattern.test(input)) {
-        const result = await checkProxyIP(input);
+      if (!ipPortPattern.test(input)) {
+        await this.sendMessage(chatId, `Format salah: ${input}\nFormat: IP atau IP:PORT (port default 443 jika tidak disertakan)`);
+        continue;
+      }
 
-        if (result.status === 'ACTIVE') {
-          await this.sendMessage(chatId, result.configText);
-        } else if (result.status === 'ERROR') {
-          await this.sendMessage(chatId, `Error cek IP: ${input}`);
-        } else {
-          await this.sendMessage(chatId, `Proxy tidak aktif/invalid: ${input}`);
-        }
+      const result = await checkProxyIP(input);
+
+      if (result.status === 'ACTIVE') {
+        await this.sendMessage(chatId, result.configText);
+      } else if (result.status === 'ERROR') {
+        await this.sendMessage(chatId, `Error cek IP: ${input}`);
       } else {
-        await this.sendMessage(chatId, `Format salah: ${input}`);
+        await this.sendMessage(chatId, `Proxy tidak aktif atau tidak valid: ${input}`);
       }
     }
 
