@@ -46,8 +46,8 @@ export default class TelegramBot {
         `PORT     :${result.port}\n` +
         `ISP      :${result.isp}\n` +
         `COUNTRY  :${result.country}\n` +
-        `STATUS   :${result.status}\n` +
-        `DELAY    :✅ ${result.delay}\n` +
+        `STATUS   :✅ ${result.status}\n` +
+        `DELAY    :${result.delay}\n` +
         '```' +
           '```TLS\n' +
           `${this.getTLSConfig(result, action)}\n` +
