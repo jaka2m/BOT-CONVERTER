@@ -88,33 +88,36 @@ export async function checkProxyIP(link) {
       const ssTLSLink = `ss://${toBase64(ssConfig)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
       // Informasi lengkap
-      const infoMessage = 
-`ISP: ${provider}
+      const infoMessage = `
+
+ISP: ${provider}
 IP: ${ip}
-Port: ${port}
-Country: ${result.country}
+port: ${port}
+Country ${result.country}
 Ping: ${result.delay}
-Status: ✅ ACTIVE`;
+Status: ✅ ACTIVE
+`;
 
-      const configText = 
-`\
-\`\`\`INFORMATION
-${infoMessage}
-\`\`\`
-\`\`\`VMESS-TLS
+      const configText = `
+INFORMATION
+${infoMessage.trim()}
+
+VMESS-TLS
 ${vmessTLSLink}
-\`\`\`
-\`\`\`VLESS-TLS
-${vlessTLSLink}
-\`\`\`
-\`\`\`TROJAN-TLS
-${trojanTLSLink}
-\`\`\`
-\`\`\`SHADOWSOCKS-TLS
-${ssTLSLink}
-\`\`\`
 
-👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)`;
+VLESS-TLS
+${vlessTLSLink}
+
+TROJAN-TLS
+${trojanTLSLink}
+
+SHADOWSOCKS-TLS
+${ssTLSLink}
+
+
+\`\`\`👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+\`\`\`
+`.trim();
 
       result.configText = configText;
     }
