@@ -51,4 +51,4 @@ jobs:
           fi
 
           echo "Deploying worker..."
-          npx wrangler publish
+          npx wrangler deploy
