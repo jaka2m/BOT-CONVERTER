@@ -155,7 +155,8 @@ ${trojantls}
 \`\`\`SHADOWSOCKS-TLS
 ${ssntls}
 \`\`\`
-`;
 
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+`;
   return configText;
 }
