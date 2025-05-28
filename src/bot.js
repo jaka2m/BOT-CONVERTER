@@ -142,73 +142,60 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-// /converter command
-      if (text.startsWith('/converter')) {
-        const infoMessage =
-          '🧠 *Stupid World Converter Bot*\n\n' +
-          'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
-          '- Singbox\n- Nekobox\n- Clash\n\n' +
-          '*Contoh:*\n' +
-          '`vless://...`\n' +
-          '`104.21.75.43:443`\n\n' +
-          '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
-        await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
-        return new Response('OK', { status: 200 });
-      }
+  // /converter command
+  if (text.startsWith('/converter')) {
+    const infoMessage =
+      '🧠 *Stupid World Converter Bot*\n\n' +
+      'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
+      '- Singbox\n- Nekobox\n- Clash\n\n' +
+      '*Contoh:*\n' +
+      '`vless://...`\n' +
+      '`104.21.75.43:443`\n\n' +
+      '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
 
-    async function handleUpdate(update) {
-  const text = update?.message?.text || '';
-  const chatId = update?.message?.chat?.id || update?.callback_query?.message?.chat?.id;
-  const userId = update?.message?.from?.id || update?.callback_query?.from?.id;
-  const callback = update?.callback_query;
+    await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
+    return new Response('OK', { status: 200 });
+  }
 
   // Pola IP atau IP:PORT
   const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
 
-  // Jika bukan callback dan bukan IP/IP:PORT, jangan lanjut
-  if (!callback && !ipPortPattern.test(text)) {
-    return new Response('OK', { status: 200 });
-  }
-
-  // Tangani callback query (misalnya dari inline keyboard)
-  if (callback) {
-    await handleCallback({
-      callback,
-      sendMessage: this.sendMessage.bind(this),
-      answerCallback: answerCallback.bind(this),
-      editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
-      token: this.token,
-      apiUrl: this.apiUrl
+  // Kalau bukan IP atau IP:PORT, lanjut ke command handler
+  if (!ipPortPattern.test(text)) {
+    await handleCommand({
+      text,
+      chatId,
+      userId,
+      sendMessage: this.sendMessage.bind(this)
     });
 
+    // Kalau ada callback, tangani juga
+    if (callback) {
+      await handleCallback({
+        callback,
+        sendMessage: this.sendMessage.bind(this),
+        answerCallback: this.answerCallback.bind(this),
+        editMessageReplyMarkup: this.editMessageReplyMarkup.bind(this),
+        token: this.token,
+        apiUrl: this.apiUrl
+      });
+    }
+
     return new Response('OK', { status: 200 });
   }
 
-  try {
-    // Kirim pesan loading
-    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+  // Kirim pesan loading
+  const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
 
-    const messageId = loadingMsg?.result?.message_id;
-    if (messageId) {
-      // Tampilkan menu pilihan konfigurasi berdasarkan IP/PORT
-      await this.editMessage(
-        chatId,
-        messageId,
-        `Pilih konfigurasi untuk \`${text}\`:`,
-        this.getMainKeyboard(text)
-      );
-    } else {
-      console.warn('Gagal mendapatkan message_id dari loadingMsg');
-    }
-  } catch (err) {
-    console.error('Gagal mengirim atau mengedit pesan:', err);
-    await this.sendMessage(chatId, `Terjadi kesalahan internal saat memproses pesan.`);
-  }
+  // Tampilkan menu pilihan konfigurasi
+  await this.editMessage(
+    chatId,
+    loadingMsg.result.message_id,
+    `Pilih konfigurasi untuk \`${text}\`:`,
+    this.getMainKeyboard(text)
+  );
 
-  // Dapatkan daftar proxy berdasarkan IP/PORT
-  const proxyUrls = getProxiesFromText(text); // <-- pastikan fungsi ini tersedia
-
-  // Jika ada proxy, buat file konfigurasi dan kirim
+  // --- Misalnya di bagian lain kamu punya array proxyUrls yang terisi ---
   if (proxyUrls.length > 0) {
     try {
       const clash = generateClashConfig(proxyUrls, true);
@@ -224,16 +211,43 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
     }
   }
 
-  // Handler untuk perintah umum seperti /start, /help, dll
-  await handleCommand({
-    text,
-    chatId,
-    userId,
-    sendMessage: this.sendMessage.bind(this)
-  });
-
   return new Response('OK', { status: 200 });
 }
+
+// Buat file konfigurasi
+      if (proxyUrls.length > 0) {
+        try {
+          const clash = generateClashConfig(proxyUrls, true);
+          const neko = generateNekoboxConfig(proxyUrls, true);
+          const singbox = generateSingboxConfig(proxyUrls, true);
+
+          await this.sendDocument(chatId, clash, 'clash.yaml', 'text/yaml');
+          await this.sendDocument(chatId, neko, 'nekobox.json', 'application/json');
+          await this.sendDocument(chatId, singbox, 'singbox.bpf', 'application/json');
+        } catch (err) {
+          console.error('Error generating config:', err);
+          await this.sendMessage(chatId, `Terjadi kesalahan saat generate konfigurasi: ${err.message}`);
+        }
+      }
+
+      // Handler command tambahan
+      await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
+    }
+
+    // Callback handler
+    if (callback) {
+      await handleCallback({
+        callback,
+        sendMessage: this.sendMessage.bind(this),
+        answerCallback: answerCallback.bind(this),
+        editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
+        token: this.token,
+        apiUrl: this.apiUrl
+      });
+    }
+
+    return new Response('OK', { status: 200 });
+  }
 
 
   getTLSConfig(result, action) {
