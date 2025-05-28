@@ -271,18 +271,34 @@ async sendMessageWithDelete(chatId, text) {
     return res.json();
   }
 
+
   async answerCallback(callbackQueryId, text = '') {
-    const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
-    const body = {
-      callback_query_id: callbackQueryId,
-      text,
-      show_alert: text ? true : false,
-    };
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    return response.json();
-  }
+  const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
+  const body = {
+    callback_query_id: callbackQueryId,
+    text,
+    show_alert: !!text,
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+}
+
+async sendDocument(chatId, content, filename, mimeType) {
+  const formData = new FormData();
+  formData.append('chat_id', chatId);
+  formData.append('document', new Blob([content], { type: mimeType }), filename);
+
+  const url = `${this.apiUrl}/bot${this.token}/sendDocument`;
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData
+  });
+
+  return res.json();
 }
