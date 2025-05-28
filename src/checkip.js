@@ -101,19 +101,19 @@ Status: ✅ ACTIVE
       const configText = `
 INFORMATION
 ${infoMessage.trim()}
-
+\`\`\`\`\`\`
 VMESS-TLS
 ${vmessTLSLink}
-
+\`\`\`\`\`\`
 VLESS-TLS
 ${vlessTLSLink}
-
+\`\`\`\`\`\`
 TROJAN-TLS
 ${trojanTLSLink}
-
+\`\`\`\`\`\`
 SHADOWSOCKS-TLS
 ${ssTLSLink}
-
+\`\`\`\`\`\`
 
 \`\`\`👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
 \`\`\`
