@@ -1,7 +1,7 @@
 {
   "name": "v2ray-config-bot",
   "version": "1.0.0",
-  "description": "Telegram bot deployed on Cloudflare Workers",
+  "description": "Telegram bot on Cloudflare Workers",
   "main": "src/worker.js",
   "scripts": {
     "deploy": "wrangler publish"
@@ -9,8 +9,7 @@
   "devDependencies": {
     "wrangler": "^4.17.0"
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "engines": {
     "node": ">=16"
   }
