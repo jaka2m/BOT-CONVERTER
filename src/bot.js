@@ -302,3 +302,4 @@ async sendDocument(chatId, content, filename, mimeType) {
 
   return res.json();
 }
+}
