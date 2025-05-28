@@ -1,3 +1,4 @@
+// checkip.js
 export async function checkProxyIP(link) {
   try {
     let ip = '';
