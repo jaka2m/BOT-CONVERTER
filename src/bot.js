@@ -1,4 +1,4 @@
-import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
+import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
 import { checkProxyIP, randomconfig } from './checkip.js';
 import { rotateconfig } from './config.js';
 import { handleCommand } from './randomip/commandHandler.js';
