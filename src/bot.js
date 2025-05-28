@@ -16,19 +16,27 @@ export default class TelegramBot {
     const inputs = text.split(/[\s\n]+/).filter(Boolean);
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
 
-    for (const input of inputs) {
-      if (!ipPortPattern.test(input)) {
-        await this.sendMessage(chatId, `Format salah: ${input}\nFormat: IP atau IP:PORT (port default 443 jika tidak disertakan)`);
-        continue;
-      }
+    // Pisah valid dan invalid input
+    const validInputs = inputs.filter(input => ipPortPattern.test(input));
+    const invalidInputs = inputs.filter(input => !ipPortPattern.test(input));
 
-      // Kirim pesan loading dan simpan message_id-nya
+    // Kirim pesan kesalahan untuk input yang tidak valid
+    for (const invalid of invalidInputs) {
+      await this.sendMessage(
+        chatId,
+        `Format salah: ${invalid}\nFormat: IP atau IP:PORT (port default 443 jika tidak disertakan)`
+      );
+    }
+
+    if (validInputs.length === 0) {
+      return { status: 200, body: 'OK' };
+    }
+
+    if (validInputs.length === 1) {
+      // Proses 1 input dan kirim hasil sekali
+      const input = validInputs[0];
       const loadingMsg = await this.sendMessage(chatId, `⏳ Memproses IP: ${input} ...`);
-
-      // Proses cek IP
       const result = await checkProxyIP(input);
-
-      // Hapus pesan loading
       await this.deleteMessage(chatId, loadingMsg.result.message_id);
 
       if (result.status === 'ACTIVE') {
@@ -37,6 +45,21 @@ export default class TelegramBot {
         await this.sendMessage(chatId, `❌ Error cek IP: ${input}`);
       } else {
         await this.sendMessage(chatId, `⚠️ Proxy tidak aktif atau tidak valid: ${input}`);
+      }
+    } else {
+      // Proses multiple input satu per satu
+      for (const input of validInputs) {
+        const loadingMsg = await this.sendMessage(chatId, `⏳ Memproses IP: ${input} ...`);
+        const result = await checkProxyIP(input);
+        await this.deleteMessage(chatId, loadingMsg.result.message_id);
+
+        if (result.status === 'ACTIVE') {
+          await this.sendMessage(chatId, result.configText);
+        } else if (result.status === 'ERROR') {
+          await this.sendMessage(chatId, `❌ Error cek IP: ${input}`);
+        } else {
+          await this.sendMessage(chatId, `⚠️ Proxy tidak aktif atau tidak valid: ${input}`);
+        }
       }
     }
 
@@ -50,7 +73,7 @@ export default class TelegramBot {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: text,
+        text,
         parse_mode: 'Markdown'
       })
     });
