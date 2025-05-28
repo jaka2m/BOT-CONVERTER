@@ -12,19 +12,20 @@ export default class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    // Cek apakah pesan berisi IP atau IP:PORT sederhana
-    // Contoh valid: "8.8.8.8", "8.8.8.8:443"
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
 
     if (!ipPortPattern.test(text.trim())) {
-      // Jika bukan format IP:PORT, balas info instruksi
       await this.sendMessage(chatId, 'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy.');
       return new Response('OK', { status: 200 });
     }
 
+    // Kirim pesan loading
+    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+
     // Lakukan pengecekan IP
     const result = await checkProxyIP(text.trim());
 
+    // Susun reply dengan markdown (preformatted)
     let reply = `Status pengecekan untuk ${text.trim()}:\n\n`;
     reply += `Status: ${result.status}\n`;
     reply += `Delay: ${result.delay}\n`;
@@ -32,9 +33,13 @@ export default class TelegramBot {
     reply += `ISP: ${result.isp}\n\n`;
 
     if (result.status === 'ACTIVE' && result.configText) {
-      reply += `\`\`\`${result.configText}\`\`\``;
+      reply += '```\n' + result.configText + '\n```';
     }
 
+    // Hapus pesan loading
+    await this.deleteMessage(chatId, loadingMsg.result.message_id);
+
+    // Kirim hasil pengecekan
     await this.sendMessage(chatId, reply);
 
     return new Response('OK', { status: 200 });
@@ -47,7 +52,21 @@ export default class TelegramBot {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: text
+        text: text,
+        parse_mode: 'Markdown'
+      })
+    });
+    return response.json();
+  }
+
+  async deleteMessage(chatId, messageId) {
+    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId
       })
     });
     return response.json();
