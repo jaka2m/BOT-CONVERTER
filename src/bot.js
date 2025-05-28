@@ -42,8 +42,13 @@ export default class TelegramBot {
         chatId,
         messageId,
         '```INFORMATION\n' +
-        `${ipPort}\n` +
-        '```\n' +
+        `${result.ip}\n` +
+        `${result.port}\n` +
+        `${result.isp}\n` +
+        `${result.country}\n` +
+        `${result.status}\n` +
+        `${result.delay}\n` +
+        '```' +
           '```TLS\n' +
           `${this.getTLSConfig(result, action)}\n` +
           '```\n' +
