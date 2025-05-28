@@ -1,88 +1,119 @@
- // Data format: "action|ipPort"
-      // contoh: "vless|1.2.3.4:443"
+import { checkProxyIP } from './checkip.js';
+
+export default class TelegramBot {
+  constructor(token, apiUrl = 'https://api.telegram.org') {
+    this.token = token;
+    this.apiUrl = apiUrl;
+  }
+
+  async handleUpdate(update) {
+    // Abaikan jika bukan message atau callback_query
+    if (!update.message && !update.callback_query) {
+      return new Response('OK', { status: 200 });
+    }
+
+    // Tangani callback_query (tombol)
+    if (update.callback_query) {
+      const callback = update.callback_query;
+      const chatId = callback.message.chat.id;
+      const messageId = callback.message.message_id;
+      const data = callback.data;
+
       const [action, ipPort] = data.split('|');
 
-      // Jika tombol back
       if (action === 'back') {
-        // Kirim pesan instruksi awal
-        await this.editMessage(chatId, messageId, 
-          'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.', 
+        await this.editMessage(
+          chatId,
+          messageId,
+          'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.',
           this.getMainKeyboard(ipPort)
         );
-        // Jawab callback agar loading hilang
         await this.answerCallback(callback.id);
         return new Response('OK', { status: 200 });
       }
 
-      // Jalankan cek proxy
       const result = await checkProxyIP(ipPort);
       if (result.status !== 'ACTIVE') {
         await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
         return new Response('OK', { status: 200 });
       }
 
-      // Edit pesan untuk menampilkan konfigurasi dengan dua blok kode terpisah TLS dan Non-TLS
-await this.editMessage(
-  chatId,
-  messageId,
-  `Konfigurasi untuk \`${ipPort}\`:\n\n` +
-  '```TLS\n' +
-  `${this.getTLSConfig(result, action)}\n` +
-  '```' +
-  '```Non-TLS\n' +
-  `${this.getNonTLSConfig(result, action)}\n` +
-  '```',
-  this.getConfigKeyboard(ipPort)
-);
+      await this.editMessage(
+        chatId,
+        messageId,
+        `Konfigurasi untuk \`${ipPort}\`:\n\n` +
+          '```TLS\n' +
+          `${this.getTLSConfig(result, action)}\n` +
+          '```' +
+          '```Non-TLS\n' +
+          `${this.getNonTLSConfig(result, action)}\n` +
+          '```',
+        this.getConfigKeyboard(ipPort)
+      );
 
-      // Jawab callback untuk hilangkan loading
       await this.answerCallback(callback.id);
       return new Response('OK', { status: 200 });
     }
 
-    // Jika pesan biasa (input IP)
-    if (update.message && update.message.text) {
-  const chatId = update.message.chat.id;
-  const text = update.message.text.trim();
+    // Tangani pesan teks biasa
+    const chatId = update.message.chat.id;
+    const text = (update.message.text || '').trim();
 
-  // Regex validasi IP atau IP:PORT (IP 0.0.0.0–255.255.255.255 dan port opsional 1–65535)
-  const ipPortPattern = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?::\d{1,5})?$/;
+    // Tangani perintah /start
+    if (text === '/start') {
+      await this.sendMessage(chatId, 'Halo! Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy.');
+      return new Response('OK', { status: 200 });
+    }
 
-  if (!ipPortPattern.test(text)) {
-    // Format tidak valid: abaikan tanpa balasan
+    // Pola IP atau IP:PORT
+    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+
+    // Kalau pesan bukan IP atau IP:PORT, jangan balas
+    if (!ipPortPattern.test(text)) {
+      return new Response('OK', { status: 200 });
+    }
+
+    // Kirim pesan loading
+    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+
+    // Edit pesan loading menjadi menu pilihan konfigurasi
+    await this.editMessage(
+      chatId,
+      loadingMsg.result.message_id,
+      `Pilih konfigurasi untuk \`${text}\`:`,
+      this.getMainKeyboard(text)
+    );
+
     return new Response('OK', { status: 200 });
   }
 
-  // Kirim pesan loading
-  const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-
-  // Edit pesan loading ke tombol pilihan
-  await this.editMessage(chatId, loadingMsg.result.message_id,
-    `Pilih konfigurasi untuk \`${text}\`:`,
-    this.getMainKeyboard(text)
-  );
-
-  return new Response('OK', { status: 200 });
-}
-
-
   getTLSConfig(result, action) {
     switch (action) {
-      case 'vless': return result.vlessTLSLink || '';
-      case 'trojan': return result.trojanTLSLink || '';
-      case 'vmess': return result.vmessTLSLink || '';
-      case 'ss': return result.ssTLSLink || '';
-      default: return '';
+      case 'vless':
+        return result.vlessTLSLink || '';
+      case 'trojan':
+        return result.trojanTLSLink || '';
+      case 'vmess':
+        return result.vmessTLSLink || '';
+      case 'ss':
+        return result.ssTLSLink || '';
+      default:
+        return '';
     }
   }
 
   getNonTLSConfig(result, action) {
     switch (action) {
-      case 'vless': return result.vlessNTLSLink || '';
-      case 'trojan': return result.trojanNTLSLink || '';
-      case 'vmess': return result.vmessNTLSLink || '';
-      case 'ss': return result.ssNTLSLink || '';
-      default: return '';
+      case 'vless':
+        return result.vlessNTLSLink || '';
+      case 'trojan':
+        return result.trojanNTLSLink || '';
+      case 'vmess':
+        return result.vmessNTLSLink || '';
+      case 'ss':
+        return result.ssNTLSLink || '';
+      default:
+        return '';
     }
   }
 
@@ -91,26 +122,20 @@ await this.editMessage(
       inline_keyboard: [
         [
           { text: 'VLESS', callback_data: `vless|${ipPort}` },
-          { text: 'TROJAN', callback_data: `trojan|${ipPort}` }
+          { text: 'TROJAN', callback_data: `trojan|${ipPort}` },
         ],
         [
           { text: 'VMESS', callback_data: `vmess|${ipPort}` },
-          { text: 'SHADOWSOCKS', callback_data: `ss|${ipPort}` }
+          { text: 'SHADOWSOCKS', callback_data: `ss|${ipPort}` },
         ],
-        [
-          { text: 'BACK', callback_data: `back|${ipPort}` }
-        ]
-      ]
+        [{ text: 'BACK', callback_data: `back|${ipPort}` }],
+      ],
     };
   }
 
   getConfigKeyboard(ipPort) {
     return {
-      inline_keyboard: [
-        [
-          { text: 'Kembali ke menu', callback_data: `back|${ipPort}` }
-        ]
-      ]
+      inline_keyboard: [[{ text: 'Kembali ke menu', callback_data: `back|${ipPort}` }]],
     };
   }
 
@@ -122,10 +147,11 @@ await this.editMessage(
       parse_mode: 'Markdown',
     };
     if (replyMarkup) body.reply_markup = replyMarkup;
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
     return response.json();
   }
@@ -139,10 +165,11 @@ await this.editMessage(
       parse_mode: 'Markdown',
     };
     if (replyMarkup) body.reply_markup = replyMarkup;
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
     return response.json();
   }
@@ -157,7 +184,7 @@ await this.editMessage(
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
     return response.json();
   }
