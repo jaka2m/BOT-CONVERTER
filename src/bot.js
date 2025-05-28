@@ -39,21 +39,26 @@ export default class TelegramBot {
       }
 
       await this.editMessage(
-        chatId,
-        messageId,
-        `Konfigurasi untuk \`${ipPort}\`:\n\n` +
-          '```TLS\n' +
-          `${this.getTLSConfig(result, action)}\n` +
-          '```\n' +
-          '```Non-TLS\n' +
-          `${this.getNonTLSConfig(result, action)}\n` +
-          '```',
-        this.getConfigKeyboard(ipPort)
-      );
+  chatId,
+  messageId,
+  `\`\`\`INFORMATION
+Port    : ${result.port}
+IP      : ${result.ip}
+ISP     : ${result.isp}
+Country : ${result.country}
+Status  : ${result.status}
+Delay   : ${result.delay}
+\`\`\`
 
-      await this.answerCallback(callback.id);
-      return new Response('OK', { status: 200 });
-    }
+\`\`\`TLS
+${this.getTLSConfig(result, action)}
+\`\`\`
+
+\`\`\`Non-TLS
+${this.getNonTLSConfig(result, action)}
+\`\`\``,
+  this.getConfigKeyboard(ipPort)
+);
 
     // ======= HANDLE PESAN MASUK =======
     const chatId = update.message.chat.id;
