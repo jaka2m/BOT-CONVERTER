@@ -14,27 +14,30 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Install dependencies
         run: npm install
-        
-      - name: Check and Set TELEGRAM_BOT_TOKEN secret if not exists
+
+      - name: Setup Wrangler secret TELEGRAM_BOT_TOKEN and deploy
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           WORKER_NAME: v2ray-config-bot
         run: |
-          echo "Checking if TELEGRAM_BOT_TOKEN secret exists..."
+          set -e
+
           SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
+
+          echo "Checking if TELEGRAM_BOT_TOKEN secret exists..."
           EXISTS=$(curl -s -X GET "$SECRETS_API" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H "Content-Type: application/json" | jq -r '.result[] | select(.name=="TELEGRAM_BOT_TOKEN") | .name')
+            -H "Content-Type: application/json" | jq -r '.result[]?.name' | grep "^TELEGRAM_BOT_TOKEN$" || true)
 
           if [ "$EXISTS" = "TELEGRAM_BOT_TOKEN" ]; then
             echo "Secret TELEGRAM_BOT_TOKEN already exists, skipping creation."
@@ -42,9 +45,6 @@ jobs:
             echo "Secret TELEGRAM_BOT_TOKEN not found, creating..."
             echo "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN
           fi
-          
-      - name: Deploy to Cloudflare
-        run: npm run deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+          echo "Deploying worker..."
+          npx wrangler publish
