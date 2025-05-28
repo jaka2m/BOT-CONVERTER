@@ -1,4 +1,12 @@
+import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
 import { checkProxyIP } from './checkip.js';
+import { randomconfig } from './randomconfig.js';
+import { rotateconfig } from './config.js';
+import { handleCommand } from './randomip/commandHandler.js';
+import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
+import { randomip } from './randomip/randomip.js';
+
+const HOSTKU = 'example.com';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
@@ -69,6 +77,68 @@ export default class TelegramBot {
           '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
           'Ketik `/converter` untuk info lebih lanjut.';
         await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
+
+// /config command
+      if (text.startsWith('/config')) {
+        const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
+
+Ketik perintah berikut untuk mendapatkan config rotate berdasarkan negara:
+
+\`/rotate + kode_negara\`
+
+Negara tersedia:
+id, sg, my, us, ca, in, gb, ir, ae, fi, tr, md, tw, ch, se, nl, es, ru, ro, pl, al, nz, mx, it, de, fr, am, cy, dk, br, kr, vn, th, hk, cn, jp.
+
+Contoh:
+\`/rotate id\`
+\`/rotate sg\`
+\`/rotate my\`
+
+Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.`;
+        await this.sendMessage(chatId, helpMsg, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
+
+      // /rotate command
+      if (text.startsWith('/rotate ')) {
+        await rotateconfig.call(this, chatId, text);
+        return new Response('OK', { status: 200 });
+      }
+
+      // /randomconfig command
+      if (text.startsWith('/randomconfig')) {
+        const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
+        try {
+          const configText = await randomconfig();
+          await this.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
+        } catch (error) {
+          console.error('Error generating random config:', error);
+          await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
+        }
+        if (loadingMsg && loadingMsg.message_id) {
+          await this.deleteMessage(chatId, loadingMsg.message_id);
+        }
+        return new Response('OK', { status: 200 });
+      }
+
+      // /listwildcard command
+      if (text.startsWith('/listwildcard')) {
+        const wildcards = [
+          "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
+          "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
+          "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
+          "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
+        ];
+
+        const configText =
+          `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
+          wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
+          `\n\n📦 *Total:* ${wildcards.length} wildcard` +
+          `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
+
+        await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
         return new Response('OK', { status: 200 });
       }
 
