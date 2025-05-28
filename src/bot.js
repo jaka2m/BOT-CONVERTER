@@ -22,34 +22,30 @@ export default class TelegramBot {
       const userId = message.from.id;
       const text = message.text || '';
 
+      // /start command
       if (text.startsWith('/start')) {
-  const startMessage = 
-    `Selamat datang di *Stupid World Converter Bot!*\n\n` +
-    'Gunakan perintah:\n' +
-    '━━━━━━━━━━━━━━━━━\n' +
-    '≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡\n' +
-    '━━━━━━━━━━━━━━━━━\n' +
-    `» *Name:* ${msg.from.first_name}\n` +
-    `» *Username:* @${msg.from.username || "Tidak Ada"}\n` +
-    `» *User ID:* ${userId}\n` +
-    '━━━━━━━━━━━━━━━━━\n' +
-    '🔍 *Cara Penggunaan:*\n' +
-    '1. Masukkan alamat IP dan port yang ingin Anda cek.\n' +
-    '2. Jika tidak memasukkan port, maka default adalah *443*.\n' +
-    '3. Tunggu beberapa detik untuk hasilnya\n\n' +
-    '💡 KETIK /menu UNTUK MELIHAT COMMAND\n' +
-    '💡 *Format IP yang Diterima:*\n' +
-    '• `176.97.78.80`\n' +
-    '• `176.97.78.80:2053`\n\n' +
-    '👨‍💻 Modded By : [Geo Project](https://t.me/sampiiiiu)\n\n' +
-    '🌐 [WEB VPN TUNNEL](https://joss.checker-ip.web.id)\n' +
-    '📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)\n' +
-    `👥 [Phreaker GROUP](${GROUP_LINK || "https://t.me/your_group_link"})`;
-
-  await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
-  return new Response('OK', { status: 200 });
-}
-
+        const startMessage =
+          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
+          'Gunakan perintah:\n' +
+          ' `━━━━━━━━━━━━━━━━━' +
+          '  ≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡' +
+          ' `━━━━━━━━━━━━━━━━━' +
+          '🔍 *Cara Penggunaan:*' +
+          '1. Masukkan alamat IP dan port yang ingin Anda cek.' +
+          '2. Jika tidak memasukkan port, maka default adalah *443*.' +
+          '3. Tunggu beberapa detik untuk hasilnya\n\n' +
+          '💡KETIK /menu UNTUK MELIHAT COMMAND\n\n' +
+          '💡 *Format IP yang Diterima:*' +
+          '• \`176.97.78.80\' +
+          '• \`176.97.78.80:2053\`\n\n' +
+          '👨‍💻 Modded By : [Geo Project](https://t.me/sampiiiiu)\n\n' +
+          '🌐 [WEB VPN TUNNEL](https://joss.checker-ip.web.id)' +
+          '📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)' +
+          '👥 [Phreaker GROUP](${GROUP_LINK || "https://t.me/your_group_link"})' +
+        await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
+      
       // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
