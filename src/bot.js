@@ -79,40 +79,20 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-if (text.startsWith('/converter')) {
-        const infoMessage =
-          '🧠 *Stupid World Converter Bot*\n\n' +
-          'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
-          '- Singbox\n- Nekobox\n- Clash\n\n' +
-          '*Contoh:*\n' +
-          '`vless://...`\n' +
-          '`104.21.75.43:443`\n\n' +
-          '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
-        await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
-        return new Response('OK', { status: 200 });
-      }
-
-      // Hanya lanjutkan jika input adalah IP atau IP:PORT
-      const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-      if (!ipPortPattern.test(text)) {
-        // Abaikan tanpa membalas jika format salah
-        return new Response('OK', { status: 200 });
-      }
-
-      const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-      await this.editMessage(
-        chatId,
-        loadingMsg.result.message_id,
-        `Pilih konfigurasi untuk \`${text}\`:`,
-        this.getMainKeyboard(text)
-      );
-
-      return new Response('OK', { status: 200 });
-    } catch (error) {
-      console.error('Error processing links:', error);
-      await this.sendMessage(chatId, `Error: ${error.message}`);
+    // Hanya lanjutkan jika input adalah IP atau IP:PORT
+    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+    if (!ipPortPattern.test(text)) {
+      // Abaikan tanpa membalas jika format salah
       return new Response('OK', { status: 200 });
     }
+
+    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+    await this.editMessage(chatId, loadingMsg.result.message_id,
+      `Pilih konfigurasi untuk \`${text}\`:`,
+      this.getMainKeyboard(text)
+    );
+
+    return new Response('OK', { status: 200 });
   }
 
   getTLSConfig(result, action) {
@@ -163,34 +143,39 @@ if (text.startsWith('/converter')) {
     };
   }
 
-  // Contoh generate dan kirim konfigurasi (pastikan di fungsi async)
-  async generateAndSendConfigs(chatId, links) {
-    try {
-      const clashConfig = generateClashConfig(links, true);
-      const nekoboxConfig = generateNekoboxConfig(links, true);
-      const singboxConfig = generateSingboxConfig(links, true);
+// Generate configurations
+        const clashConfig = generateClashConfig(links, true);
+        const nekoboxConfig = generateNekoboxConfig(links, true);
+        const singboxConfig = generateSingboxConfig(links, true);
 
-      await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
-      await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
-      await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
-    } catch (error) {
-      console.error('Error processing links:', error);
-      await this.sendMessage(chatId, `Error: ${error.message}`);
+        // Send files
+        await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
+        await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
+        await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
+
+      } catch (error) {
+        console.error('Error processing links:', error);
+        await this.sendMessage(chatId, `Error: ${error.message}`);
+      }
+    } else {
+      await this.sendMessage(chatId, 'Please send VMess, VLESS, Trojan, or Shadowsocks links for conversion.');
     }
+
+    return new Response('OK', { status: 200 });
   }
 
-  async sendMessage(chatId, text, options = {}) {
+  async sendMessage(chatId, text, replyMarkup) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const body = {
       chat_id: chatId,
       text,
-      parse_mode: options.parse_mode || 'Markdown',
+      parse_mode: 'Markdown',
     };
-    if (options.reply_markup) body.reply_markup = options.reply_markup;
+    if (replyMarkup) body.reply_markup = replyMarkup;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
     return response.json();
   }
@@ -207,7 +192,7 @@ if (text.startsWith('/converter')) {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
     return response.json();
   }
@@ -222,22 +207,25 @@ if (text.startsWith('/converter')) {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
     return response.json();
   }
 
-  async sendDocument(chatId, content, filename, mimeType) {
+async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
     formData.append('document', blob, filename);
     formData.append('chat_id', chatId.toString());
 
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
-      method: 'POST',
-      body: formData,
-    });
+    const response = await fetch(
+      `${this.apiUrl}/bot${this.token}/sendDocument`, {
+        method: 'POST',
+        body: formData
+      }
+    );
 
     return response.json();
   }
 }
+
