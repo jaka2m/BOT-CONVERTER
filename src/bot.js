@@ -59,11 +59,18 @@ export default class TelegramBot {
     const chatId = update.message.chat.id;
     const text = (update.message.text || '').trim();
 
-    // Tangani perintah /start
-    if (text === '/start') {
-      await this.sendMessage(chatId, 'Halo! Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy.');
-      return new Response('OK', { status: 200 });
-    }
+    // /start command
+      if (text.startsWith('/start')) {
+        const startMessage =
+          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
+          'Gunakan perintah:\n' +
+          '• `/converter` — untuk mengubah link proxy ke format:\n' +
+          '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
+          '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
+          'Ketik `/converter` untuk info lebih lanjut.';
+        await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
 
     // Pola IP atau IP:PORT
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
