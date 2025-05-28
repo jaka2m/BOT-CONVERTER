@@ -1,4 +1,4 @@
-name: Deploy VPN CF
+name: Deploy to Cloudflare Workers
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
         run: npm install
 
       - name: Set TELEGRAM_BOT_TOKEN as Cloudflare Worker Secret
-        run: echo "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN --yes
+        run: echo "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN --name v2ray-config-bot
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
