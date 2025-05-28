@@ -143,30 +143,23 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
       }
 
   // /converter command
-      if (text.startsWith('/converter')) {
-        const infoMessage =
-          '🧠 *Stupid World Converter Bot*\n\n' +
-          'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
-          '- Singbox\n- Nekobox\n- Clash\n\n' +
-          '*Contoh:*\n' +
-          '`vless://...`\n' +
-          '`104.21.75.43:443`\n\n' +
-          '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
-        await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
-        return new Response('OK', { status: 200 });
-      }
+  if (text.startsWith('/converter')) {
+    const infoMessage =
+      '🧠 *Stupid World Converter Bot*\n\n' +
+      'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
+      '- Singbox\n- Nekobox\n- Clash\n\n' +
+      '*Contoh:*\n' +
+      '`vless://...`\n' +
+      '`104.21.75.43:443`\n\n' +
+      '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
 
-      // Regex validasi IP:PORT dan proxy URL
-      const ipPortRegex = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
-      const proxyUrlRegex = /^(vless|vmess|trojan|ss):\/\/.+$/i;
-
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean).slice(0, 10);
-      const ipLines = lines.filter(l => ipPortRegex.test(l));
-      const proxyUrls = lines.filter(l => proxyUrlRegex.test(l));
-
+    await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
+    return new Response('OK', { status: 200 });
+  }
 
   // Pola IP atau IP:PORT
   const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+  const proxyUrls = lines.filter(l => proxyUrlRegex.test(l));
 
   // Kalau bukan IP atau IP:PORT, lanjut ke command handler
   if (!ipPortPattern.test(text)) {
