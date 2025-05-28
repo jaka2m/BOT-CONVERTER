@@ -52,10 +52,14 @@ export async function checkProxyIP(link) {
       const flag = getFlagEmoji(data.country);
       result.flag = flag;
 
-      const country = data.country || 'UNKNOWN';
-      const provider = data.org || data.isp || 'UNKNOWN';
-      const HOSTKU = 'joss.checker-ip.xyz';
-      const path = encodeURIComponent(`/Geo-Project/${ip}-${port}`);
+      const rawCountry = data.country || 'UNKNOWN';
+const rawProvider = data.org || data.isp || 'UNKNOWN';
+
+const country = encodeURIComponent(rawCountry);
+const provider = encodeURIComponent(rawProvider);
+
+const HOSTKU = 'joss.checker-ip.xyz';
+const path = encodeURIComponent(`/Geo-Project/${ip}-${port}`);
 
       const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1';
       const vlessUUID = generateUUID();
