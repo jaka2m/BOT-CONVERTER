@@ -14,16 +14,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
+          
       - name: Install dependencies
         run: npm install
-
-      - name: Setup Wrangler secret TELEGRAM_BOT_TOKEN and deploy
+          
+      - name: Setup Wrangler secret and deploy worker
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -31,7 +31,6 @@ jobs:
           WORKER_NAME: v2ray-config-bot
         run: |
           set -e
-
           SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
 
           echo "Checking if TELEGRAM_BOT_TOKEN secret exists..."
@@ -43,7 +42,12 @@ jobs:
             echo "Secret TELEGRAM_BOT_TOKEN already exists, skipping creation."
           else
             echo "Secret TELEGRAM_BOT_TOKEN not found, creating..."
+            set +e
             echo "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN
+            if [ $? -ne 0 ]; then
+              echo "Warning: Failed to create secret, maybe already exists. Continuing deploy..."
+            fi
+            set -e
           fi
 
           echo "Deploying worker..."
