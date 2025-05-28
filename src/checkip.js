@@ -88,19 +88,18 @@ export async function checkProxyIP(link) {
       const ssTLSLink = `ss://${toBase64(ssConfig)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
       // Informasi lengkap
-      const infoMessage = `
-
-ISP: ${provider}
+      const infoMessage = 
+`ISP: ${provider}
 IP: ${ip}
-port: ${port}
-Country ${result.country}
+Port: ${port}
+Country: ${result.country}
 Ping: ${result.delay}
-Status: ✅ ACTIVE
-`;
+Status: ✅ ACTIVE`;
 
-      const configText = `
+      const configText = 
+`\
 \`\`\`INFORMATION
-${infoMessage.trim()}
+${infoMessage}
 \`\`\`
 \`\`\`VMESS-TLS
 ${vmessTLSLink}
@@ -115,8 +114,7 @@ ${trojanTLSLink}
 ${ssTLSLink}
 \`\`\`
 
-👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
-`.trim();
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)`;
 
       result.configText = configText;
     }
