@@ -112,11 +112,10 @@ ${vlessTLSLink}
 ${trojanTLSLink}
 \`\`\`\`\`\`
 \`\`\`\`\`\`SHADOWSOCKS-TLS
-${ssTLSLink}
+${ssTLSLink}\n
 \`\`\`\`\`\`
-
-\`👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
-\`
+\`\`\`\`\`\`👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+\`\`\`\`\`\`
 `.trim();
 
       result.configText = configText;
