@@ -66,10 +66,32 @@ export default class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text?.trim() || '';
 
-    if (text === '/start') {
-      await this.sendMessage(chatId, 'Selamat datang!\n\nKirim IP atau IP:PORT untuk memeriksa status proxy dan memilih konfigurasi (VLESS, Trojan, VMess, Shadowsocks).');
-      return new Response('OK', { status: 200 });
-    }
+    // /start command
+      if (text.startsWith('/start')) {
+        const startMessage =
+          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
+          'Gunakan perintah:\n' +
+          '• `/converter` — untuk mengubah link proxy ke format:\n' +
+          '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
+          '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
+          'Ketik `/converter` untuk info lebih lanjut.';
+        await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
+
+// /converter command
+      if (text.startsWith('/converter')) {
+        const infoMessage =
+          '🧠 *Stupid World Converter Bot*\n\n' +
+          'Kirimkan saya link konfigurasi V2Ray ATAU IP:PORT dan saya akan mengubahnya ke format:\n' +
+          '- Singbox\n- Nekobox\n- Clash\n\n' +
+          '*Contoh:*\n' +
+          '`vless://...`\n' +
+          '`104.21.75.43:443`\n\n' +
+          '*Catatan:*\n- Maksimal 10 link atau IP per permintaan.';
+        await this.sendMessage(chatId, infoMessage, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
 
     // Hanya lanjutkan jika input adalah IP atau IP:PORT
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
@@ -135,6 +157,27 @@ export default class TelegramBot {
     };
   }
 
+// Generate configurations
+        const clashConfig = generateClashConfig(links, true);
+        const nekoboxConfig = generateNekoboxConfig(links, true);
+        const singboxConfig = generateSingboxConfig(links, true);
+
+        // Send files
+        await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
+        await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
+        await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
+
+      } catch (error) {
+        console.error('Error processing links:', error);
+        await this.sendMessage(chatId, `Error: ${error.message}`);
+      }
+    } else {
+      await this.sendMessage(chatId, 'Please send VMess, VLESS, Trojan, or Shadowsocks links for conversion.');
+    }
+
+    return new Response('OK', { status: 200 });
+  }
+
   async sendMessage(chatId, text, replyMarkup) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const body = {
@@ -182,4 +225,21 @@ export default class TelegramBot {
     });
     return response.json();
   }
+
+async sendDocument(chatId, content, filename, mimeType) {
+    const formData = new FormData();
+    const blob = new Blob([content], { type: mimeType });
+    formData.append('document', blob, filename);
+    formData.append('chat_id', chatId.toString());
+
+    const response = await fetch(
+      `${this.apiUrl}/bot${this.token}/sendDocument`, {
+        method: 'POST',
+        body: formData
+      }
+    );
+
+    return response.json();
+  }
 }
+
