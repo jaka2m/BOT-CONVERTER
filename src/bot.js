@@ -24,16 +24,43 @@ export default class TelegramBot {
 
       // /start command
       if (text.startsWith('/start')) {
-        const startMessage =
-          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
-          'Gunakan perintah:\n' +
-          '• `/converter` — untuk mengubah link proxy ke format:\n' +
-          '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
-          '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
-          'Ketik `/converter` untuk info lebih lanjut.';
-        await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
-        return new Response('OK', { status: 200 });
-      }
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  const welcomeMessage = `
+━━━━━━━━━━━━━━━━━        
+≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡
+━━━━━━━━━━━━━━━━━
+» *Name:* ${msg.from.first_name}  
+» *Username:* @${msg.from.username || "Tidak Ada"}  
+» *User ID:* ${userId}  
+━━━━━━━━━━━━━━━━━
+🔍 *Cara Penggunaan:*
+1. Masukkan alamat IP dan port yang ingin Anda cek.
+2. Jika tidak memasukkan port, maka default adalah *443*.
+3. Tunggu beberapa detik untuk hasilnya
+
+💡KETIK /menu UNTUK MELIHAT COMMAND
+
+💡 *Format IP yang Diterima:*
+• \`176.97.78.80\`
+• \`176.97.78.80:2053\`
+
+👨‍💻 Modded By : [Geo Project](https://t.me/sampiiiiu)
+
+🌐 [WEB VPN TUNNEL](https://joss.checker-ip.web.id)
+📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
+👥 [Phreaker GROUP](${GROUP_LINK})
+`;
+
+  await this.sendMessage(chatId, welcomeMessage, {
+    parse_mode: "Markdown",
+    disable_web_page_preview: true,
+  });
+
+  return new Response('OK', { status: 200 });
+}
+
 
       // /config command
       if (text.startsWith('/config')) {
