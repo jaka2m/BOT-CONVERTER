@@ -1,12 +1,19 @@
 {
   "name": "v2ray-config-bot",
   "version": "1.0.0",
-  "description": "Telegram bot to convert V2Ray configurations",
-  "type": "module",
+  "description": "Telegram bot deployed on Cloudflare Workers",
+  "main": "src/worker.js",
   "scripts": {
-    "deploy": "wrangler deploy --account-id $CLOUDFLARE_ACCOUNT_ID"
+    "deploy": "wrangler publish"
+  },
+  "devDependencies": {
+    "wrangler": "^4.17.0"
   },
   "dependencies": {
-    "wrangler": "^3.21.0"
+    // tambahkan dependencies bot kamu jika ada, misal:
+    // "telegraf": "^4.12.0"
+  },
+  "engines": {
+    "node": ">=16"
   }
 }
