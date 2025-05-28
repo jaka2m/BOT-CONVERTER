@@ -99,19 +99,19 @@ Status: ✅ ACTIVE
 `;
 
       const configText = `
-INFORMATION
+\`\`\`\`\`\`INFORMATION
 ${infoMessage.trim()}
 \`\`\`\`\`\`
-VMESS-TLS
+\`\`\`\`\`\`VMESS-TLS
 ${vmessTLSLink}
 \`\`\`\`\`\`
-VLESS-TLS
+\`\`\`\`\`\`VLESS-TLS
 ${vlessTLSLink}
 \`\`\`\`\`\`
-TROJAN-TLS
+\`\`\`\`\`\`TROJAN-TLS
 ${trojanTLSLink}
 \`\`\`\`\`\`
-SHADOWSOCKS-TLS
+\`\`\`\`\`\`SHADOWSOCKS-TLS
 ${ssTLSLink}
 \`\`\`\`\`\`
 
