@@ -32,7 +32,7 @@ export default class TelegramBot {
     reply += `ISP: ${result.isp}\n\n`;
 
     if (result.status === 'ACTIVE' && result.configText) {
-      reply += `Config:\n${result.configText}`;
+      reply += `\`\`\`${result.configText}\`\`\``;
     }
 
     await this.sendMessage(chatId, reply);
