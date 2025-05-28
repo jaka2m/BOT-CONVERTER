@@ -39,26 +39,28 @@ export default class TelegramBot {
       }
 
       await this.editMessage(
-  chatId,
-  messageId,
-  `\`\`\`INFORMATION
-Port    : ${result.port}
-IP      : ${result.ip}
-ISP     : ${result.isp}
-Country : ${result.country}
-Status  : ${result.status}
-Delay   : ${result.delay}
-\`\`\`
+        chatId,
+        messageId,
+        ````INFORMATION
+             ${result.port}\n
+               ${result.ip}\n
+               ${result.isp}\n
+               ${result.country}\n
+               ${result.status}\n
+               ${result.delay}\n
+               ``` ` +
+          '```TLS\n' +
+          `${this.getTLSConfig(result, action)}\n` +
+          '```\n' +
+          '```Non-TLS\n' +
+          `${this.getNonTLSConfig(result, action)}\n` +
+          '```',
+        this.getConfigKeyboard(ipPort)
+      );
 
-\`\`\`TLS
-${this.getTLSConfig(result, action)}
-\`\`\`
-
-\`\`\`Non-TLS
-${this.getNonTLSConfig(result, action)}
-\`\`\``,
-  this.getConfigKeyboard(ipPort)
-);
+      await this.answerCallback(callback.id);
+      return new Response('OK', { status: 200 });
+    }
 
     // ======= HANDLE PESAN MASUK =======
     const chatId = update.message.chat.id;
