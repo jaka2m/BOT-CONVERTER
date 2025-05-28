@@ -23,7 +23,10 @@ export default class TelegramBot {
       // Jika tombol back
       if (action === 'back') {
         // Kirim pesan instruksi awal
-        await this.editMessage(chatId, messageId, 'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.', this.getMainKeyboard(ipPort));
+        await this.editMessage(chatId, messageId, 
+          'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.', 
+          this.getMainKeyboard(ipPort)
+        );
         // Jawab callback agar loading hilang
         await this.answerCallback(callback.id);
         return new Response('OK', { status: 200 });
@@ -36,30 +39,19 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-      // Pilih config sesuai tombol
-      let config = '';
-      switch (action) {
-        case 'vless':
-          config = result.vlessTLSLink + '\n' + result.vlessNTLSLink;
-          break;
-        case 'trojan':
-          config = result.trojanTLSLink + '\n' + result.trojanNTLSLink;
-          break;
-        case 'vmess':
-          config = result.vmessTLSLink + '\n' + result.vmessNTLSLink;
-          break;
-        case 'ss':
-          config = result.ssTLSLink + '\n' + result.ssNTLSLink;
-          break;
-        default:
-          config = 'Unknown action';
-      }
-
-      // Kirim edit pesan dengan config (kode blok markdown)
-      await this.editMessage(chatId, messageId,
-        `Konfigurasi untuk \`${ipPort}\`:\n\n\`\`\`\n${config}\n\`\`\``,
-        this.getConfigKeyboard(ipPort)
-      );
+      // Edit pesan untuk menampilkan konfigurasi dengan dua blok kode terpisah TLS dan Non-TLS
+await this.editMessage(
+  chatId,
+  messageId,
+  `Konfigurasi untuk \`${ipPort}\`:\n\n` +
+  '```TLS\n' +
+  `${this.getTLSConfig(result, action)}\n` +
+  '```' +
+  '```Non-TLS\n' +
+  `${this.getNonTLSConfig(result, action)}\n` +
+  '```',
+  this.getConfigKeyboard(ipPort)
+);
 
       // Jawab callback untuk hilangkan loading
       await this.answerCallback(callback.id);
@@ -87,6 +79,26 @@ export default class TelegramBot {
     );
 
     return new Response('OK', { status: 200 });
+  }
+
+  getTLSConfig(result, action) {
+    switch (action) {
+      case 'vless': return result.vlessTLSLink || '';
+      case 'trojan': return result.trojanTLSLink || '';
+      case 'vmess': return result.vmessTLSLink || '';
+      case 'ss': return result.ssTLSLink || '';
+      default: return '';
+    }
+  }
+
+  getNonTLSConfig(result, action) {
+    switch (action) {
+      case 'vless': return result.vlessNTLSLink || '';
+      case 'trojan': return result.trojanNTLSLink || '';
+      case 'vmess': return result.vmessNTLSLink || '';
+      case 'ss': return result.ssNTLSLink || '';
+      default: return '';
+    }
   }
 
   getMainKeyboard(ipPort) {
