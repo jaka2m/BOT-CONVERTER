@@ -26,7 +26,7 @@ export default class TelegramBot {
     const result = await checkProxyIP(text.trim());
 
     // Susun reply dengan markdown (preformatted)
-    let reply = `Status pengecekan untuk ${text.trim()}:\n\n`;
+    let reply = `\`${text.trim()}\``;
     
     if (result.status === 'ACTIVE' && result.configText) {
       reply += '```\n' + result.configText + '\n```';
