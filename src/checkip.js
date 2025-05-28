@@ -6,7 +6,7 @@ export async function checkProxyIP(link) {
     const clean = link.trim();
     [ip, port = '443'] = clean.split(':');
 
-    // Validasi IP format
+    // Validasi IP format sederhana
     const isValidIP = ip.match(/^(\d{1,3}\.){3}\d{1,3}$/);
     if (!isValidIP) throw new Error('Invalid IP format');
 
@@ -89,10 +89,12 @@ export async function checkProxyIP(link) {
 
       // Informasi lengkap
       const infoMessage = `
-${flag} ${country}
+
 ISP: ${provider}
 IP: ${ip}
-Ping: ${result.delay} ms
+port: ${port}
+Country ${result.country}
+Ping: ${result.delay}
 Status: ✅ ACTIVE
 `;
 
