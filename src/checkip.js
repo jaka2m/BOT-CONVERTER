@@ -1,4 +1,3 @@
-// checkip.js
 export async function checkProxyIP(link) {
   try {
     let ip = '';
@@ -20,7 +19,7 @@ export async function checkProxyIP(link) {
       status: data.status || 'UNKNOWN',
       delay: data.delay || '-',
       country: data.country || '-',
-      flag: data.flag || '',
+      flag: '',
       city: data.city || '-',
       isp: data.isp || '-',
       regionName: data.regionName || '-',
@@ -49,6 +48,7 @@ export async function checkProxyIP(link) {
 
     if (result.status === 'ACTIVE') {
       const flag = getFlagEmoji(data.country);
+      result.flag = flag;
       const country = data.country || 'UNKNOWN';
       const provider = data.org || data.isp || 'UNKNOWN';
       const HOSTKU = result.ip;
