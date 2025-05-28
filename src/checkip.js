@@ -108,10 +108,9 @@ export async function checkProxyIP(link) {
 
       // Informasi lengkap
       const infoMessage = `
-ISP     : ${result.isp}
 IP      : ${result.ip}
-Proxy   : ${result.proxy}
 Port    : ${result.port}
+ISP     : ${result.isp}
 Country : ${result.country}
 Delay   : ${result.delay}
 Status  : ✅ ${result.status}
