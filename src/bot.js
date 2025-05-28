@@ -46,7 +46,7 @@ await this.editMessage(
   `Konfigurasi untuk \`${ipPort}\`:\n\n` +
   '```TLS\n' +
   `${this.getTLSConfig(result, action)}\n` +
-  '```\n\n' +
+  '```' +
   '```Non-TLS\n' +
   `${this.getNonTLSConfig(result, action)}\n` +
   '```',
