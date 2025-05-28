@@ -1,4 +1,4 @@
-import { randomip } from './randomip.js';
+import { randomip } from './randomip/randomip.js';
 
 export async function handleCommand({ text, chatId, userId, sendMessage }) {
   if (text.startsWith('/randomip')) {
