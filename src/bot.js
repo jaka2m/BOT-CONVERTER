@@ -1,4 +1,11 @@
+import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
+import { randomconfig } from './randomconfig.js';
 import { checkProxyIP } from './checkip.js';
+import { rotateconfig } from './config.js';
+import { handleCommand } from './randomip/commandHandler.js';
+import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
+import { randomip } from './randomip/randomip.js';
+
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
@@ -15,6 +22,20 @@ export default class TelegramBot {
       const chatId = callback.message.chat.id;
       const messageId = callback.message.message_id;
       const data = callback.data;
+      
+      // /start command
+      if (text.startsWith('/start')) {
+        const startMessage =
+          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
+          'Gunakan perintah:\n' +
+          '• `/converter` — untuk mengubah link proxy ke format:\n' +
+          '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
+          '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
+          'Ketik `/converter` untuk info lebih lanjut.';
+        await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
+
 
       // Data format: "action|ipPort"
       // contoh: "vless|1.2.3.4:443"
