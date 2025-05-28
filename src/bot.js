@@ -25,9 +25,9 @@ export default class TelegramBot {
       // /start command
       if (text.startsWith('/start')) {
         const startMessage =
-          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
-          'Gunakan perintah:\n' +
-          '• `/converter` — untuk mengubah link proxy ke format:\n' +
+          '━━━━━━━━━━━━━━━━━\n\n' +
+          '≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡\n' +
+          '• `━━━━━━━━━━━━━━━━━\n' +
           '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
           '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
           'Ketik `/converter` untuk info lebih lanjut.';
