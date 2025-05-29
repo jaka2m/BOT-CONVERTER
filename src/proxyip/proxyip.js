@@ -180,23 +180,23 @@ export async function handleCallbackQuery(bot, callbackQuery) {
       } else if (type === 'vless') {
         configText = `\`\`\`VLESS-TLS
 vless://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\n\`\`\`VLESS-NTLS
+\`\`\`\`\`\`\n\`\`\`\`\`\`VLESS-NTLS
 vless://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
-\`\`\``;
+\`\`\`\`\`\``;
 
       } else if (type === 'trojan') {
-        configText = `\`\`\`TROJAN-TLS
+        configText = `\`\`\`\`\`\`TROJAN-TLS
 trojan://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\n\`\`\`TROJAN-NTLS
+\`\`\`\`\`\`\n\`\`\`\`\`\`TROJAN-NTLS
 trojan://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
-\`\`\``;
+\`\`\`\`\`\``;
 
       } else if (type === 'ss') {
-        configText = `\`\`\`SHADOWSOCKS-TLS
+        configText = `\`\`\`\`\`\`SHADOWSOCKS-TLS
 ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:443?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=tls&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\n\`\`\`SHADOWSOCKS-NTLS
+\`\`\`\`\`\`\n\`\`\`\`\`\`SHADOWSOCKS-NTLS
 ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:80?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=none&sni=${DEFAULT_HOST}#${prov}
-\`\`\``;
+\`\`\`\`\`\``;
 
       } else {
         await bot.answerCallbackQuery(callbackQuery.id, { text: "Protokol tidak dikenali." });
