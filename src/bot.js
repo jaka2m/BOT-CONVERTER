@@ -20,38 +20,31 @@ export class TelegramBot {
     }
 
     // ======= HANDLE CALLBACK (TOMBOL) =======
-if (update.callback_query) {
-  const callback = update.callback_query;
-  const chatId = callback.message.chat.id;
-  const messageId = callback.message.message_id;
-  const data = callback.data;
+    if (update.callback_query) {
+      const callback = update.callback_query;
+      const chatId = callback.message.chat.id;
+      const messageId = callback.message.message_id;
+      const data = callback.data;
 
-  const [action, ipPort] = data.split('|');
+      const [action, ipPort] = data.split('|');
 
-  if (action === 'back') {
-    await this.editMessage(
-      chatId,
-      messageId,
-      'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.',
-      this.getMainKeyboard(ipPort)
-    );
-    await this.answerCallback(callback.id);
-    return new Response('OK', { status: 200 });
-  }
+      if (action === 'back') {
+        await this.editMessage(
+          chatId,
+          messageId,
+          'format IP atau IP:PORT, tombol hanya merespon IP ACTIVE.',
+          this.getMainKeyboard(ipPort)
+        );
+        await this.answerCallback(callback.id);
+        return new Response('OK', { status: 200 });
+      }
 
-  const result = await checkProxyIP(ipPort);
-
-  // Hanya tanggapi jika proxy DEAD (tidak ACTIVE)
-  if (result.status !== 'ACTIVE') {
-    // Kirim balasan callback untuk beri tahu IP dead
-    await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
-    return new Response('OK', { status: 200 });
-  }
-
-  // Jika proxy ACTIVE, TIDAK membalas callbackQuery (silent)
+      const result = await checkProxyIP(ipPort);
+if (result.status !== 'ACTIVE') {
+  // Baris ini dihapus supaya tidak balas apapun
+  // await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
   return new Response('OK', { status: 200 });
 }
-
 
       await this.editMessage(
         chatId,
