@@ -149,7 +149,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-   if (text.startsWith('/converter')) {
+    if (text.startsWith('/converter')) {
   await this.sendMessage(
     chatId,
     `🤖 Stupid World Converter Bot
@@ -170,30 +170,24 @@ Catatan:
   return new Response('OK', { status: 200 });
 }
 
-// Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
+// Jika pesan mengandung protokol proxy
 if (text.includes('://')) {
   try {
-    // Ambil baris yang mengandung link valid
     const links = text
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.includes('://'))
-      .slice(0, 10); // Batasi maksimal 10 link
+      .slice(0, 10); // Maks 10 link
 
     if (links.length === 0) {
-      await this.sendMessage(
-        chatId,
-        'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.'
-      );
+      await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
       return new Response('OK', { status: 200 });
     }
 
-    // Generate konfigurasi
     const clashConfig = generateClashConfig(links, true);
     const nekoboxConfig = generateNekoboxConfig(links, true);
     const singboxConfig = generateSingboxConfig(links, true);
 
-    // Kirim file konfigurasi
     await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
     await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
     await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
@@ -218,20 +212,15 @@ if (ipPortPattern.test(text)) {
 }
 
 // Jika input tidak dikenali
-await this.sendMessage(
-  chatId,
-  'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).'
-);
-
+await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
 return new Response('OK', { status: 200 });
 }
 
-// Berikut contoh pemanggilan fungsi handler command dan callback
 await handleCommand({
   text,
   chatId,
   userId,
-  sendMessage: this.sendMessage.bind(this),
+  sendMessage: this.sendMessage.bind(this)
 });
 
 } else if (callback) {
@@ -241,62 +230,66 @@ await handleCommand({
     answerCallback: answerCallback.bind(this),
     editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
     token: this.token,
-    apiUrl: this.apiUrl,
+    apiUrl: this.apiUrl
   });
 }
 
 return new Response('OK', { status: 200 });
-  }
+}
 
-  getTLSConfig(result, action) {
-    switch (action) {
-      case 'vless': return result.vlessTLSLink || '';
-      case 'trojan': return result.trojanTLSLink || '';
-      case 'vmess': return result.vmessTLSLink || '';
-      case 'ss': return result.ssTLSLink || '';
-      default: return '';
-    }
+// Get TLS config
+getTLSConfig(result, action) {
+  switch (action) {
+    case 'vless': return result.vlessTLSLink || '';
+    case 'trojan': return result.trojanTLSLink || '';
+    case 'vmess': return result.vmessTLSLink || '';
+    case 'ss': return result.ssTLSLink || '';
+    default: return '';
   }
+}
 
-  getNonTLSConfig(result, action) {
-    switch (action) {
-      case 'vless': return result.vlessNTLSLink || '';
-      case 'trojan': return result.trojanNTLSLink || '';
-      case 'vmess': return result.vmessNTLSLink || '';
-      case 'ss': return result.ssNTLSLink || '';
-      default: return '';
-    }
+// Get non-TLS config
+getNonTLSConfig(result, action) {
+  switch (action) {
+    case 'vless': return result.vlessNTLSLink || '';
+    case 'trojan': return result.trojanNTLSLink || '';
+    case 'vmess': return result.vmessNTLSLink || '';
+    case 'ss': return result.ssNTLSLink || '';
+    default: return '';
   }
+}
 
-  getMainKeyboard(ipPort) {
-    return {
-      inline_keyboard: [
-        [
-          { text: 'VLESS', callback_data: `vless|${ipPort}` },
-          { text: 'TROJAN', callback_data: `trojan|${ipPort}` }
-        ],
-        [
-          { text: 'VMESS', callback_data: `vmess|${ipPort}` },
-          { text: 'SHADOWSOCKS', callback_data: `ss|${ipPort}` }
-        ],
-        [
-          { text: 'BACK', callback_data: `back|${ipPort}` }
-        ]
+// Menu utama inline keyboard
+getMainKeyboard(ipPort) {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'VLESS', callback_data: `vless|${ipPort}` },
+        { text: 'TROJAN', callback_data: `trojan|${ipPort}` }
+      ],
+      [
+        { text: 'VMESS', callback_data: `vmess|${ipPort}` },
+        { text: 'SHADOWSOCKS', callback_data: `ss|${ipPort}` }
+      ],
+      [
+        { text: 'BACK', callback_data: `back|${ipPort}` }
       ]
-    };
-  }
+    ]
+  };
+}
 
-  getConfigKeyboard(ipPort) {
-    return {
-      inline_keyboard: [
-        [
-          { text: 'Kembali ke menu', callback_data: `back|${ipPort}` }
-        ]
+// Keyboard konfigurasi (kembali)
+getConfigKeyboard(ipPort) {
+  return {
+    inline_keyboard: [
+      [
+        { text: 'Kembali ke menu', callback_data: `back|${ipPort}` }
       ]
-    };
-  }
+    ]
+  };
+}
 
-  // Mengirim pesan ke chat
+// Kirim pesan
 async sendMessage(chatId, text, replyMarkup) {
   const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
   const body = {
@@ -305,9 +298,7 @@ async sendMessage(chatId, text, replyMarkup) {
     parse_mode: 'Markdown',
   };
 
-  if (replyMarkup) {
-    body.reply_markup = replyMarkup;
-  }
+  if (replyMarkup) body.reply_markup = replyMarkup;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -318,7 +309,7 @@ async sendMessage(chatId, text, replyMarkup) {
   return response.json();
 }
 
-// Mengedit pesan yang sudah dikirim
+// Edit pesan
 async editMessage(chatId, messageId, text, replyMarkup) {
   const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
   const body = {
@@ -328,9 +319,7 @@ async editMessage(chatId, messageId, text, replyMarkup) {
     parse_mode: 'Markdown',
   };
 
-  if (replyMarkup) {
-    body.reply_markup = replyMarkup;
-  }
+  if (replyMarkup) body.reply_markup = replyMarkup;
 
   const response = await fetch(url, {
     method: 'POST',
@@ -341,7 +330,7 @@ async editMessage(chatId, messageId, text, replyMarkup) {
   return response.json();
 }
 
-// Mengirim file (dokumen) ke chat
+// Kirim file
 async sendDocument(chatId, content, filename, mimeType) {
   const formData = new FormData();
   const blob = new Blob([content], { type: mimeType });
@@ -357,7 +346,7 @@ async sendDocument(chatId, content, filename, mimeType) {
   return response.json();
 }
 
-// Mengirim pesan lalu menyimpan message_id
+// Kirim pesan dan simpan message_id
 async sendMessageWithDelete(chatId, text) {
   try {
     const res = await this.sendMessage(chatId, text);
@@ -368,7 +357,7 @@ async sendMessageWithDelete(chatId, text) {
   }
 }
 
-// Menghapus pesan dari chat
+// Hapus pesan
 async deleteMessage(chatId, messageId) {
   const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
 
@@ -384,7 +373,7 @@ async deleteMessage(chatId, messageId) {
   return res.json();
 }
 
-// Menjawab callback query (dari inline keyboard)
+// Jawab callback inline keyboard
 async answerCallback(callbackQueryId, text = '') {
   const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
   const body = {
