@@ -15,65 +15,11 @@ export default class TelegramBot {
   }
 
   async handleUpdate(update) {
-    // Abaikan jika bukan message atau callback_query
-    if (!update.message && !update.callback_query) {
-      return new Response('OK', { status: 200 });
-    }
+  // Abaikan jika bukan message atau callback_query
+  if (!update.message && !update.callback_query) {
+    return new Response('OK', { status: 200 });
+  }
 
-    // ======= HANDLE CALLBACK (TOMBOL) =======
-    if (update.callback_query) {
-      const callback = update.callback_query;
-      const chatId = callback.message.chat.id;
-      const messageId = callback.message.message_id;
-      const data = callback.data;
-
-      const [action, ipPort] = data.split('|');
-
-      if (action === 'back') {
-        await this.editMessage(
-          chatId,
-          messageId,
-          'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.',
-          this.getMainKeyboard(ipPort)
-        );
-        await this.answerCallback(callback.id);
-        return new Response('OK', { status: 200 });
-      }
-
-      const result = await checkProxyIP(ipPort);
-      if (result.status !== 'ACTIVE') {
-        await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
-        return new Response('OK', { status: 200 });
-      }
-
-      await this.editMessage(
-        chatId,
-        messageId,
-        '```INFORMATION\n' +
-        `IP       :${result.ip}\n` +
-        `PORT     :${result.port}\n` +
-        `ISP      :${result.isp}\n` +
-        `COUNTRY  :${result.country}\n` +
-        `DELAY    :${result.delay}\n` +
-        `STATUS   :✅ ${result.status}\n` +
-        '```' +
-          '```TLS\n' +
-          `${this.getTLSConfig(result, action)}\n` +
-          '```' +
-          '```Non-TLS\n' +
-          `${this.getNonTLSConfig(result, action)}\n` +
-          '```',
-        this.getConfigKeyboard(ipPort)
-      );
-
-      await this.answerCallback(callback.id);
-      return new Response('OK', { status: 200 });
-    }
-
-    // ======= HANDLE PESAN MASUK =======
-    const chatId = update.message.chat.id;
-    const text = update.message.text?.trim() || '';
-    async handleUpdate(update) {
   const message = update.message;
   const callback = update.callback_query;
 
@@ -103,21 +49,59 @@ export default class TelegramBot {
       await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
     }
   } else if (callback) {
-    await handleCallback({
-      callback,
-      sendMessage: this.sendMessage.bind(this),
-      answerCallback: answerCallback.bind(this),
-      editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
-      token: this.token,
-      apiUrl: this.apiUrl
-    });
+    const chatId = callback.message.chat.id;
+    const messageId = callback.message.message_id;
+    const data = callback.data;
+    const [action, ipPort] = data.split('|');
+
+    if (action === 'back') {
+      await this.editMessage(
+        chatId,
+        messageId,
+        'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.',
+        this.getMainKeyboard(ipPort)
+      );
+      await this.answerCallback(callback.id);
+      return new Response('OK', { status: 200 });
+    }
+
+    const result = await checkProxyIP(ipPort);
+    if (result.status !== 'ACTIVE') {
+      await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
+      return new Response('OK', { status: 200 });
+    }
+
+    await this.editMessage(
+      chatId,
+      messageId,
+      '```INFORMATION\n' +
+      `IP       :${result.ip}\n` +
+      `PORT     :${result.port}\n` +
+      `ISP      :${result.isp}\n` +
+      `COUNTRY  :${result.country}\n` +
+      `DELAY    :${result.delay}\n` +
+      `STATUS   :✅ ${result.status}\n` +
+      '```' +
+      '```TLS\n' +
+      `${this.getTLSConfig(result, action)}\n` +
+      '```' +
+      '```Non-TLS\n' +
+      `${this.getNonTLSConfig(result, action)}\n` +
+      '```',
+      this.getConfigKeyboard(ipPort)
+    );
+
+    await this.answerCallback(callback.id);
   }
 
   return new Response('OK', { status: 200 });
 }
 
-
-
+    // ======= HANDLE PESAN MASUK =======
+    const chatId = update.message.chat.id;
+    const text = update.message.text?.trim() || '';
+    
+    
       // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
