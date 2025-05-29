@@ -17,7 +17,7 @@ export default class TelegramBot {
       const userId = message.from.id;
       const text = message.text || '';
 
-      if (text === '/start') {
+      if (text.startsWith('/start')) {
         await this.sendMessage(chatId, 'Halo! Selamat datang di bot kami. Ketik /help untuk bantuan.');
       } else {
         await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
