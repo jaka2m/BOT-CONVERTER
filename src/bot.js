@@ -46,8 +46,8 @@ export default class TelegramBot {
         `PORT     :${result.port}\n` +
         `ISP      :${result.isp}\n` +
         `COUNTRY  :${result.country}\n` +
-        `STATUS   :✅ ${result.status}\n` +
         `DELAY    :${result.delay}\n` +
+        `STATUS   :✅ ${result.status}\n` +
         '```' +
           '```TLS\n' +
           `${this.getTLSConfig(result, action)}\n` +
@@ -63,29 +63,60 @@ export default class TelegramBot {
     }
 
     // ======= HANDLE PESAN MASUK =======
-    const chatId = update.message.chat.id;
-    const text = update.message.text?.trim() || '';
+const chatId = update.message.chat.id;
+const text = update.message.text?.trim() || '';
 
-    if (text === '/start') {
-      await this.sendMessage(chatId, 'Selamat datang!\n\nKirim IP atau IP:PORT untuk memeriksa status proxy dan memilih konfigurasi (VLESS, Trojan, VMess, Shadowsocks).');
-      return new Response('OK', { status: 200 });
-    }
+if (text === '/start') {
+  await this.sendMessage(
+    chatId,
+    'Selamat datang!\n\nKirim IP atau IP:PORT untuk memeriksa status proxy dan memilih konfigurasi (VLESS, Trojan, VMess, Shadowsocks).'
+  );
+  return new Response('OK', { status: 200 });
+}
 
-    // Hanya lanjutkan jika input adalah IP atau IP:PORT
-    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-    if (!ipPortPattern.test(text)) {
-      // Abaikan tanpa membalas jika format salah
-      return new Response('OK', { status: 200 });
-    }
+// Hanya lanjutkan jika input adalah IP atau IP:PORT
+const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+if (!ipPortPattern.test(text)) {
+  // Abaikan tanpa membalas jika format salah
+  return new Response('OK', { status: 200 });
+}
 
-    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-    await this.editMessage(chatId, loadingMsg.result.message_id,
-      `Pilih konfigurasi untuk \`${text}\`:`,
-      this.getMainKeyboard(text)
-    );
+// Tampilkan pesan "loading"
+const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
 
-    return new Response('OK', { status: 200 });
-  }
+// Edit pesan dengan tombol konfigurasi
+await this.editMessage(
+  chatId,
+  loadingMsg.result.message_id,
+  `Pilih konfigurasi untuk \`${text}\`:`,
+  this.getMainKeyboard(text)
+);
+
+return new Response('OK', { status: 200 });
+
+
+// ======= GENERATE DAN KIRIM KONFIGURASI =======
+const clashConfig = generateClashConfig(links, true);
+const nekoboxConfig = generateNekoboxConfig(links, true);
+const singboxConfig = generateSingboxConfig(links, true);
+
+try {
+  // Kirim file konfigurasi
+  await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
+  await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
+  await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
+
+} catch (error) {
+  console.error('Error processing links:', error);
+  await this.sendMessage(chatId, `Error: ${error.message}`);
+}
+
+} else {
+  await this.sendMessage(chatId, 'Please send VMess, VLESS, Trojan, or Shadowsocks links for conversion.');
+}
+
+return new Response('OK', { status: 200 });
+}
 
   getTLSConfig(result, action) {
     switch (action) {
@@ -136,50 +167,77 @@ export default class TelegramBot {
   }
 
   async sendMessage(chatId, text, replyMarkup) {
-    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const body = {
-      chat_id: chatId,
-      text,
-      parse_mode: 'Markdown',
-    };
-    if (replyMarkup) body.reply_markup = replyMarkup;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
+  const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+  const body = {
+    chat_id: chatId,
+    text,
+    parse_mode: 'Markdown',
+  };
+
+  if (replyMarkup) {
+    body.reply_markup = replyMarkup;
   }
 
-  async editMessage(chatId, messageId, text, replyMarkup) {
-    const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
-    const body = {
-      chat_id: chatId,
-      message_id: messageId,
-      text,
-      parse_mode: 'Markdown',
-    };
-    if (replyMarkup) body.reply_markup = replyMarkup;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+}
+
+async editMessage(chatId, messageId, text, replyMarkup) {
+  const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
+  const body = {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    parse_mode: 'Markdown',
+  };
+
+  if (replyMarkup) {
+    body.reply_markup = replyMarkup;
   }
 
-  async answerCallback(callbackQueryId, text = '') {
-    const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
-    const body = {
-      callback_query_id: callbackQueryId,
-      text,
-      show_alert: !!text,
-    };
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
-  }
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+}
+
+async sendDocument(chatId, content, filename, mimeType) {
+  const formData = new FormData();
+  const blob = new Blob([content], { type: mimeType });
+
+  formData.append('document', blob, filename);
+  formData.append('chat_id', chatId.toString());
+
+  const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  return response.json();
+}
+
+async answerCallback(callbackQueryId, text = '') {
+  const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
+  const body = {
+    callback_query_id: callbackQueryId,
+    text,
+    show_alert: !!text,
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+}
 }
