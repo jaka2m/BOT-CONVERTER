@@ -15,94 +15,114 @@ export default class TelegramBot {
   }
 
   async handleUpdate(update) {
-  // Abaikan jika bukan message atau callback_query
-  if (!update.message && !update.callback_query) {
-    return new Response('OK', { status: 200 });
-  }
-
-  const message = update.message;
-  const callback = update.callback_query;
-
-  if (message) {
-    const chatId = message.chat.id;
-    const userId = message.from.id;
-    const text = message.text?.trim() || '';
-
-    if (text.startsWith('/start')) {
-      await this.sendMessage(chatId, 'Halo! Selamat datang di bot kami. Ketik /help untuk bantuan.');
-    } else if (text.startsWith('/listwildcard')) {
-      const wildcards = [
-        "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
-        "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
-        "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
-        "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
-      ];
-
-      const configText =
-        `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
-        wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
-        `\n\n📦 *Total:* ${wildcards.length} wildcard` +
-        `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
-
-      await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
-    } else {
-      await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
+    // Abaikan jika bukan message atau callback_query
+    if (!update.message && !update.callback_query) {
+      return new Response('OK', { status: 200 });
     }
 
-  } else if (callback) {
-    const chatId = callback.message.chat.id;
-    const messageId = callback.message.message_id;
-    const data = callback.data;
-    const [action, ipPort] = data.split('|');
+    // ======= HANDLE CALLBACK (TOMBOL) =======
+    if (update.callback_query) {
+      const callback = update.callback_query;
+      const chatId = callback.message.chat.id;
+      const messageId = callback.message.message_id;
+      const data = callback.data;
 
-    if (action === 'back') {
+      const [action, ipPort] = data.split('|');
+
+      if (action === 'back') {
+        await this.editMessage(
+          chatId,
+          messageId,
+          'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.',
+          this.getMainKeyboard(ipPort)
+        );
+        await this.answerCallback(callback.id);
+        return new Response('OK', { status: 200 });
+      }
+
+      const result = await checkProxyIP(ipPort);
+      if (result.status !== 'ACTIVE') {
+        await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
+        return new Response('OK', { status: 200 });
+      }
+
       await this.editMessage(
         chatId,
         messageId,
-        'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.',
-        this.getMainKeyboard(ipPort)
+        '```INFORMATION\n' +
+        `IP       :${result.ip}\n` +
+        `PORT     :${result.port}\n` +
+        `ISP      :${result.isp}\n` +
+        `COUNTRY  :${result.country}\n` +
+        `DELAY    :${result.delay}\n` +
+        `STATUS   :✅ ${result.status}\n` +
+        '```' +
+          '```TLS\n' +
+          `${this.getTLSConfig(result, action)}\n` +
+          '```' +
+          '```Non-TLS\n' +
+          `${this.getNonTLSConfig(result, action)}\n` +
+          '```',
+        this.getConfigKeyboard(ipPort)
       );
+
       await this.answerCallback(callback.id);
       return new Response('OK', { status: 200 });
     }
 
-    const result = await checkProxyIP(ipPort);
-    if (result.status !== 'ACTIVE') {
-      await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
+    // ======= HANDLE PESAN MASUK =======
+    const chatId = update.message.chat.id;
+    const text = update.message.text?.trim() || '';
+
+// /start command
+      if (text.startsWith('/start')) {
+        const startMessage =
+          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
+          'Gunakan perintah:\n' +
+          '• `/converter` — untuk mengubah link proxy ke format:\n' +
+          '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
+          '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
+          'Ketik `/converter` untuk info lebih lanjut.';
+        await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
+      
+      if (text.startsWith('/randomip')) {
+  try {
+    const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
+    const ipText = await response.text();
+    const ipList = ipText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '');
+
+    if (ipList.length === 0) {
+      await this.sendMessage(chatId, `⚠️ *Daftar IP kosong atau tidak ditemukan. Coba lagi nanti.*`, { parse_mode: 'Markdown' });
       return new Response('OK', { status: 200 });
     }
 
-    await this.editMessage(
-      chatId,
-      messageId,
-      '```INFORMATION\n' +
-      `IP       :${result.ip}\n` +
-      `PORT     :${result.port}\n` +
-      `ISP      :${result.isp}\n` +
-      `COUNTRY  :${result.country}\n` +
-      `DELAY    :${result.delay}\n` +
-      `STATUS   :✅ ${result.status}\n` +
-      '```' +
-      '```TLS\n' +
-      `${this.getTLSConfig(result, action)}\n` +
-      '```' +
-      '```Non-TLS\n' +
-      `${this.getNonTLSConfig(result, action)}\n` +
-      '```',
-      this.getConfigKeyboard(ipPort)
-    );
+    // Ambil maksimal 20 IP secara acak
+    const shuffled = ipList.sort(() => 0.5 - Math.random());
+    const selectedIPs = shuffled.slice(0, 20);
 
-    await this.answerCallback(callback.id);
+    let resultText = `🔑 *Here are ${selectedIPs.length} random Proxy IPs:*\n\n`;
+    selectedIPs.forEach(line => {
+      const [ip, port, code, isp] = line.split(',');
+      resultText += `📍 *IP:PORT* : \`${ip}:${port}\`\n`;
+      resultText += `🌐 *Country* : ${code} ${getFlagEmoji(code)}\n`;
+      resultText += `💻 *ISP* : ${isp}\n\n`;
+    });
+
+    await this.sendMessage(chatId, resultText, { parse_mode: 'Markdown' });
+    return new Response('OK', { status: 200 });
+
+  } catch (error) {
+    await this.sendMessage(chatId, `❌ Terjadi kesalahan saat memuat IP: ${error.message}`);
+    return new Response('OK', { status: 200 });
   }
 
-  return new Response('OK', { status: 200 });
-}
-
-
-    // ======= HANDLE PESAN MASUK =======
-    
       // /config command
-      } else if (text.startsWith('/config')) {
+      if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
 
 Ketik perintah berikut untuk mendapatkan config rotate berdasarkan negara:
@@ -144,7 +164,26 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-          if (text.startsWith('/converter')) {
+      // /listwildcard command
+      if (text.startsWith('/listwildcard')) {
+        const wildcards = [
+          "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
+          "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
+          "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
+          "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
+        ];
+
+        const configText =
+          `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
+          wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
+          `\n\n📦 *Total:* ${wildcards.length} wildcard` +
+          `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
+
+        await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
+        return new Response('OK', { status: 200 });
+      }
+
+    if (text.startsWith('/converter')) {
     await this.sendMessage(
       chatId,
       `🤖 Stupid World Converter Bot
