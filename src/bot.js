@@ -25,8 +25,9 @@ export default class TelegramBot {
 
   const chatId = message?.chat?.id || callback?.message?.chat?.id;
   const userId = message?.from?.id || callback?.from?.id;
-  const text = message?.text || callback?.data;
+  const text = message?.text?.trim() || callback?.data?.trim() || '';
 
+  // Tangani callback dari tombol inline
   if (callback) {
     await handleCallback({
       callback,
@@ -40,6 +41,31 @@ export default class TelegramBot {
     return new Response('OK', { status: 200 });
   }
 
+  // Cek apakah input adalah IP atau IP:PORT
+  const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+  if (ipPortPattern.test(text)) {
+    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+    
+    await this.editMessage(
+      chatId,
+      loadingMsg.result.message_id,
+      `Pilih konfigurasi untuk \`${text}\`:`,
+      this.getMainKeyboard(text)
+    );
+
+    // Lanjutkan ke handler tambahan jika ada
+    await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
+
+    return new Response('OK', { status: 200 });
+  }
+
+  // Jika bukan IP, teruskan ke handler perintah
+  await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
+
+  // Jika tetap tidak dikenali, kirim pesan default
+  await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
+  return new Response('OK', { status: 200 });
+}
 
     // ======= HANDLE CALLBACK (TOMBOL) =======
     if (update.callback_query) {
