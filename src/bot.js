@@ -1,10 +1,7 @@
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
 import { checkProxyIP } from './checkip.js';
-import { randomconfig } from './randomconfig.js';
-import { rotateconfig } from './config.js';
 import { handleCommand } from './randomip/commandHandler.js';
 import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
-import { randomip } from './randomip/randomip.js';
 
 const HOSTKU = 'example.com';
 
@@ -14,21 +11,53 @@ export default class TelegramBot {
     this.apiUrl = apiUrl;
   }
 
+  async sendMessage(chatId, text, options) {
+    // Implementasi sendMessage ke Telegram API sesuai kebutuhan
+  }
+
+  async sendDocument(chatId, content, filename, mimeType) {
+    // Implementasi kirim dokumen ke Telegram API sesuai kebutuhan
+  }
+
+  async editMessage(chatId, messageId, text, options) {
+    // Implementasi editMessage Telegram API sesuai kebutuhan
+  }
+
+  async answerCallback(callbackId, text = '') {
+    // Implementasi answerCallback Telegram API sesuai kebutuhan
+  }
+
+  getMainKeyboard(ipPort) {
+    // Return keyboard objek sesuai kebutuhan
+  }
+
+  getConfigKeyboard(ipPort) {
+    // Return keyboard objek sesuai kebutuhan
+  }
+
+  getTLSConfig(result, action) {
+    // Generate konfigurasi TLS string
+    return '';
+  }
+
+  getNonTLSConfig(result, action) {
+    // Generate konfigurasi Non-TLS string
+    return '';
+  }
+
   async handleUpdate(update) {
     // Abaikan jika bukan message atau callback_query
     if (!update.message && !update.callback_query) {
       return new Response('OK', { status: 200 });
     }
 
-    // ======= HANDLE CALLBACK (TOMBOL) =======
+    // HANDLE CALLBACK QUERY
     if (update.callback_query) {
       const callback = update.callback_query;
       const chatId = callback.message.chat.id;
       const messageId = callback.message.message_id;
       const data = callback.data;
-
       const [action, ipPort] = data.split('|');
-      const isCommand = text.startsWith('/');
 
       if (action === 'back') {
         await this.editMessage(
@@ -58,12 +87,12 @@ export default class TelegramBot {
         `DELAY    :${result.delay}\n` +
         `STATUS   :✅ ${result.status}\n` +
         '```' +
-          '```TLS\n' +
-          `${this.getTLSConfig(result, action)}\n` +
-          '```' +
-          '```Non-TLS\n' +
-          `${this.getNonTLSConfig(result, action)}\n` +
-          '```',
+        '```TLS\n' +
+        `${this.getTLSConfig(result, action)}\n` +
+        '```' +
+        '```Non-TLS\n' +
+        `${this.getNonTLSConfig(result, action)}\n` +
+        '```',
         this.getConfigKeyboard(ipPort)
       );
 
@@ -71,89 +100,15 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-    // ======= HANDLE PESAN MASUK =======
+    // HANDLE MESSAGE
     const chatId = update.message.chat.id;
     const text = update.message.text?.trim() || '';
-
-// /start command
-      if (text.startsWith('/start')) {
-        const startMessage =
-          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
-          'Gunakan perintah:\n' +
-          '• `/converter` — untuk mengubah link proxy ke format:\n' +
-          '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
-          '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
-          'Ketik `/converter` untuk info lebih lanjut.';
-        await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
-        return new Response('OK', { status: 200 });
-      }
-
-      // /config command
-      if (text.startsWith('/config')) {
-        const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
-
-Ketik perintah berikut untuk mendapatkan config rotate berdasarkan negara:
-
-\`/rotate + kode_negara\`
-
-Negara tersedia:
-id, sg, my, us, ca, in, gb, ir, ae, fi, tr, md, tw, ch, se, nl, es, ru, ro, pl, al, nz, mx, it, de, fr, am, cy, dk, br, kr, vn, th, hk, cn, jp.
-
-Contoh:
-\`/rotate id\`
-\`/rotate sg\`
-\`/rotate my\`
-
-Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.`;
-        await this.sendMessage(chatId, helpMsg, { parse_mode: 'Markdown' });
-        return new Response('OK', { status: 200 });
-      }
-
-      // /rotate command
-      if (text.startsWith('/rotate ')) {
-        await rotateconfig.call(this, chatId, text);
-        return new Response('OK', { status: 200 });
-      }
-
-      // /randomconfig command
-      if (text.startsWith('/randomconfig')) {
-        const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
-        try {
-          const configText = await randomconfig();
-          await this.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
-        } catch (error) {
-          console.error('Error generating random config:', error);
-          await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
-        }
-        if (loadingMsg && loadingMsg.message_id) {
-          await this.deleteMessage(chatId, loadingMsg.message_id);
-        }
-        return new Response('OK', { status: 200 });
-      }
-
-      // /listwildcard command
-      if (text.startsWith('/listwildcard')) {
-        const wildcards = [
-          "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
-          "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
-          "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
-          "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
-        ];
-
-        const configText =
-          `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
-          wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
-          `\n\n📦 *Total:* ${wildcards.length} wildcard` +
-          `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
-
-        await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
-        return new Response('OK', { status: 200 });
-      }
+    const userId = update.message.from.id;
 
     if (text.startsWith('/converter')) {
-    await this.sendMessage(
-      chatId,
-      `🤖 Stupid World Converter Bot
+      await this.sendMessage(
+        chatId,
+        `🤖 Stupid World Converter Bot
 
 Kirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox dan Clash.
 
@@ -167,75 +122,60 @@ Catatan:
 - Maksimal 10 link per permintaan.
 - Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.
 `
-    );
-    return new Response('OK', { status: 200 });
-  }
-
-  // Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
-  if (text.includes('://')) {
-    try {
-      // Ambil baris yang mengandung link valid
-      const links = text
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.includes('://'))
-        .slice(0, 10); // Batasi maksimal 10 link
-
-      if (links.length === 0) {
-        await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
-        return new Response('OK', { status: 200 });
-      }
-
-      // Generate konfigurasi
-      const clashConfig = generateClashConfig(links, true);
-      const nekoboxConfig = generateNekoboxConfig(links, true);
-      const singboxConfig = generateSingboxConfig(links, true);
-
-      // Kirim file konfigurasi
-      await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
-      await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
-      await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
-    } catch (error) {
-      console.error('Error processing links:', error);
-      await this.sendMessage(chatId, `Error: ${error.message}`);
-    }
-    return new Response('OK', { status: 200 });
-  }
-
-  // Jika input adalah IP atau IP:PORT
-  const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-  if (ipPortPattern.test(text)) {
-    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-    await this.editMessage(
-      chatId,
-      loadingMsg.result.message_id,
-      `Pilih konfigurasi untuk \`${text}\`:`,
-      this.getMainKeyboard(text)
-    );
-    return new Response('OK', { status: 200 });
-  }
-
-  // Jika input tidak dikenali
-  await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
-  return new Response('OK', { status: 200 });
-      }
-
-      // Handle command lain yang kamu sudah punya di kode asli
-      await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
-
-    } else if (callback) {
-      await handleCallback({
-        callback,
-        sendMessage: this.sendMessage.bind(this),
-        answerCallback: answerCallback.bind(this),
-        editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
-        token: this.token,
-        apiUrl: this.apiUrl
-      });
+      );
+      return new Response('OK', { status: 200 });
     }
 
+    // Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
+    if (text.includes('://')) {
+      try {
+        const links = text
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.includes('://'))
+          .slice(0, 10);
+
+        if (links.length === 0) {
+          await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
+          return new Response('OK', { status: 200 });
+        }
+
+        const clashConfig = generateClashConfig(links, true);
+        const nekoboxConfig = generateNekoboxConfig(links, true);
+        const singboxConfig = generateSingboxConfig(links, true);
+
+        await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
+        await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
+        await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
+      } catch (error) {
+        console.error('Error processing links:', error);
+        await this.sendMessage(chatId, `Error: ${error.message}`);
+      }
+      return new Response('OK', { status: 200 });
+    }
+
+    // Jika input adalah IP atau IP:PORT
+    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+    if (ipPortPattern.test(text)) {
+      const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+      await this.editMessage(
+        chatId,
+        loadingMsg.result.message_id,
+        `Pilih konfigurasi untuk \`${text}\`:`,
+        this.getMainKeyboard(text)
+      );
+      return new Response('OK', { status: 200 });
+    }
+
+    // Jika input tidak dikenali
+    await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
+
+    // Handle command lain yang kamu sudah punya di kode asli
+    await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
+
     return new Response('OK', { status: 200 });
   }
+}
 
 
   getTLSConfig(result, action) {
