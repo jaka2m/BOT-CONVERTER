@@ -16,24 +16,22 @@ export class TelegramBotku {
   }
 
   async handleUpdate(update) {
-    if (update.callback_query) {
-      await handleCallbackQuery(this, update.callback_query);
-      return new Response('OK', { status: 200 });
-    }
-
-    if (!update.message) return new Response('OK', { status: 200 });
-
-    const chatId = update.message.chat.id;
-    const text = update.message.text || '';
-
-    if (text.startsWith('/proxy')) {
-      await handleRandomIpCommand(this, chatId);
-    } else {
-      await this.sendMessage(chatId, 'Gunakan perintah /randomip untuk mendapatkan IP acak.');
-    }
-
+  if (update.callback_query) {
+    await handleCallbackQuery(this, update.callback_query);
     return new Response('OK', { status: 200 });
   }
+
+  if (!update.message) return new Response('OK', { status: 200 });
+
+  const chatId = update.message.chat.id;
+  const text = update.message.text || '';
+
+  if (text.startsWith('/proxy')) {
+    await handleRandomIpCommand(this, chatId);
+  } 
+  
+  return new Response('OK', { status: 200 });
+}
 
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
