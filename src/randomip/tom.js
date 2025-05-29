@@ -1,3 +1,5 @@
+import { handleCommand } from './commandHandler.js';
+import { handleCallback, answerCallback, editMessageReplyMarkup } from './callbackHandler.js';
 import { randomip } from './randomip.js';
 
 export default class TelegramBot {
