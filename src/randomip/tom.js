@@ -4,7 +4,7 @@ import { randomip } from './randomip.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
-    this.token = token;
+    this.token = '7664381872:AAHfoMYhaUYlzRgMlydfA3zvwkMyVLMhoTU';
     this.apiUrl = apiUrl;
   }
 
