@@ -4,10 +4,6 @@ import {
   handleConfigGeneration
 } from './proxyip.js';
 
-export async function proxyBot(link) {
-  console.log("Bot link:", link);
-}
-
 export class TelegramProxyBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
@@ -18,21 +14,43 @@ export class TelegramProxyBot {
     const message = update.message;
     const callbackQuery = update.callback_query;
 
-    // Hanya respon jika ada message dan teksnya /proxyip
+    // Debug log, hapus kalau sudah oke
+    console.log("Received update:", JSON.stringify(update));
+
     if (message) {
+      // Skip pesan dari bot sendiri agar tidak loop
+      if (message.from?.is_bot) {
+        return new Response('OK', { status: 200 });
+      }
+
       const chatId = message.chat.id;
       const text = message.text || '';
+
+      if (text.startsWith('/start')) {
+        await this.sendMessage(chatId, 'yes no.');
+        return new Response('OK', { status: 200 });
+      }
 
       if (text.startsWith('/proxyip')) {
         await handleProxyIpCommand(chatId, this);
         return new Response('OK', { status: 200 });
       }
 
-      // Selain /proxyip, tidak merespon apapun
+      if (message.reply_to_message && message.reply_to_message.text?.includes('Pilih negara')) {
+        await handleConfigGeneration(chatId, text, this);
+        return new Response('OK', { status: 200 });
+      }
+    }
+
+    if (callbackQuery) {
+      const chatId = callbackQuery.message.chat.id;
+      const data = callbackQuery.data;
+
+      await handleCountrySelection(chatId, data, this);
       return new Response('OK', { status: 200 });
     }
 
-    // Jangan merespon callback query juga
+    // Kalau update tidak diproses, tetap balas OK
     return new Response('OK', { status: 200 });
   }
 
@@ -40,7 +58,8 @@ export class TelegramProxyBot {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const body = {
       chat_id: chatId,
-      text: text
+      text: text,
+      parse_mode: 'Markdown' // optional, bisa dihilangkan
     };
     if (replyMarkup) {
       body.reply_markup = replyMarkup;
