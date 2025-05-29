@@ -3,9 +3,13 @@ import {
   handleCallbackQuery,
 } from './randomip.js';
 
+// Fungsi biasa yang bisa kamu pakai di luar
 export async function botku(link) {
-  
-export default class TelegramBotku {
+  // misalnya kamu bisa inisialisasi sesuatu di sini
+  console.log("Bot link:", link);
+}
+
+export class TelegramBotku {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
@@ -33,11 +37,7 @@ export default class TelegramBotku {
 
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const body = {
-      chat_id: chatId,
-      text,
-      ...options,
-    };
+    const body = { chat_id: chatId, text, ...options };
 
     const response = await fetch(url, {
       method: 'POST',
