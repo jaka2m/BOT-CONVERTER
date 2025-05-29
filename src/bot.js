@@ -74,28 +74,40 @@ export default class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text?.trim() || '';
 
-// /start command
-      if (text.startsWith('/start')) {
-        await this.sendMessage(chatId, 'Halo! Selamat datang di bot kami. Ketik /help untuk bantuan.');
-      } else {
-        await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
-      }
+if (text.startsWith('/start')) {
+      await this.sendMessage(chatId, 'Halo! Selamat datang di bot kami. Ketik /help untuk bantuan.');
+    } else if (text.startsWith('/listwildcard')) {
+      const wildcards = [
+        "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
+        "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
+        "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
+        "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
+      ];
 
-    } else if (callback) {
-      await handleCallback({
-        callback,
-        sendMessage: this.sendMessage.bind(this),
-        answerCallback: answerCallback.bind(this),
-        editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
-        token: this.token,
-        apiUrl: this.apiUrl
-      });
+      const configText =
+        `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
+        wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
+        `\n\n📦 *Total:* ${wildcards.length} wildcard` +
+        `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
+
+      await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
+    } else {
+      await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
     }
 
-    return new Response('OK', { status: 200 });
+  } else if (callback) {
+    await handleCallback({
+      callback,
+      sendMessage: this.sendMessage.bind(this),
+      answerCallback: answerCallback.bind(this),
+      editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
+      token: this.token,
+      apiUrl: this.apiUrl
+    });
   }
 
-
+  return new Response('OK', { status: 200 });
+}
       // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
