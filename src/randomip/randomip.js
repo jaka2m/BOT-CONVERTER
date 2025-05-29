@@ -1,98 +1,145 @@
-const ipDetailsMap = new Map();
+// proxyUtils.js
 
-export function getFlagEmoji(countryCode = '') {
-  const code = countryCode.trim().toUpperCase();
-  return code.length === 2
-    ? String.fromCodePoint(...[...code].map(c => 0x1f1e6 + c.charCodeAt(0) - 65))
-    : '';
+export let globalIpList = [];
+export let globalCountryCodes = [];
+
+// Ambil daftar IP dan simpan global
+export async function fetchProxyList(url) {
+  const response = await fetch(url);
+  const ipText = await response.text();
+  const ipList = ipText
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line !== '');
+  return ipList;
 }
 
-/**
- * Menghasilkan teks dan tombol dengan paging.
- * @param {string|number} userId 
- * @param {number} page - halaman mulai 1
- * @returns {Promise<{text:string, buttons:Array}>}
- */
-export async function randomip(userId, page = 1) {
+// Generate emoji bendera dari kode negara (cc)
+export function getFlagEmoji(code) {
+  const OFFSET = 127397;
+  return [...code.toUpperCase()]
+    .map(c => String.fromCodePoint(c.charCodeAt(0) + OFFSET))
+    .join('');
+}
+
+// Buat inline keyboard tombol flag negara dengan pagination
+export function buildCountryButtons(page = 0, pageSize = 15) {
+  const start = page * pageSize;
+  const end = start + pageSize;
+  const pageItems = globalCountryCodes.slice(start, end);
+
+  // Buat tombol flag + kode negara (3 per baris)
+  const buttons = pageItems.map(code => ({
+    text: `${getFlagEmoji(code)} ${code}`,
+    callback_data: `cc_${code}`,
+  }));
+
+  const inline_keyboard = [];
+  for (let i = 0; i < buttons.length; i += 3) {
+    inline_keyboard.push(buttons.slice(i, i + 3));
+  }
+
+  // Tombol navigasi Prev / Next
+  const navButtons = [];
+  if (page > 0) navButtons.push({ text: '⬅️ Prev', callback_data: `randomip_page_${page - 1}` });
+  if (end < globalCountryCodes.length) navButtons.push({ text: 'Next ➡️', callback_data: `randomip_page_${page + 1}` });
+  if (navButtons.length) inline_keyboard.push(navButtons);
+
+  return { inline_keyboard };
+}
+
+// Generate pesan 20 IP acak
+export function generateRandomIPsMessage(ipList, count = 20) {
+  const shuffled = [...ipList].sort(() => 0.5 - Math.random());
+  const selectedIPs = shuffled.slice(0, count);
+
+  let resultText = `🔑 *Here are ${selectedIPs.length} random Proxy IPs:*\n\n`;
+  selectedIPs.forEach(line => {
+    const [ip, port, code, isp] = line.split(',');
+    resultText += `📍 *IP:PORT* : \`${ip}:${port}\`\n`;
+    resultText += `🌐 *Country* : ${code} ${getFlagEmoji(code)}\n`;
+    resultText += `💻 *ISP* : ${isp}\n\n`;
+  });
+
+  return resultText;
+}
+
+// Generate pesan IP berdasarkan filter kode negara
+export function generateCountryIPsMessage(ipList, countryCode) {
+  const filteredIPs = ipList.filter(line => line.split(',')[2] === countryCode);
+
+  if (filteredIPs.length === 0) return null;
+
+  let msg = `🌐 *Proxy IP untuk negara ${countryCode} ${getFlagEmoji(countryCode)}:*\n\n`;
+
+filteredIPs.slice(0, 20).forEach(line => {
+  const [ip, port, _code, isp] = line.split(',');
+  msg += `
+📍 *IP:PORT* : \`${ip}:${port}\` 
+🌐 *Country* : ${_code} ${getFlagEmoji(_code)}
+💻 *ISP* : ${isp}
+`;
+});
+
+return msg;
+}
+
+// Handler untuk command /randomip
+export async function handleRandomIpCommand(bot, chatId) {
   try {
-    const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
-    const ipText = await response.text();
-    const ipList = ipText
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line !== '');
+    globalIpList = await fetchProxyList('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
 
-    if (ipList.length === 0) {
-      return { text: '❌ Tidak ada IP yang tersedia.', buttons: [] };
+    if (globalIpList.length === 0) {
+      await bot.sendMessage(chatId, `⚠️ *Daftar IP kosong atau tidak ditemukan. Coba lagi nanti.*`, { parse_mode: 'Markdown' });
+      return;
     }
 
-    // Ambil 100 IP random supaya paging lebih berasa (atau bisa sesuai kebutuhan)
-    const shuffled = ipList.sort(() => 0.5 - Math.random());
-    const totalIPs = Math.min(100, shuffled.length);
-    const selectedIPs = shuffled.slice(0, totalIPs);
+    globalCountryCodes = [...new Set(globalIpList.map(line => line.split(',')[2]))].sort();
 
-    // Kelompokkan detail by country code
-    const detailsByCountry = {};
-    selectedIPs.forEach(line => {
-      const [ip, port, code, isp] = line.split(',');
-      const flag = getFlagEmoji(code);
-      const detail = `📍 *IP:PORT*: \`${ip}:${port}\`\n🌐 *Country*: ${code} ${flag}\n💻 *ISP*: ${isp}`;
-      if (!detailsByCountry[code]) {
-        detailsByCountry[code] = [];
-      }
-      detailsByCountry[code].push(detail);
+    // *** Hanya kirim pesan pilihan negara dulu ***
+    const text = 'Silakan pilih negara untuk mendapatkan IP random:';
+    const reply_markup = buildCountryButtons(0);
+
+    await bot.sendMessage(chatId, text, {
+      parse_mode: 'Markdown',
+      reply_markup,
     });
-
-    // Simpan ke map untuk user
-    ipDetailsMap.set(userId, detailsByCountry);
-
-    // Buat tombol per negara, 3 per baris
-    const countryCodes = Object.keys(detailsByCountry).sort();
-    const buttonsPerPage = 30; // 10 baris * 3 tombol per baris
-    const totalPages = Math.ceil(countryCodes.length / buttonsPerPage);
-
-    // Validasi page
-    if (page < 1) page = 1;
-    if (page > totalPages) page = totalPages;
-
-    const start = (page - 1) * buttonsPerPage;
-    const end = start + buttonsPerPage;
-    const pageCountries = countryCodes.slice(start, end);
-
-    // Tombol negara 3 per baris
-    const buttons = [];
-    for (let i = 0; i < pageCountries.length; i += 3) {
-      const row = pageCountries.slice(i, i + 3).map(code => ({
-        text: getFlagEmoji(code) + ' ' + code,
-        callback_data: `DETAIL_${code}`
-      }));
-      buttons.push(row);
-    }
-
-    // Tombol navigasi Prev / Next selalu tampil
-    const navButtons = [];
-    // Tombol Prev selalu muncul, callback ke minimal 1
-    navButtons.push({
-      text: '⬅️ Prev',
-      callback_data: `PAGE_${page > 1 ? page - 1 : 1}`
-    });
-    // Tombol Next selalu muncul, callback ke maksimal totalPages
-    navButtons.push({
-      text: 'Next ➡️',
-      callback_data: `PAGE_${page < totalPages ? page + 1 : totalPages}`
-    });
-
-    buttons.push(navButtons);
-
-    const text = `🔑 *Here are ${totalIPs} random Proxy IPs:*\n\nTekan bendera untuk detail:\nHalaman ${page} dari ${totalPages}`;
-    return { text, buttons };
   } catch (error) {
-    return { text: '❌ Gagal mengambil data IP.', buttons: [] };
+    await bot.sendMessage(chatId, `❌ Gagal mengambil data IP: ${error.message}`);
   }
 }
 
-export function getIpDetail(userId, countryCode) {
-  const map = ipDetailsMap.get(userId);
-  if (!map) return null;
-  return map[countryCode] || null;
+// Handler untuk callback query tombol inline keyboard
+export async function handleCallbackQuery(bot, callbackQuery) {
+  const chatId = callbackQuery.message.chat.id;
+  const messageId = callbackQuery.message.message_id;
+  const data = callbackQuery.data;
+
+  if (data.startsWith('randomip_page_')) {
+    const page = parseInt(data.split('_')[2], 10);
+    const keyboard = buildCountryButtons(page);
+
+    await bot.editMessageReplyMarkup({
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: keyboard,
+    });
+
+    await bot.answerCallbackQuery(callbackQuery.id);
+    return;
+  }
+
+  if (data.startsWith('cc_')) {
+    const code = data.split('_')[1];
+    const msg = generateCountryIPsMessage(globalIpList, code);
+
+    if (!msg) {
+      await bot.sendMessage(chatId, `⚠️ Tidak ditemukan IP untuk negara: ${code}`, { parse_mode: 'Markdown' });
+    } else {
+      await bot.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
+    }
+
+    await bot.answerCallbackQuery(callbackQuery.id);
+    return;
+  }
 }
