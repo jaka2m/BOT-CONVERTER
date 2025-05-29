@@ -81,10 +81,7 @@ if (!ipPortPattern.test(text)) {
   return new Response('OK', { status: 200 });
 }
 
-// Tampilkan pesan "loading"
 const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-
-// Edit pesan dengan tombol konfigurasi
 await this.editMessage(
   chatId,
   loadingMsg.result.message_id,
@@ -94,13 +91,12 @@ await this.editMessage(
 
 return new Response('OK', { status: 200 });
 
-
 // ======= GENERATE DAN KIRIM KONFIGURASI =======
-const clashConfig = generateClashConfig(links, true);
-const nekoboxConfig = generateNekoboxConfig(links, true);
-const singboxConfig = generateSingboxConfig(links, true);
-
 try {
+  const clashConfig = generateClashConfig(links, true);
+  const nekoboxConfig = generateNekoboxConfig(links, true);
+  const singboxConfig = generateSingboxConfig(links, true);
+
   // Kirim file konfigurasi
   await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
   await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
@@ -109,14 +105,12 @@ try {
 } catch (error) {
   console.error('Error processing links:', error);
   await this.sendMessage(chatId, `Error: ${error.message}`);
-}
-
 } else {
   await this.sendMessage(chatId, 'Please send VMess, VLESS, Trojan, or Shadowsocks links for conversion.');
 }
 
 return new Response('OK', { status: 200 });
-}
+
 
   getTLSConfig(result, action) {
     switch (action) {
