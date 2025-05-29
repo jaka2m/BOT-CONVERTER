@@ -87,6 +87,13 @@ export default class TelegramBot {
   return new Response('OK', { status: 200 });
 }
 
+function getFlagEmoji(code) {
+  const OFFSET = 127397;
+  return [...code.toUpperCase()]
+    .map(c => String.fromCodePoint(c.charCodeAt() + OFFSET))
+    .join('');
+}
+
 if (text.startsWith('/randomip')) {
   try {
     const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
