@@ -13,16 +13,18 @@ export default class TelegramBot {
   }
 
   async handleUpdate(update) {
+    // Abaikan jika bukan message atau callback_query
     if (!update.message && !update.callback_query) {
       return new Response('OK', { status: 200 });
     }
 
-    // ===== HANDLE CALLBACK =====
+    // ======= HANDLE CALLBACK (TOMBOL) =======
     if (update.callback_query) {
       const callback = update.callback_query;
       const chatId = callback.message.chat.id;
       const messageId = callback.message.message_id;
       const data = callback.data;
+
       const [action, ipPort] = data.split('|');
 
       if (action === 'back') {
@@ -42,32 +44,35 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-      const infoText =
+      await this.editMessage(
+        chatId,
+        messageId,
         '```INFORMATION\n' +
-        `IP       :${result.ip}\n` +
-        `PORT     :${result.port}\n` +
-        `ISP      :${result.isp}\n` +
-        `COUNTRY  :${result.country}\n` +
-        `DELAY    :${result.delay}\n` +
-        `STATUS   :✅ ${result.status}\n` +
-        '```\n' +
-        '```TLS\n' +
-        `${this.getTLSConfig(result, action)}\n` +
-        '```\n' +
-        '```Non-TLS\n' +
-        `${this.getNonTLSConfig(result, action)}\n` +
-        '```';
+          `IP       :${result.ip}\n` +
+          `PORT     :${result.port}\n` +
+          `ISP      :${result.isp}\n` +
+          `COUNTRY  :${result.country}\n` +
+          `DELAY    :${result.delay}\n` +
+          `STATUS   :✅ ${result.status}\n` +
+          '```' +
+          '```TLS\n' +
+          `${this.getTLSConfig(result, action)}\n` +
+          '```' +
+          '```Non-TLS\n' +
+          `${this.getNonTLSConfig(result, action)}\n` +
+          '```',
+        this.getConfigKeyboard(ipPort)
+      );
 
-      await this.editMessage(chatId, messageId, infoText, this.getConfigKeyboard(ipPort));
       await this.answerCallback(callback.id);
       return new Response('OK', { status: 200 });
     }
 
-    // ===== HANDLE MESSAGE =====
+    // ======= HANDLE PESAN MASUK =======
     const chatId = update.message.chat.id;
-    const userId = update.message.from.id;
     const text = update.message.text?.trim() || '';
 
+    // /start command
     if (text.startsWith('/start')) {
       const startMessage =
         'Selamat datang di *Stupid World Converter Bot!*\n\n' +
@@ -81,35 +86,47 @@ export default class TelegramBot {
     }
 
     if (text.startsWith('/converter')) {
-      const msg =
-        `🤖 Stupid World Converter Bot\n\n` +
-        `Kirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox dan Clash.\n\n` +
-        `Contoh:\n` +
-        `vless://...\nvmess://...\ntrojan://...\nss://...\n\n` +
-        `Catatan:\n` +
-        `- Maksimal 10 link per permintaan.\n` +
-        `- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.`;
-      await this.sendMessage(chatId, msg);
+      await this.sendMessage(
+        chatId,
+        `🤖 Stupid World Converter Bot
+
+Kirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox dan Clash.
+
+Contoh:
+vless://...
+vmess://...
+trojan://...
+ss://...
+
+Catatan:
+- Maksimal 10 link per permintaan.
+- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.
+`
+      );
       return new Response('OK', { status: 200 });
     }
 
+    // Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
     if (text.includes('://')) {
       try {
+        // Ambil baris yang mengandung link valid
         const links = text
           .split('\n')
           .map(line => line.trim())
           .filter(line => line.includes('://'))
-          .slice(0, 10);
+          .slice(0, 10); // Batasi maksimal 10 link
 
         if (links.length === 0) {
           await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
           return new Response('OK', { status: 200 });
         }
 
+        // Generate konfigurasi
         const clashConfig = generateClashConfig(links, true);
         const nekoboxConfig = generateNekoboxConfig(links, true);
         const singboxConfig = generateSingboxConfig(links, true);
 
+        // Kirim file konfigurasi
         await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
         await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
         await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
@@ -120,6 +137,7 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
+    // Jika input adalah IP atau IP:PORT
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
     if (ipPortPattern.test(text)) {
       const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
@@ -132,28 +150,38 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
+    // Jika input tidak dikenali
     await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
-    await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
     return new Response('OK', { status: 200 });
   }
 
   getTLSConfig(result, action) {
     switch (action) {
-      case 'vless': return result.vlessTLSLink || '';
-      case 'trojan': return result.trojanTLSLink || '';
-      case 'vmess': return result.vmessTLSLink || '';
-      case 'ss': return result.ssTLSLink || '';
-      default: return '';
+      case 'vless':
+        return result.vlessTLSLink || '';
+      case 'trojan':
+        return result.trojanTLSLink || '';
+      case 'vmess':
+        return result.vmessTLSLink || '';
+      case 'ss':
+        return result.ssTLSLink || '';
+      default:
+        return '';
     }
   }
 
   getNonTLSConfig(result, action) {
     switch (action) {
-      case 'vless': return result.vlessNTLSLink || '';
-      case 'trojan': return result.trojanNTLSLink || '';
-      case 'vmess': return result.vmessNTLSLink || '';
-      case 'ss': return result.ssNTLSLink || '';
-      default: return '';
+      case 'vless':
+        return result.vlessNTLSLink || '';
+      case 'trojan':
+        return result.trojanNTLSLink || '';
+      case 'vmess':
+        return result.vmessNTLSLink || '';
+      case 'ss':
+        return result.ssNTLSLink || '';
+      default:
+        return '';
     }
   }
 
@@ -185,6 +213,7 @@ export default class TelegramBot {
     };
   }
 
+  // Mengirim pesan ke chat
   async sendMessage(chatId, text, replyMarkup) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const body = {
@@ -192,7 +221,10 @@ export default class TelegramBot {
       text,
       parse_mode: 'Markdown',
     };
-    if (replyMarkup) body.reply_markup = replyMarkup;
+
+    if (replyMarkup) {
+      body.reply_markup = replyMarkup;
+    }
 
     const response = await fetch(url, {
       method: 'POST',
@@ -203,6 +235,7 @@ export default class TelegramBot {
     return response.json();
   }
 
+  // Mengedit pesan yang sudah dikirim
   async editMessage(chatId, messageId, text, replyMarkup) {
     const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
     const body = {
@@ -211,7 +244,10 @@ export default class TelegramBot {
       text,
       parse_mode: 'Markdown',
     };
-    if (replyMarkup) body.reply_markup = replyMarkup;
+
+    if (replyMarkup) {
+      body.reply_markup = replyMarkup;
+    }
 
     const response = await fetch(url, {
       method: 'POST',
@@ -222,6 +258,7 @@ export default class TelegramBot {
     return response.json();
   }
 
+  // Mengirim file (dokumen) ke chat
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
@@ -237,6 +274,7 @@ export default class TelegramBot {
     return response.json();
   }
 
+  // Mengirim pesan lalu menyimpan message_id
   async sendMessageWithDelete(chatId, text) {
     try {
       const res = await this.sendMessage(chatId, text);
@@ -247,29 +285,37 @@ export default class TelegramBot {
     }
   }
 
+  // Menghapus pesan dari chat
   async deleteMessage(chatId, messageId) {
     const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
 
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, message_id }),
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+      }),
     });
 
     return res.json();
   }
 
-  async answerCallback(callbackId, text = '') {
+  // Menjawab callback query (dari inline keyboard)
+  async answerCallback(callbackQueryId, text = '') {
     const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
-    const body = { callback_query_id: callbackId };
-    if (text) body.text = text;
+    const body = {
+      callback_query_id: callbackQueryId,
+      text,
+      show_alert: !!text,
+    };
 
-    const res = await fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
-    return res.json();
+    return response.json();
   }
 }
