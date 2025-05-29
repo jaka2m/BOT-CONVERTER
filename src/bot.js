@@ -73,8 +73,16 @@ export default class TelegramBot {
     // ======= HANDLE PESAN MASUK =======
     const chatId = update.message.chat.id;
     const text = update.message.text?.trim() || '';
+    async handleUpdate(update) {
+  const message = update.message;
+  const callback = update.callback_query;
 
-if (text.startsWith('/start')) {
+  if (message) {
+    const chatId = message.chat.id;
+    const userId = message.from.id;
+    const text = message.text?.trim() || '';
+
+    if (text.startsWith('/start')) {
       await this.sendMessage(chatId, 'Halo! Selamat datang di bot kami. Ketik /help untuk bantuan.');
     } else if (text.startsWith('/listwildcard')) {
       const wildcards = [
@@ -94,7 +102,6 @@ if (text.startsWith('/start')) {
     } else {
       await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
     }
-
   } else if (callback) {
     await handleCallback({
       callback,
@@ -108,6 +115,9 @@ if (text.startsWith('/start')) {
 
   return new Response('OK', { status: 200 });
 }
+
+
+
       // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
@@ -151,25 +161,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      // /listwildcard command
-      if (text.startsWith('/listwildcard')) {
-        const wildcards = [
-          "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
-          "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
-          "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
-          "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
-        ];
-
-        const configText =
-          `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
-          wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
-          `\n\n📦 *Total:* ${wildcards.length} wildcard` +
-          `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
-
-        await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
-        return new Response('OK', { status: 200 });
-      }
-
+      
     if (text.startsWith('/converter')) {
     await this.sendMessage(
       chatId,
