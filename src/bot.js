@@ -63,15 +63,10 @@ export default class TelegramBot {
     }
 
     // ======= HANDLE PESAN MASUK =======
-    async handleUpdate(update) {
-  // Pastikan update berisi pesan
-  if (!update.message) return new Response('OK', { status: 200 });
+    const chatId = update.message.chat.id;
+    const text = update.message.text?.trim() || '';
 
-  const chatId = update.message.chat.id;
-  const text = update.message.text?.trim() || '';
-
-  // Jika perintah start
-  if (text.startsWith('/start')) {
+    if (text.startsWith('/start')) {
     await this.sendMessage(
       chatId,
       `🤖 Stupid World Converter Bot
