@@ -102,7 +102,7 @@ export default class TelegramBot {
     // ======= HANDLE PESAN MASUK =======
     
       // /config command
-      if (text.startsWith('/config')) {
+      } else if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
 
 Ketik perintah berikut untuk mendapatkan config rotate berdasarkan negara:
