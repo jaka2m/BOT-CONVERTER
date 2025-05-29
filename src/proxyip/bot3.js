@@ -4,6 +4,10 @@ import {
   handleConfigGeneration
 } from './proxyip.js';
 
+export async function proxyBot(link) {
+  console.log("Bot link:", link);
+}
+
 export class TelegramProxyBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
