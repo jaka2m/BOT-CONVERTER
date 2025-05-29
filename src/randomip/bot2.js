@@ -20,7 +20,7 @@ export default class TelegramBotku {
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    if (text.startsWith('/randomip')) {
+    if (text.startsWith('/proxy')) {
       await handleRandomIpCommand(this, chatId);
     } else {
       await this.sendMessage(chatId, 'Gunakan perintah /randomip untuk mendapatkan IP acak.');
