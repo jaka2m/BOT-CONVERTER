@@ -70,15 +70,18 @@ export function generateCountryIPsMessage(ipList, countryCode) {
 
   if (filteredIPs.length === 0) return null;
 
-  🌐 Proxy IP untuk negara US 🇺🇸:
+  let msg = `🌐 *Proxy IP untuk negara ${countryCode} ${getFlagEmoji(countryCode)}:*\n\n`;
 
-📍 IP:PORT : `104.28.10.1:443` 
-🌐 Country : US 🇺🇸
-💻 ISP : Cloudflare
+filteredIPs.slice(0, 20).forEach(line => {
+  const [ip, port, _code, isp] = line.split(',');
+  msg += `
+📍 *IP:PORT* : \`${ip}:${port}\` 
+🌐 *Country* : ${_code} ${getFlagEmoji(_code)}
+💻 *ISP* : ${isp}\n\n
+`;
+});
 
-📍 IP:PORT : `1.1.1.1:443` 
-🌐 Country : US 🇺🇸
-💻 ISP : Cloudflare
+return msg;
 }
 
 // Handler untuk command /randomip
