@@ -129,7 +129,6 @@ Catatan:
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
 
 if (text && ipPortPattern.test(text)) {
-  // Jika input adalah IP atau IP:PORT
   const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
   await this.editMessage(
     chatId,
@@ -137,19 +136,12 @@ if (text && ipPortPattern.test(text)) {
     `Pilih konfigurasi untuk \`${text}\`:`,
     this.getMainKeyboard(text)
   );
-
-  // Kalau ada command lain untuk handle input IP/PORT, jalankan disini
-  await handleCommand({
-    text,
-    chatId,
-    userId,
-    sendMessage: this.sendMessage.bind(this)
-  });
+  // Kalau kamu memang ingin handleCommand jalan setelah ini, letakkan di sini:
+  await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
 
   return new Response('OK', { status: 200 });
 
 } else if (callback) {
-  // Kalau ada callback query, handle callback
   await handleCallback({
     callback,
     sendMessage: this.sendMessage.bind(this),
@@ -158,26 +150,18 @@ if (text && ipPortPattern.test(text)) {
     token: this.token,
     apiUrl: this.apiUrl
   });
-
   return new Response('OK', { status: 200 });
 
 } else if (text) {
-  // Kalau ada text tapi bukan IP/PORT, handle command normal
-  await handleCommand({
-    text,
-    chatId,
-    userId,
-    sendMessage: this.sendMessage.bind(this)
-  });
-
+  // Handle command ketika text ada tapi bukan IP/PORT
+  await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
   return new Response('OK', { status: 200 });
 
 } else {
-  // Kalau input tidak dikenali
+  // Jika input tidak dikenali
   await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
   return new Response('OK', { status: 200 });
 }
-
 
   // Kamu harus juga buat definisi fungsi seperti sendMessage, sendDocument, editMessage, answerCallback, getMainKeyboard, getConfigKeyboard, getTLSConfig, getNonTLSConfig di class ini atau import dari modul lain sesuai kebutuhan
 
