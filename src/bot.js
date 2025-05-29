@@ -48,6 +48,7 @@ export default class TelegramBot {
     } else {
       await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
     }
+
   } else if (callback) {
     const chatId = callback.message.chat.id;
     const messageId = callback.message.message_id;
@@ -97,11 +98,11 @@ export default class TelegramBot {
   return new Response('OK', { status: 200 });
 }
 
+
     // ======= HANDLE PESAN MASUK =======
     const chatId = update.message.chat.id;
     const text = update.message.text?.trim() || '';
-    
-    
+
       // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
@@ -145,8 +146,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      
-    if (text.startsWith('/converter')) {
+          if (text.startsWith('/converter')) {
     await this.sendMessage(
       chatId,
       `🤖 Stupid World Converter Bot
