@@ -2,6 +2,9 @@ import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } fro
 import { checkProxyIP } from './checkip.js';
 import { randomconfig } from './randomconfig.js';
 import { rotateconfig } from './config.js';
+import { handleCommand } from './randomip/commandHandler.js';
+import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
+import { randomip } from './randomip/randomip.js';
 
 const HOSTKU = 'example.com';
 
@@ -73,17 +76,52 @@ export default class TelegramBot {
 
 // /start command
       if (text.startsWith('/start')) {
-        const startMessage =
-          'Selamat datang di *Stupid World Converter Bot!*\n\n' +
-          'Gunakan perintah:\n' +
-          '• `/converter` — untuk mengubah link proxy ke format:\n' +
-          '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
-          '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
-          'Ketik `/converter` untuk info lebih lanjut.';
-        await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
-        return new Response('OK', { status: 200 });
-      }
-      
+  const startMessage =
+    'Selamat datang di *Stupid World Converter Bot!*\n\n' +
+    'Gunakan perintah:\n' +
+    '• `/converter` — untuk mengubah link proxy ke format:\n' +
+    '  - Singbox\n  - Nekobox\n  - Clash\n\n' +
+    '• `/randomip` — untuk mendapatkan 20 IP acak dari daftar proxy\n\n' +
+    'Ketik `/converter` untuk info lebih lanjut.';
+  await this.sendMessage(chatId, startMessage, { parse_mode: 'Markdown' });
+  return new Response('OK', { status: 200 });
+}
+
+if (text.startsWith('/randomip')) {
+  try {
+    const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
+    const ipText = await response.text();
+    const ipList = ipText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '');
+
+    if (ipList.length === 0) {
+      await this.sendMessage(chatId, `⚠️ *Daftar IP kosong atau tidak ditemukan. Coba lagi nanti.*`, { parse_mode: 'Markdown' });
+      return new Response('OK', { status: 200 });
+    }
+
+    // Ambil maksimal 20 IP secara acak
+    const shuffled = ipList.sort(() => 0.5 - Math.random());
+    const selectedIPs = shuffled.slice(0, 20);
+
+    let resultText = `🔑 *Here are ${selectedIPs.length} random Proxy IPs:*\n\n`;
+    selectedIPs.forEach(line => {
+      const [ip, port, code, isp] = line.split(',');
+      resultText += `📍 *IP:PORT* : \`${ip}:${port}\`\n`;
+      resultText += `🌐 *Country* : ${code} ${getFlagEmoji(code)}\n`;
+      resultText += `💻 *ISP* : ${isp}\n\n`;
+    });
+
+    await this.sendMessage(chatId, resultText, { parse_mode: 'Markdown' });
+    return new Response('OK', { status: 200 });
+
+  } catch (error) {
+    await this.sendMessage(chatId, `❌ Gagal mengambil data IP: ${error.message}`);
+    return new Response('OK', { status: 200 });
+  }
+}
+
       // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
