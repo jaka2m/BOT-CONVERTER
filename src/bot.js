@@ -268,7 +268,8 @@ Catatan:
     };
   }
 
-  async sendMessage(chatId, text, replyMarkup) {
+  // Mengirim pesan ke chat
+async sendMessage(chatId, text, replyMarkup) {
   const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
   const body = {
     chat_id: chatId,
@@ -289,6 +290,7 @@ Catatan:
   return response.json();
 }
 
+// Mengedit pesan yang sudah dikirim
 async editMessage(chatId, messageId, text, replyMarkup) {
   const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
   const body = {
@@ -311,6 +313,7 @@ async editMessage(chatId, messageId, text, replyMarkup) {
   return response.json();
 }
 
+// Mengirim file (dokumen) ke chat
 async sendDocument(chatId, content, filename, mimeType) {
   const formData = new FormData();
   const blob = new Blob([content], { type: mimeType });
@@ -326,16 +329,34 @@ async sendDocument(chatId, content, filename, mimeType) {
   return response.json();
 }
 
-async deleteMessage(chatId, messageId) {
-    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, message_id: messageId })
-    });
-    return res.json();
+// Mengirim pesan lalu menyimpan message_id
+async sendMessageWithDelete(chatId, text) {
+  try {
+    const res = await this.sendMessage(chatId, text);
+    return res.result;
+  } catch (e) {
+    console.error('Gagal mengirim pesan:', e);
+    return null;
   }
+}
 
+// Menghapus pesan dari chat
+async deleteMessage(chatId, messageId) {
+  const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+    }),
+  });
+
+  return res.json();
+}
+
+// Menjawab callback query (dari inline keyboard)
 async answerCallback(callbackQueryId, text = '') {
   const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
   const body = {
