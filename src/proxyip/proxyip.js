@@ -174,15 +174,15 @@ export async function handleCallbackQuery(bot, callbackQuery) {
           ps: `${countryCode} - ${prov1} [VMess-NTLS]`
         };
 
-        configText = "```VMESS-TLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_TLS)) + "```\n" +
-          "```VMESS-NTLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_NTLS)) + "```";
+        configText = "``````VMESS-TLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_TLS)) + "``````\n" +
+          "``````VMESS-NTLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_NTLS)) + "``````";
 
       } else if (type === 'vless') {
         configText = `\`\`\`VLESS-TLS
 vless://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\n\`\`\`VLESS-NTLS
+\`\`\`\`\`\`\n\`\`\`\`\`\`VLESS-NTLS
 vless://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
-\`\`\``;
+\`\`\`\`\`\``;
 
       } else if (type === 'trojan') {
         configText = `\`\`\`\`\`\`TROJAN-TLS
