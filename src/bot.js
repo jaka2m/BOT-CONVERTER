@@ -2,9 +2,8 @@ import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } fro
 import { checkProxyIP } from './checkip.js';
 import { randomconfig } from './randomconfig.js';
 import { rotateconfig } from './config.js';
-import { handleCommand } from './randomip/commandHandler.js';
-import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
-import { TelegramBot } from './tombol.js';
+import { randomip } from './randomip/randomip.js';
+import tom from './tom.js';
 
 const HOSTKU = 'example.com';
 
