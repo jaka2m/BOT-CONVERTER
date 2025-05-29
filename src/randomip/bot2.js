@@ -3,6 +3,8 @@ import {
   handleCallbackQuery,
 } from './randomip.js';
 
+export async function botku(link) {
+  
 export default class TelegramBotku {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
