@@ -1,8 +1,4 @@
-import {
-  handleProxyIpCommand,
-  handleCountrySelection,
-  handleConfigGeneration
-} from './proxyip.js';
+import { handleProxyipCommand, handleCallbackQuery } from './proxyip.js';
 
 export async function proxyBot(link) {
   console.log("Bot link:", link);
@@ -14,76 +10,64 @@ export class TelegramProxyBot {
     this.apiUrl = apiUrl;
   }
 
+  // Fungsi utama untuk menerima update webhook dari Telegram
   async handleUpdate(update) {
-    const message = update.message;
-    const callbackQuery = update.callback_query;
+    // Tangani pesan biasa
+    if (update.message) {
+      const chatId = update.message.chat.id;
+      const text = update.message.text || '';
 
-    // Debug log, hapus kalau sudah oke
-    console.log("Received update:", JSON.stringify(update));
-
-    if (message) {
-      // Skip pesan dari bot sendiri agar tidak loop
-      if (message.from?.is_bot) {
-        return new Response('OK', { status: 200 });
-      }
-
-      const chatId = message.chat.id;
-      const text = message.text || '';
-
-      if (text.startsWith('/start')) {
-        await this.sendMessage(chatId, 'yes no.');
-        return new Response('OK', { status: 200 });
-      }
+      // Buat objek msg mirip struktur node-telegram-bot-api supaya handler compatible
+      const msg = update.message;
 
       if (text.startsWith('/proxyip')) {
-        await handleProxyIpCommand(chatId, this);
-        return new Response('OK', { status: 200 });
-      }
-
-      if (message.reply_to_message && message.reply_to_message.text?.includes('Pilih negara')) {
-        await handleConfigGeneration(chatId, text, this);
-        return new Response('OK', { status: 200 });
+        // Jalankan handler command proxyip dengan this sebagai bot
+        await handleProxyipCommand(this, msg);
       }
     }
 
-    if (callbackQuery) {
-      const chatId = callbackQuery.message.chat.id;
-      const data = callbackQuery.data;
-
-      await handleCountrySelection(chatId, data, this);
-      return new Response('OK', { status: 200 });
+    // Tangani callback_query dari inline button
+    if (update.callback_query) {
+      // Sesuaikan supaya handler menerima objek bot ini dan callbackQuery
+      await handleCallbackQuery(this, update.callback_query);
     }
 
-    // Kalau update tidak diproses, tetap balas OK
+    // Balas Telegram supaya webhook tidak timeout
     return new Response('OK', { status: 200 });
   }
 
-  async sendMessage(chatId, text, replyMarkup = null) {
+  // Fungsi untuk mengirim pesan ke chatId, support opsi tambahan
+  async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+
     const body = {
       chat_id: chatId,
       text: text,
-      parse_mode: 'Markdown' // optional, bisa dihilangkan
+      ...options
     };
-    if (replyMarkup) {
-      body.reply_markup = replyMarkup;
-    }
 
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     return response.json();
   }
 
-  async sendDocument(chatId, formData) {
-    const url = `${this.apiUrl}/bot${this.token}/sendDocument`;
+  // Kalau perlu fungsi lain seperti answerCallbackQuery bisa ditambahkan juga
+  async answerCallbackQuery(callbackQueryId, options = {}) {
+    const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
+
+    const body = {
+      callback_query_id: callbackQueryId,
+      ...options
+    };
 
     const response = await fetch(url, {
       method: 'POST',
-      body: formData
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
 
     return response.json();
