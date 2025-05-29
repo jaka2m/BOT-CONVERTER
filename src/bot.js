@@ -148,6 +148,23 @@ Catatan:
 
   // Kamu harus juga buat definisi fungsi seperti sendMessage, sendDocument, editMessage, answerCallback, getMainKeyboard, getConfigKeyboard, getTLSConfig, getNonTLSConfig di class ini atau import dari modul lain sesuai kebutuhan
 
+async function handleUpdate(req, res) {
+  const body = await req.json();
+  const { message, callback_query } = body;
+
+  if (callback_query) {
+    await handleCallback({
+      callback: callback_query,
+      sendMessage: this.sendMessage.bind(this),
+      answerCallback: this.answerCallback.bind(this),
+      editMessageReplyMarkup: this.editMessageReplyMarkup.bind(this),
+      token: this.token,
+      apiUrl: this.apiUrl
+    });
+  }
+
+  return new Response('OK', { status: 200 });
+}
 
 
   getTLSConfig(result, action) {
@@ -303,15 +320,4 @@ async answerCallback(callbackQueryId, text = '') {
 
   return response.json();
 }
-
-// Di luar fungsi di atas (bukan di dalam answerCallback!)
-if (callback) {
-  await handleCallback({
-    callback,
-    sendMessage: this.sendMessage.bind(this),
-    answerCallback: this.answerCallback.bind(this),
-    editMessageReplyMarkup: this.editMessageReplyMarkup.bind(this),
-    token: this.token,
-    apiUrl: this.apiUrl
-  });
-}
+} 
