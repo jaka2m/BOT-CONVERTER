@@ -1,3 +1,5 @@
+import { randomip } from './randomip.js';
+
 export async function jamur(update) {
   if (update.callback_query) {
     const callback = update.callback_query;
