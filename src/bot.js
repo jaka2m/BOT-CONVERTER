@@ -7,7 +7,6 @@ import { handleCommand as handleCommandFromCommandHandler } from './randomip/com
 import { handleCommand as handleCommandFromTom } from './randomip/tom.js';
 
 import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
-import { jamur } from './randomip/tom.js';
 
 const HOSTKU = 'example.com';
 
