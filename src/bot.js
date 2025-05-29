@@ -1,6 +1,6 @@
-import { handleCommand } from './randomip/commandHandler.js';
-import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
-import { randomip } from './randomip/randomip.js';
+import { handleCommand } from './commandHandler.js';
+import { handleCallback, answerCallback, editMessageReplyMarkup } from './callbackHandler.js';
+import { randomip } from './randomip.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
@@ -17,7 +17,11 @@ export default class TelegramBot {
       const userId = message.from.id;
       const text = message.text || '';
 
-      await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
+      if (text === '/start') {
+        await this.sendMessage(chatId, 'Halo! Selamat datang di bot kami. Ketik /help untuk bantuan.');
+      } else {
+        await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
+      }
 
     } else if (callback) {
       await handleCallback({
