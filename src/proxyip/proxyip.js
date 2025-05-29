@@ -3,6 +3,9 @@
 const DEFAULT_HOST = 'your.host.com';
 const APIKU = 'https://api.checker-ip.web.id/check?ip=';
 
+// Simple cache to prevent repeated messages (per chat & per action)
+const lastSent = new Map();
+
 function getFlagEmoji(countryCode) {
   const codePoints = [...countryCode].map(c => 0x1F1E6 - 65 + c.charCodeAt());
   return String.fromCodePoint(...codePoints);
@@ -16,8 +19,24 @@ function generateUUID() {
   });
 }
 
+function canSendMessage(chatId, key, cooldown = 10000) {
+  // key = unique action key, cooldown = ms
+  const now = Date.now();
+  const cacheKey = `${chatId}_${key}`;
+  if (lastSent.has(cacheKey)) {
+    const lastTime = lastSent.get(cacheKey);
+    if (now - lastTime < cooldown) {
+      return false; // belum cooldown habis, jangan kirim pesan ulang
+    }
+  }
+  lastSent.set(cacheKey, now);
+  return true;
+}
+
 export async function handleProxyIpCommand(bot, chatId) {
   try {
+    if (!canSendMessage(chatId, 'country_list')) return; // prevent spam
+
     const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
     const ipText = await response.text();
     const ipList = ipText.split('\n').filter(line => line.trim() !== '');
@@ -38,19 +57,23 @@ export async function handleProxyIpCommand(bot, chatId) {
       );
     }
 
-    bot.sendMessage(chatId, '🌍 *Pilih negara:*', {
+    await bot.sendMessage(chatId, '🌍 *Pilih negara:*', {
       parse_mode: 'Markdown',
       reply_markup: { inline_keyboard: buttons }
     });
 
   } catch (error) {
     console.error('Error fetching IP list:', error);
-    bot.sendMessage(chatId, `⚠️ *Terjadi kesalahan saat mengambil daftar IP: ${error.message}*`, { parse_mode: 'Markdown' });
+    if (canSendMessage(chatId, 'error_fetch')) {
+      bot.sendMessage(chatId, `⚠️ *Terjadi kesalahan saat mengambil daftar IP: ${error.message}*`, { parse_mode: 'Markdown' });
+    }
   }
 }
 
 export async function handleCountrySelection(bot, chatId, countryCode) {
   try {
+    if (!canSendMessage(chatId, `country_${countryCode}`)) return; // prevent repeated selection spam
+
     const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
     const ipText = await response.text();
     const ipList = ipText.split('\n').filter(line => line.trim() !== '');
@@ -95,20 +118,26 @@ STATUS  : ${status}
       messageText += `\n👉 🌍 [View Google Maps](https://www.google.com/maps?q=${ipData.latitude},${ipData.longitude})`;
     }
 
-    bot.sendMessage(chatId, messageText, {
+    await bot.sendMessage(chatId, messageText, {
       parse_mode: 'Markdown',
       reply_markup: { inline_keyboard: buttons }
     });
 
   } catch (error) {
     console.error('Error fetching IP status:', error);
-    bot.sendMessage(chatId, `⚠️ *Terjadi kesalahan saat memverifikasi IP.*`, { parse_mode: 'Markdown' });
+    if (canSendMessage(chatId, 'error_status')) {
+      bot.sendMessage(chatId, `⚠️ *Terjadi kesalahan saat memverifikasi IP.*`, { parse_mode: 'Markdown' });
+    }
   }
 }
 
 export async function handleConfigGeneration(bot, callbackQuery) {
   const chatId = callbackQuery.message.chat.id;
   const data = callbackQuery.data;
+
+  if (!canSendMessage(chatId, data)) {
+    return bot.answerCallbackQuery(callbackQuery.id, { text: 'Mohon tunggu sebentar sebelum meminta konfigurasi yang sama lagi.' });
+  }
 
   const [_, type, ip, port, countryCode, provider] = data.split('_');
 
