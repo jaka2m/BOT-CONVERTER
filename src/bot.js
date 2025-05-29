@@ -130,7 +130,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      // /listwildcard command
+    // /listwildcard command
 if (text.startsWith('/listwildcard')) {
   const wildcards = [
     "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
@@ -173,17 +173,19 @@ Catatan:
 // Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
 if (text.includes('://')) {
   try {
-    // Ambil baris yang mengandung link valid
+    // Ambil baris yang mengandung link valid, maksimal 10
     const links = text
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.includes('://'))
-      .slice(0, 10); // Batasi maksimal 10 link
+      .slice(0, 10);
 
     if (links.length === 0) {
       await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
       return new Response('OK', { status: 200 });
     }
+
+    await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
 
     // Generate konfigurasi
     const clashConfig = generateClashConfig(links, true);
@@ -194,16 +196,15 @@ if (text.includes('://')) {
     await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
     await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
     await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
-
-    // Jalankan handleCommand jika perlu
-    await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
-
   } catch (error) {
     console.error('Error processing links:', error);
     await this.sendMessage(chatId, `Error: ${error.message}`);
   }
   return new Response('OK', { status: 200 });
-} else if (callback) {
+}
+
+// Jika terdapat callback
+if (callback) {
   await handleCallback({
     callback,
     sendMessage: this.sendMessage.bind(this),
@@ -231,7 +232,8 @@ if (ipPortPattern.test(text)) {
 // Jika input tidak dikenali
 await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
 return new Response('OK', { status: 200 });
-}
+}  
+
       // Generate konfigurasi
       const clashConfig = generateClashConfig(links, true);
       const nekoboxConfig = generateNekoboxConfig(links, true);
