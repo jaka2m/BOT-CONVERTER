@@ -100,9 +100,7 @@ export default class TelegramBot {
 
 
     // ======= HANDLE PESAN MASUK =======
-    const chatId = update.message.chat.id;
-    const text = update.message.text?.trim() || '';
-
+    
       // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
