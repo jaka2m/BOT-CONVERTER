@@ -148,7 +148,7 @@ Catatan:
 
   // Kamu harus juga buat definisi fungsi seperti sendMessage, sendDocument, editMessage, answerCallback, getMainKeyboard, getConfigKeyboard, getTLSConfig, getNonTLSConfig di class ini atau import dari modul lain sesuai kebutuhan
 
-}
+
 
 
   getTLSConfig(result, action) {
