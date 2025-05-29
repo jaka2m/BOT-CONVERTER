@@ -1,7 +1,10 @@
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
 import { checkProxyIP } from './checkip.js';
+import { randomconfig } from './randomconfig.js';
+import { rotateconfig } from './config.js';
 import { handleCommand } from './randomip/commandHandler.js';
 import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
+import { randomip } from './randomip/randomip.js';
 
 const HOSTKU = 'example.com';
 
@@ -11,52 +14,19 @@ export default class TelegramBot {
     this.apiUrl = apiUrl;
   }
 
-  async sendMessage(chatId, text, options) {
-    // Implementasi sendMessage ke Telegram API sesuai kebutuhan
-  }
-
-  async sendDocument(chatId, content, filename, mimeType) {
-    // Implementasi kirim dokumen ke Telegram API sesuai kebutuhan
-  }
-
-  async editMessage(chatId, messageId, text, options) {
-    // Implementasi editMessage Telegram API sesuai kebutuhan
-  }
-
-  async answerCallback(callbackId, text = '') {
-    // Implementasi answerCallback Telegram API sesuai kebutuhan
-  }
-
-  getMainKeyboard(ipPort) {
-    // Return keyboard objek sesuai kebutuhan
-  }
-
-  getConfigKeyboard(ipPort) {
-    // Return keyboard objek sesuai kebutuhan
-  }
-
-  getTLSConfig(result, action) {
-    // Generate konfigurasi TLS string
-    return '';
-  }
-
-  getNonTLSConfig(result, action) {
-    // Generate konfigurasi Non-TLS string
-    return '';
-  }
-
   async handleUpdate(update) {
     // Abaikan jika bukan message atau callback_query
     if (!update.message && !update.callback_query) {
       return new Response('OK', { status: 200 });
     }
 
-    // HANDLE CALLBACK QUERY
+    // ======= HANDLE CALLBACK (TOMBOL) =======
     if (update.callback_query) {
       const callback = update.callback_query;
       const chatId = callback.message.chat.id;
       const messageId = callback.message.message_id;
       const data = callback.data;
+
       const [action, ipPort] = data.split('|');
 
       if (action === 'back') {
@@ -87,12 +57,12 @@ export default class TelegramBot {
         `DELAY    :${result.delay}\n` +
         `STATUS   :✅ ${result.status}\n` +
         '```' +
-        '```TLS\n' +
-        `${this.getTLSConfig(result, action)}\n` +
-        '```' +
-        '```Non-TLS\n' +
-        `${this.getNonTLSConfig(result, action)}\n` +
-        '```',
+          '```TLS\n' +
+          `${this.getTLSConfig(result, action)}\n` +
+          '```' +
+          '```Non-TLS\n' +
+          `${this.getNonTLSConfig(result, action)}\n` +
+          '```',
         this.getConfigKeyboard(ipPort)
       );
 
@@ -100,10 +70,10 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-    // HANDLE MESSAGE
+    // ======= HANDLE PESAN MASUK =======
     const chatId = update.message.chat.id;
-    const text = update.message.text?.trim() || '';
     const userId = update.message.from.id;
+    const text = update.message.text?.trim() || '';
 
     if (text.startsWith('/converter')) {
       await this.sendMessage(
@@ -126,24 +96,26 @@ Catatan:
       return new Response('OK', { status: 200 });
     }
 
-    // Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
     if (text.includes('://')) {
       try {
+        // Ambil baris yang mengandung link valid
         const links = text
           .split('\n')
           .map(line => line.trim())
           .filter(line => line.includes('://'))
-          .slice(0, 10);
+          .slice(0, 10); // Batasi maksimal 10 link
 
         if (links.length === 0) {
           await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
           return new Response('OK', { status: 200 });
         }
 
+        // Generate konfigurasi
         const clashConfig = generateClashConfig(links, true);
         const nekoboxConfig = generateNekoboxConfig(links, true);
         const singboxConfig = generateSingboxConfig(links, true);
 
+        // Kirim file konfigurasi
         await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
         await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
         await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
@@ -154,7 +126,6 @@ Catatan:
       return new Response('OK', { status: 200 });
     }
 
-    // Jika input adalah IP atau IP:PORT
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
     if (ipPortPattern.test(text)) {
       const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
@@ -167,15 +138,16 @@ Catatan:
       return new Response('OK', { status: 200 });
     }
 
-    // Jika input tidak dikenali
-    await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
-
-    // Handle command lain yang kamu sudah punya di kode asli
+    // Tambahkan ini supaya handleCommand berjalan di dalam blok yang valid (misalnya di else)
     await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
 
+    // Jika input tidak dikenali
+    await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
     return new Response('OK', { status: 200 });
   }
-}
+
+  // Kamu harus juga buat definisi fungsi seperti sendMessage, sendDocument, editMessage, answerCallback, getMainKeyboard, getConfigKeyboard, getTLSConfig, getNonTLSConfig di class ini atau import dari modul lain sesuai kebutuhan
+
 
 
   getTLSConfig(result, action) {
