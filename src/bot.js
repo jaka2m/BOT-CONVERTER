@@ -128,27 +128,19 @@ Catatan:
 
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
 
-if (text) {
-  if (ipPortPattern.test(text)) {
-    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-    await this.editMessage(
-      chatId,
-      loadingMsg.result.message_id,
-      `Pilih konfigurasi untuk \`${text}\`:`,
-      this.getMainKeyboard(text)
-    );
-    return new Response('OK', { status: 200 });
-  } else {
-    // Run other command handling when text is not IP/IP:PORT
-    await handleCommand({
-      text,
-      chatId,
-      userId,
-      sendMessage: this.sendMessage.bind(this)
-    });
-  }
+if (ipPortPattern.test(text)) {
+  // Jika input sesuai IP atau IP:PORT
+  const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+  await this.editMessage(
+    chatId,
+    loadingMsg.result.message_id,
+    `Pilih konfigurasi untuk \`${text}\`:`,
+    this.getMainKeyboard(text)
+  );
+  return new Response('OK', { status: 200 });
+
 } else if (callback) {
-  // Handle callback queries
+  // Jika ada callback query (misalnya user menekan tombol inline keyboard)
   await handleCallback({
     callback,
     sendMessage: this.sendMessage.bind(this),
@@ -157,16 +149,20 @@ if (text) {
     token: this.token,
     apiUrl: this.apiUrl
   });
+  return new Response('OK', { status: 200 });
+
 } else {
-  // Unrecognized input fallback
+  // Input lain dianggap sebagai command
+  await handleCommand({
+    text,
+    chatId,
+    userId,
+    sendMessage: this.sendMessage.bind(this)
+  });
+  // Jika input tidak dikenali oleh handleCommand, kirim pesan fallback
   await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
+  return new Response('OK', { status: 200 });
 }
-
-return new Response('OK', { status: 200 });
-}
-
-  // Kamu harus juga buat definisi fungsi seperti sendMessage, sendDocument, editMessage, answerCallback, getMainKeyboard, getConfigKeyboard, getTLSConfig, getNonTLSConfig di class ini atau import dari modul lain sesuai kebutuhan
-
 
 
   getTLSConfig(result, action) {
