@@ -5,7 +5,6 @@ import { rotateconfig } from './config.js';
 import { handleCommand } from './randomip/commandHandler.js';
 import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
 import { randomip } from './randomip/randomip.js';
-import { jamur } from './randomip/tom.js';
 
 const HOSTKU = 'example.com';
 
