@@ -3,7 +3,7 @@ import { checkProxyIP } from './checkip.js';
 import { randomconfig } from './randomconfig.js';
 import { rotateconfig } from './config.js';
 import { randomip } from './randomip/randomip.js';
-import tom from './tom.js';
+import tom from './randomip/tom.js';
 
 const HOSTKU = 'example.com';
 
