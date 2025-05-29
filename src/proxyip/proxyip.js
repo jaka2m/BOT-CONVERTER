@@ -52,7 +52,6 @@ export async function handleProxyipCommand(bot, msg) {
 }
 
 // Fungsi helper kirim tombol negara per halaman
-// Fungsi kirim/ubah tombol negara per halaman
 async function sendCountryButtons(bot, chatId, countryCodes, page, messageId = null) {
   const pageSize = 8;
   const totalPages = Math.ceil(countryCodes.length / pageSize);
@@ -69,28 +68,22 @@ async function sendCountryButtons(bot, chatId, countryCodes, page, messageId = n
     );
   }
 
-  // Navigasi bawah
   const navButtons = [];
   if (page > 0) navButtons.push({ text: '⬅️ Prev', callback_data: `page_${page - 1}` });
   if (page < totalPages - 1) navButtons.push({ text: '➡️ Next', callback_data: `page_${page + 1}` });
-  if (navButtons.length > 0) buttons.push(navButtons);
-  buttons.push([{ text: '🔙 Back', callback_data: 'back_home' }]);
 
-  const options = {
-    parse_mode: 'Markdown',
-    reply_markup: { inline_keyboard: buttons }
-  };
+  if (navButtons.length) buttons.push(navButtons);
+  buttons.push([{ text: '🔙 Back', callback_data: 'back_home' }]);
 
   if (messageId) {
     // Edit pesan yang sudah ada
-    await bot.editMessageText('🌍 *Pilih negara:*', {
-      chat_id: chatId,
-      message_id: messageId,
-      ...options
-    });
+    await bot.editMessageReplyMarkup({ inline_keyboard: buttons }, { chat_id: chatId, message_id: messageId });
   } else {
     // Kirim pesan baru
-    await bot.sendMessage(chatId, '🌍 *Pilih negara:*', options);
+    await bot.sendMessage(chatId, '🌍 *Pilih negara:*', {
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: buttons }
+    });
   }
 }
 
@@ -98,24 +91,21 @@ async function sendCountryButtons(bot, chatId, countryCodes, page, messageId = n
 // Callback handler
 export async function handleCallbackQuery(bot, callbackQuery) {
   const chatId = callbackQuery.message.chat.id;
+  const messageId = callbackQuery.message.message_id;
   const data = callbackQuery.data;
 
   if (data.startsWith('page_')) {
-  const page = parseInt(data.split('_')[1]);
-  const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
-  const ipText = await response.text();
-  const ipList = ipText.split('\n').filter(line => line.trim() !== '');
-  const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))].sort();
+    const page = parseInt(data.split('_')[1]);
+    const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
+    const ipText = await response.text();
+    const ipList = ipText.split('\n').filter(line => line.trim() !== '');
+    const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))].sort();
 
-  // Gunakan editMessageText supaya tidak spam
-  await sendCountryButtons(bot, chatId, countryCodes, page, callbackQuery.message.message_id);
-  // Jangan lupa jawab callbackQuery biar loading tombol hilang
-  await bot.answerCallbackQuery(callbackQuery.id);
-  return;
-}
+    // Edit pesan tombol, jangan kirim baru
+    await sendCountryButtons(bot, chatId, countryCodes, page, messageId);
 
-  if (data === 'back_home') {
-    await handleProxyipCommand(bot, { chat: { id: chatId } });
+    // Jawab callback supaya loading berhenti
+    await bot.answerCallbackQuery(callbackQuery.id);
     return;
   }
 
