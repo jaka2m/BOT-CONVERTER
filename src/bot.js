@@ -213,12 +213,6 @@ if (ipPortPattern.test(text)) {
   return new Response('OK', { status: 200 });
 }
 
-  // Jika input tidak dikenali
-  await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
-  return new Response('OK', { status: 200 });
-}
-
-
   getTLSConfig(result, action) {
     switch (action) {
       case 'vless': return result.vlessTLSLink || '';
