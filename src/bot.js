@@ -40,11 +40,10 @@ export class TelegramBot {
       }
 
       const result = await checkProxyIP(ipPort);
-if (result.status !== 'ACTIVE') {
-  // Baris ini dihapus supaya tidak balas apapun
-  // await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
-  return new Response('OK', { status: 200 });
-}
+      if (result.status !== 'ACTIVE') {
+        await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
+        return new Response('OK', { status: 200 });
+      }
 
       await this.editMessage(
         chatId,
