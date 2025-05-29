@@ -3,10 +3,8 @@ import {
   handleCallbackQuery,
 } from './randomip.js';
 
-// Fungsi biasa yang bisa kamu pakai di luar
 export async function botku(link) {
-  // misalnya kamu bisa inisialisasi sesuatu di sini
-  console.log("Bot link:", link);
+console.log("Bot link:", link);
 }
 
 export class TelegramBotku {
@@ -26,9 +24,9 @@ export class TelegramBotku {
   const chatId = update.message.chat.id;
   const text = update.message.text || '';
 
-  if (text.startsWith('/proxy')) {
-    await handleRandomIpCommand(this, chatId);
-  } 
+  if (text === '/proxy') {
+  await handleRandomIpCommand(this, chatId);
+}
   
   return new Response('OK', { status: 200 });
 }
