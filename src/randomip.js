@@ -91,7 +91,8 @@ export async function handleRandomIpCommand(bot, chatId) {
 
     globalCountryCodes = [...new Set(globalIpList.map(line => line.split(',')[2]))].sort();
 
-    const text = generateRandomIPsMessage(globalIpList);
+    // *** Hanya kirim pesan pilihan negara dulu ***
+    const text = 'Silakan pilih negara untuk mendapatkan IP random:';
     const reply_markup = buildCountryButtons(0);
 
     await bot.sendMessage(chatId, text, {
