@@ -3,7 +3,7 @@ import {
   handleCallbackQuery,
 } from './randomip.js';
 
-import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
+import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
