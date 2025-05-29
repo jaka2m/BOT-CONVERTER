@@ -1,5 +1,5 @@
 
-const APIKU = 'https://api.example.com/check/'; // Ganti dengan URL asli API status IP
+const APIKU = 'https://api.checker-ip.web.id/check?ip='; // Ganti dengan URL asli API status IP
 const DEFAULT_HOST = 'your.domain.com'; // Ganti dengan host default
 
 // Simpan pesan yang sudah dikirim ke user (chatId) supaya tidak spam
