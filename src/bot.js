@@ -3,6 +3,7 @@ import { checkProxyIP } from './checkip.js';
 import { randomconfig } from './randomconfig.js';
 import { rotateconfig } from './config.js';
 import TelegramBotku from './randomip/bot2.js';
+import { botku } from './randomip/bot2.js';
 
 const HOSTKU = 'example.com';
 
