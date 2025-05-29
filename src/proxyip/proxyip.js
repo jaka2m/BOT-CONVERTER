@@ -146,7 +146,7 @@ export async function handleCallbackQuery(bot, callbackQuery) {
       const pathh = `/Geo-Project/${ip}-${port}`;
       const prov = encodeURIComponent(`${provider} ${getFlagEmoji(countryCode)}`);
       const prov1 = `${provider} ${getFlagEmoji(countryCode)}`;
-      const toBase64 = (str) => Buffer.from(str).toString('base64');
+      const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
       let configText = '';
 
