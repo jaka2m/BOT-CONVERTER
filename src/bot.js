@@ -115,12 +115,8 @@ export default class TelegramBot {
 
     await this.sendMessage(chatId, resultText, { parse_mode: 'Markdown' });
     return new Response('OK', { status: 200 });
-
-  } catch (error) {
-    await this.sendMessage(chatId, `❌ Terjadi kesalahan saat memuat IP: ${error.message}`);
-    return new Response('OK', { status: 200 });
   }
-
+  
       // /config command
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
