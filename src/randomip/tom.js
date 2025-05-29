@@ -1,3 +1,4 @@
+import { randomip } from './randomip.js';
 export async function handleCommand({ text, chatId, userId, sendMessage }) {
   // Your code to handle the command here
   await sendMessage(chatId, `Received text: ${text}`);
