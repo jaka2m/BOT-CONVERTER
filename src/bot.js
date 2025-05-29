@@ -32,7 +32,7 @@ export class TelegramBot {
         await this.editMessage(
           chatId,
           messageId,
-          'format IP atau IP:PORT, tombol hanya merespon IP ACTIVE.',
+          'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.',
           this.getMainKeyboard(ipPort)
         );
         await this.answerCallback(callback.id);
