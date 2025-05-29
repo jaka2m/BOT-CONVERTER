@@ -1,5 +1,4 @@
 // proxyip.js
-import fetch from 'node-fetch';
 
 const DEFAULT_HOST = 'your.host.com';
 const APIKU = 'https://api.checker-ip.web.id/check?ip=';
