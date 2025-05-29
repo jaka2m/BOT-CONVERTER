@@ -3,7 +3,7 @@ import {
   handleCallbackQuery,
 } from './randomip/randomip.js';
 
-export default class TelegramBot {
+export default class TelegramBotku {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
