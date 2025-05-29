@@ -201,17 +201,24 @@ Catatan:
   }
 
   // Jika input adalah IP atau IP:PORT
-const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-if (ipPortPattern.test(text)) {
-  const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-  await this.editMessage(
-    chatId,
-    loadingMsg.result.message_id,
-    `Pilih konfigurasi untuk \`${text}\`:`,
-    this.getMainKeyboard(text)
-  );
+  const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+  if (ipPortPattern.test(text)) {
+    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+    await this.editMessage(
+      chatId,
+      loadingMsg.result.message_id,
+      `Pilih konfigurasi untuk \`${text}\`:`,
+      this.getMainKeyboard(text)
+    );
+    return new Response('OK', { status: 200 });
+  }
+
+  // Jika input tidak dikenali
+  await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
   return new Response('OK', { status: 200 });
 }
+}
+
 
   getTLSConfig(result, action) {
     switch (action) {
