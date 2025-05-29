@@ -1,16 +1,14 @@
+const APIKU = 'https://api.checker-ip.web.id/check?ip=';
+const DEFAULT_HOST = 'your.domain.com';
 
-const APIKU = 'https://api.checker-ip.web.id/check?ip='; // Ganti dengan URL asli API status IP
-const DEFAULT_HOST = 'your.domain.com'; // Ganti dengan host default
-
-// Simpan pesan yang sudah dikirim ke user (chatId) supaya tidak spam
 const sentMessages = new Map();
+const PAGE_SIZE = 16; // 4x4 grid
+const userPages = new Map(); // Simpan halaman saat user pilih negara untuk paging tombol
 
-// Fungsi untuk generate UUID (simple version)
 export function generateUUID() {
-  // Random UUID v4 generator sederhana
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0,
-      v = c === 'x' ? r : (r & 0x3 | 0x8);
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
 }
@@ -21,7 +19,6 @@ export function getFlagEmoji(countryCode) {
   return String.fromCodePoint(...codePoints);
 }
 
-// Fungsi untuk mencegah spam pesan berulang
 export function canSendMessage(chatId, key, interval = 30000) {
   const now = Date.now();
   if (!sentMessages.has(chatId)) sentMessages.set(chatId, {});
@@ -33,7 +30,6 @@ export function canSendMessage(chatId, key, interval = 30000) {
   return false;
 }
 
-// Handler command /proxyip
 export async function handleProxyipCommand(bot, msg) {
   const chatId = msg.chat.id;
   if (!canSendMessage(chatId, 'proxyip_command')) return;
@@ -44,37 +40,77 @@ export async function handleProxyipCommand(bot, msg) {
     const ipList = ipText.split('\n').filter(line => line.trim() !== '');
 
     if (ipList.length === 0) {
-      await bot.sendMessage(chatId, `⚠️ *Daftar IP kosong atau tidak ditemukan. Coba lagi nanti.*`, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, '⚠️ *Daftar IP kosong atau tidak ditemukan. Coba lagi nanti.*', { parse_mode: 'Markdown' });
       return;
     }
 
-    const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))];
-    const buttons = [];
+    const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))].sort();
 
-    for (let i = 0; i < countryCodes.length; i += 4) {
-      buttons.push(
-        countryCodes.slice(i, i + 4).map(code => ({
-          text: `${getFlagEmoji(code)} ${code}`,
-          callback_data: `select_${code}`
-        }))
-      );
-    }
+    // Simpan negara di userPages page 0
+    userPages.set(chatId, { countryCodes, page: 0 });
+
+    const keyboard = buildCountryKeyboard(countryCodes, 0);
 
     await bot.sendMessage(chatId, '🌍 *Pilih negara:*', {
       parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: buttons }
+      reply_markup: { inline_keyboard: keyboard }
     });
-
   } catch (error) {
     console.error('Error fetching IP list:', error);
     await bot.sendMessage(chatId, `⚠️ *Terjadi kesalahan saat mengambil daftar IP: ${error.message}*`, { parse_mode: 'Markdown' });
   }
 }
 
-// Handler callback query
+function buildCountryKeyboard(countryCodes, page) {
+  const start = page * PAGE_SIZE;
+  const slice = countryCodes.slice(start, start + PAGE_SIZE);
+
+  const rows = [];
+  for (let i = 0; i < slice.length; i += 4) {
+    rows.push(
+      slice.slice(i, i + 4).map(code => ({
+        text: `${getFlagEmoji(code)} ${code}`,
+        callback_data: `select_${code}`
+      }))
+    );
+  }
+
+  const navButtons = [];
+  if (page > 0) navButtons.push({ text: '⬅️ Prev', callback_data: 'page_prev' });
+  if ((page + 1) * PAGE_SIZE < countryCodes.length) navButtons.push({ text: 'Next ➡️', callback_data: 'page_next' });
+  if (navButtons.length) rows.push(navButtons);
+
+  return rows;
+}
+
 export async function handleCallbackQuery(bot, callbackQuery) {
   const chatId = callbackQuery.message.chat.id;
   const data = callbackQuery.data;
+
+  if (data === 'page_prev' || data === 'page_next') {
+    if (!userPages.has(chatId)) {
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Tidak ada halaman aktif.' });
+      return;
+    }
+    const pageData = userPages.get(chatId);
+    let newPage = pageData.page + (data === 'page_next' ? 1 : -1);
+    if (newPage < 0) newPage = 0;
+    if (newPage > Math.floor((pageData.countryCodes.length - 1) / PAGE_SIZE)) newPage = pageData.page;
+
+    userPages.set(chatId, { ...pageData, page: newPage });
+
+    try {
+      await bot.editMessageReplyMarkup(
+        { inline_keyboard: buildCountryKeyboard(pageData.countryCodes, newPage) },
+        { chat_id: chatId, message_id: callbackQuery.message.message_id }
+      );
+      await bot.answerCallbackQuery(callbackQuery.id);
+    } catch (error) {
+      console.error('Error saat pagination:', error);
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Gagal memperbarui halaman.' });
+    }
+    return;
+  }
 
   if (data.startsWith('select_')) {
     if (!canSendMessage(chatId, `select_${data}`)) return;
@@ -96,20 +132,23 @@ export async function handleCallbackQuery(bot, callbackQuery) {
 
       const statusResponse = await fetch(`${APIKU}${ip}:${port}`);
       const ipData = await statusResponse.json();
-      const status = ipData.status === "ACTIVE" ? "✅ ACTIVE" : "❌ DEAD";
+      const status = ipData.status === 'ACTIVE' ? '✅ ACTIVE' : '❌ DEAD';
 
       const safeProvider = provider.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
 
-      const buttons = [
+      const protocolButtons = [
         [
           { text: '⚡ VLESS', callback_data: `config_vless_${ip}_${port}_${countryCode}_${safeProvider}` },
           { text: '⚡ TROJAN', callback_data: `config_trojan_${ip}_${port}_${countryCode}_${safeProvider}` }
         ],
         [
-          { text: '⚡ VMESS', callback_data: `config_vmess_${ip}_${port}_${countryCode}_${safeProvider}` }
+          { text: '⚡ VMESS', callback_data: `config_vmess_${ip}_${port}_${countryCode}_${safeProvider}` },
+          { text: '⚡ SHADOWSOCKS', callback_data: `config_ss_${ip}_${port}_${countryCode}_${safeProvider}` }
         ],
         [
-          { text: '⚡ SHADOWSOCKS', callback_data: `config_ss_${ip}_${port}_${countryCode}_${safeProvider}` }
+          { text: '⬅️ Prev', callback_data: 'page_prev' },
+          { text: 'Next ➡️', callback_data: 'page_next' },
+          { text: '🔙 Back', callback_data: 'back_to_countries' }
         ]
       ];
 
@@ -122,14 +161,38 @@ export async function handleCallbackQuery(bot, callbackQuery) {
         messageText += `\n👉 🌍 [View Google Maps](https://www.google.com/maps?q=${ipData.latitude},${ipData.longitude})`;
       }
 
-      await bot.sendMessage(chatId, messageText, {
+      await bot.editMessageText(messageText, {
+        chat_id: chatId,
+        message_id: callbackQuery.message.message_id,
         parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: buttons }
+        reply_markup: { inline_keyboard: protocolButtons }
       });
 
+      await bot.answerCallbackQuery(callbackQuery.id);
     } catch (error) {
       console.error('❌ Error fetching IP status:', error);
-      await bot.sendMessage(chatId, `⚠️ *Terjadi kesalahan saat memverifikasi IP.*`, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, '⚠️ *Terjadi kesalahan saat memverifikasi IP.*', { parse_mode: 'Markdown' });
+    }
+    return;
+  }
+
+  if (data === 'back_to_countries') {
+    if (!userPages.has(chatId)) {
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Tidak ada halaman negara aktif.' });
+      return;
+    }
+    const pageData = userPages.get(chatId);
+    try {
+      await bot.editMessageText('🌍 *Pilih negara:*', {
+        chat_id: chatId,
+        message_id: callbackQuery.message.message_id,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: buildCountryKeyboard(pageData.countryCodes, pageData.page) }
+      });
+      await bot.answerCallbackQuery(callbackQuery.id);
+    } catch (error) {
+      console.error('Error back to countries:', error);
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Gagal kembali ke daftar negara.' });
     }
     return;
   }
@@ -138,83 +201,58 @@ export async function handleCallbackQuery(bot, callbackQuery) {
     if (!canSendMessage(chatId, `config_${data}`)) return;
 
     try {
-      const [_, type, ip, port, countryCode, provider] = data.split('_');
-      const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1';
-      const uuid = generateUUID();
+      const parts = data.split('_');
+      const protocol = parts[1];
+      const ip = parts[2];
+      const port = parts[3];
+      const countryCode = parts[4];
+      const provider = parts[5];
 
-      const path = encodeURIComponent(`/Geo-Project/${ip}=${port}`);
-      const pathh = `/Geo-Project/${ip}-${port}`;
-      const prov = encodeURIComponent(`${provider} ${getFlagEmoji(countryCode)}`);
-      const prov1 = `${provider} ${getFlagEmoji(countryCode)}`;
-      const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+      const uuid = generateUUID();
 
       let configText = '';
 
-      if (type === 'vmess') {
-        const vmessJSON_TLS = {
-          v: "2",
-          ps: `${countryCode} - ${prov1} [VMess-TLS]`,
-          add: DEFAULT_HOST,
-          port: "443",
-          id: uuid1,
-          aid: "0",
-          net: "ws",
-          type: "none",
-          host: DEFAULT_HOST,
-          path: pathh,
-          tls: "tls",
-          sni: DEFAULT_HOST,
-          scy: "zero"
-        };
-
-        const vmessJSON_NTLS = {
-          ...vmessJSON_TLS,
-          port: "80",
-          tls: "none",
-          ps: `${countryCode} - ${prov1} [VMess-NTLS]`
-        };
-
-        configText = "``````VMESS-TLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_TLS)) + "``````\n" +
-          "``````VMESS-NTLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_NTLS)) + "``````";
-
-      } else if (type === 'vless') {
-        configText = `\`\`\`\`\`\`VLESS-TLS
-vless://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\`\`\`\n\`\`\`\`\`\`VLESS-NTLS
-vless://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\``;
-
-      } else if (type === 'trojan') {
-        configText = `\`\`\`\`\`\`TROJAN-TLS
-trojan://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\`\`\`\n\`\`\`\`\`\`TROJAN-NTLS
-trojan://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\``;
-
-      } else if (type === 'ss') {
-        configText = `\`\`\`\`\`\`SHADOWSOCKS-TLS
-ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:443?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=tls&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\`\n\`\`\`\`\`\`SHADOWSOCKS-NTLS
-ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:80?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=none&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\``;
-
-      } else {
-        await bot.answerCallbackQuery(callbackQuery.id, { text: "Protokol tidak dikenali." });
-        return;
+      switch (protocol) {
+        case 'vless':
+          configText = `vless://${uuid}@${ip}:${port}?type=ws&security=tls&sni=${DEFAULT_HOST}&path=%2Fvless#${countryCode}-${provider}`;
+          break;
+        case 'trojan':
+          configText = `trojan://${uuid}@${ip}:${port}?type=ws&security=tls&sni=${DEFAULT_HOST}&path=%2Ftrojan#${countryCode}-${provider}`;
+          break;
+        case 'vmess':
+          const vmessObj = {
+            v: '2',
+            ps: `${countryCode}-${provider}`,
+            add: ip,
+            port: port,
+            id: uuid,
+            aid: '0',
+            net: 'ws',
+            type: '',
+            host: DEFAULT_HOST,
+            path: '/vmess',
+            tls: 'tls'
+          };
+          configText = `vmess://${Buffer.from(JSON.stringify(vmessObj)).toString('base64')}`;
+          break;
+        case 'ss':
+          const ssMethod = 'aes-128-gcm';
+          const ssPass = uuid;
+          configText = `ss://${Buffer.from(`${ssMethod}:${ssPass}`).toString('base64')}@${ip}:${port}#${countryCode}-${provider}`;
+          break;
+        default:
+          configText = 'Protocol tidak dikenali.';
+          break;
       }
 
-      const infoText = `✅ *Konfigurasi ${type.toUpperCase()} untuk ${getFlagEmoji(countryCode)} ${countryCode} :*\n` +
-        "```" + configText + "```";
-
-      await bot.sendMessage(chatId, infoText, { parse_mode: 'Markdown' });
+      await bot.sendMessage(chatId, `⚡ *Config untuk ${protocol.toUpperCase()}:*\n\`\`\`\n${configText}\n\`\`\``, { parse_mode: 'Markdown' });
       await bot.answerCallbackQuery(callbackQuery.id);
-
     } catch (error) {
       console.error('Error generating config:', error);
-      await bot.sendMessage(chatId, `⚠️ *Gagal membuat konfigurasi: ${error.message}*`, { parse_mode: 'Markdown' });
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Gagal membuat konfigurasi.' });
     }
     return;
   }
 
-  await bot.answerCallbackQuery(callbackQuery.id);
+  await bot.answerCallbackQuery(callbackQuery.id, { text: 'Aksi tidak dikenal.' });
 }
