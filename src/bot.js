@@ -4,7 +4,7 @@ import { randomconfig } from './randomconfig.js';
 import { rotateconfig } from './config.js';
 import { handleCommand } from './randomip/commandHandler.js';
 import { handleCallback, answerCallback, editMessageReplyMarkup } from './randomip/callbackHandler.js';
-import { randomip } from './randomip/tom.js';
+import { TelegramBot } from './tombol.js';
 
 const HOSTKU = 'example.com';
 
