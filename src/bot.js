@@ -1,7 +1,7 @@
 import {
   handleRandomIpCommand,
   handleCallbackQuery,
-} from './randomip.js';
+} from './randomip/randomip.js';
 
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
 
