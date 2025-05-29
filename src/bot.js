@@ -55,12 +55,12 @@ export default class TelegramBot {
         `DELAY    :${result.delay}\n` +
         `STATUS   :✅ ${result.status}\n` +
         '```' +
-        '```TLS\n' +
-        `${this.getTLSConfig(result, action)}\n` +
-        '```' +
-        '```Non-TLS\n' +
-        `${this.getNonTLSConfig(result, action)}\n` +
-        '```',
+          '```TLS\n' +
+          `${this.getTLSConfig(result, action)}\n` +
+          '```' +
+          '```Non-TLS\n' +
+          `${this.getNonTLSConfig(result, action)}\n` +
+          '```',
         this.getConfigKeyboard(ipPort)
       );
 
@@ -85,6 +85,7 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
+    // /converter command
     if (text.startsWith('/converter')) {
       await this.sendMessage(
         chatId,
@@ -109,15 +110,15 @@ Catatan:
     // Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
     if (text.includes('://')) {
       try {
-        // Ambil baris yang mengandung link valid, maksimal 10
+        // Ambil baris yang mengandung link valid
         const links = text
           .split('\n')
           .map(line => line.trim())
           .filter(line => line.includes('://'))
-          .slice(0, 10);
+          .slice(0, 10); // Batasi maksimal 10 link
 
         if (links.length === 0) {
-          await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
+          // Tidak mengirim pesan balasan jika tidak ada link valid
           return new Response('OK', { status: 200 });
         }
 
@@ -150,8 +151,7 @@ Catatan:
       return new Response('OK', { status: 200 });
     }
 
-    // Jika input tidak dikenali
-    await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
+    // Jika input tidak valid (bukan IP/IP:PORT dan bukan link konfigurasi), abaikan (tidak membalas apa-apa)
     return new Response('OK', { status: 200 });
   }
 
@@ -251,61 +251,26 @@ Catatan:
   // Mengirim file (dokumen) ke chat
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
-    const blob = new Blob([content], { type: mimeType });
+    formData.append('chat_id', chatId);
+    formData.append('document', new Blob([content], { type: mimeType }), filename);
 
-    formData.append('document', blob, filename);
-    formData.append('chat_id', chatId.toString());
-
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+    const url = `${this.apiUrl}/bot${this.token}/sendDocument`;
+    await fetch(url, {
       method: 'POST',
       body: formData,
     });
-
-    return response.json();
   }
 
-  // Mengirim pesan lalu menyimpan message_id
-  async sendMessageWithDelete(chatId, text) {
-    try {
-      const res = await this.sendMessage(chatId, text);
-      return res.result;
-    } catch (e) {
-      console.error('Gagal mengirim pesan:', e);
-      return null;
-    }
-  }
-
-  // Menghapus pesan dari chat
-  async deleteMessage(chatId, messageId) {
-    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-      }),
-    });
-
-    return res.json();
-  }
-
-  // Menjawab callback query (dari inline keyboard)
+  // Jawab callback query untuk menghilangkan loading spinner di Telegram client
   async answerCallback(callbackQueryId, text = '') {
     const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
-    const body = {
-      callback_query_id: callbackQueryId,
-      text,
-      show_alert: !!text,
-    };
+    const body = { callback_query_id: callbackQueryId };
+    if (text) body.text = text;
 
-    const response = await fetch(url, {
+    await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-
-    return response.json();
   }
 }
