@@ -128,8 +128,8 @@ Catatan:
 
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
 
-if (ipPortPattern.test(text)) {
-  // Jika input sesuai IP atau IP:PORT
+if (text && ipPortPattern.test(text)) {
+  // Jika input adalah IP atau IP:PORT
   const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
   await this.editMessage(
     chatId,
@@ -139,8 +139,18 @@ if (ipPortPattern.test(text)) {
   );
   return new Response('OK', { status: 200 });
 
+} else if (text) {
+  // Jika ada text tapi bukan IP/PORT, jalankan handleCommand
+  await handleCommand({
+    text,
+    chatId,
+    userId,
+    sendMessage: this.sendMessage.bind(this)
+  });
+  return new Response('OK', { status: 200 });
+
 } else if (callback) {
-  // Jika ada callback query (misalnya user menekan tombol inline keyboard)
+  // Jika ada callback query
   await handleCallback({
     callback,
     sendMessage: this.sendMessage.bind(this),
@@ -152,17 +162,13 @@ if (ipPortPattern.test(text)) {
   return new Response('OK', { status: 200 });
 
 } else {
-  // Input lain dianggap sebagai command
-  await handleCommand({
-    text,
-    chatId,
-    userId,
-    sendMessage: this.sendMessage.bind(this)
-  });
-  // Jika input tidak dikenali oleh handleCommand, kirim pesan fallback
+  // Jika input tidak dikenali
   await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
   return new Response('OK', { status: 200 });
 }
+
+  // Kamu harus juga buat definisi fungsi seperti sendMessage, sendDocument, editMessage, answerCallback, getMainKeyboard, getConfigKeyboard, getTLSConfig, getNonTLSConfig di class ini atau import dari modul lain sesuai kebutuhan
+
 
 
   getTLSConfig(result, action) {
