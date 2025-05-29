@@ -77,7 +77,7 @@ filteredIPs.slice(0, 20).forEach(line => {
   msg += `
 📍 *IP:PORT* : \`${ip}:${port}\` 
 🌐 *Country* : ${_code} ${getFlagEmoji(_code)}
-💻 *ISP* : ${isp}\n\n
+💻 *ISP* : ${isp}
 `;
 });
 
