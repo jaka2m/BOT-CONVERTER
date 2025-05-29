@@ -40,15 +40,18 @@ if (update.callback_query) {
   }
 
   const result = await checkProxyIP(ipPort);
+
+  // Hanya tanggapi jika proxy DEAD (tidak ACTIVE)
   if (result.status !== 'ACTIVE') {
-    // Hanya balas kalau proxy mati
+    // Kirim balasan callback untuk beri tahu IP dead
     await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
     return new Response('OK', { status: 200 });
   }
 
-  // Jika proxy aktif, tidak perlu balas apa-apa
+  // Jika proxy ACTIVE, TIDAK membalas callbackQuery (silent)
   return new Response('OK', { status: 200 });
 }
+
 
       await this.editMessage(
         chatId,
