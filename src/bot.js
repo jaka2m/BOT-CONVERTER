@@ -30,7 +30,6 @@ export default class TelegramBot {
       const [action, ipPort] = data.split('|');
       
       if (message) {
-      const chatId = message.chat.id;
       const userId = message.from.id;
       const text = message.text || '';
 
