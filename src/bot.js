@@ -48,19 +48,19 @@ export default class TelegramBot {
         chatId,
         messageId,
         '```INFORMATION\n' +
-          `IP       :${result.ip}\n` +
-          `PORT     :${result.port}\n` +
-          `ISP      :${result.isp}\n` +
-          `COUNTRY  :${result.country}\n` +
-          `DELAY    :${result.delay}\n` +
-          `STATUS   :✅ ${result.status}\n` +
-          '```' +
-          '```TLS\n' +
-          `${this.getTLSConfig(result, action)}\n` +
-          '```' +
-          '```Non-TLS\n' +
-          `${this.getNonTLSConfig(result, action)}\n` +
-          '```',
+        `IP       :${result.ip}\n` +
+        `PORT     :${result.port}\n` +
+        `ISP      :${result.isp}\n` +
+        `COUNTRY  :${result.country}\n` +
+        `DELAY    :${result.delay}\n` +
+        `STATUS   :✅ ${result.status}\n` +
+        '```' +
+        '```TLS\n' +
+        `${this.getTLSConfig(result, action)}\n` +
+        '```' +
+        '```Non-TLS\n' +
+        `${this.getNonTLSConfig(result, action)}\n` +
+        '```',
         this.getConfigKeyboard(ipPort)
       );
 
@@ -109,12 +109,12 @@ Catatan:
     // Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
     if (text.includes('://')) {
       try {
-        // Ambil baris yang mengandung link valid
+        // Ambil baris yang mengandung link valid, maksimal 10
         const links = text
           .split('\n')
           .map(line => line.trim())
           .filter(line => line.includes('://'))
-          .slice(0, 10); // Batasi maksimal 10 link
+          .slice(0, 10);
 
         if (links.length === 0) {
           await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
@@ -157,31 +157,21 @@ Catatan:
 
   getTLSConfig(result, action) {
     switch (action) {
-      case 'vless':
-        return result.vlessTLSLink || '';
-      case 'trojan':
-        return result.trojanTLSLink || '';
-      case 'vmess':
-        return result.vmessTLSLink || '';
-      case 'ss':
-        return result.ssTLSLink || '';
-      default:
-        return '';
+      case 'vless': return result.vlessTLSLink || '';
+      case 'trojan': return result.trojanTLSLink || '';
+      case 'vmess': return result.vmessTLSLink || '';
+      case 'ss': return result.ssTLSLink || '';
+      default: return '';
     }
   }
 
   getNonTLSConfig(result, action) {
     switch (action) {
-      case 'vless':
-        return result.vlessNTLSLink || '';
-      case 'trojan':
-        return result.trojanNTLSLink || '';
-      case 'vmess':
-        return result.vmessNTLSLink || '';
-      case 'ss':
-        return result.ssNTLSLink || '';
-      default:
-        return '';
+      case 'vless': return result.vlessNTLSLink || '';
+      case 'trojan': return result.trojanNTLSLink || '';
+      case 'vmess': return result.vmessNTLSLink || '';
+      case 'ss': return result.ssNTLSLink || '';
+      default: return '';
     }
   }
 
