@@ -32,7 +32,7 @@ export class TelegramBot {
         await this.editMessage(
           chatId,
           messageId,
-          'Kirim pesan dengan format IP atau IP:PORT untuk cek status proxy dan pilih konfigurasi.',
+          'format IP atau IP:PORT, tombol hanya merespon IP ACTIVE.',
           this.getMainKeyboard(ipPort)
         );
         await this.answerCallback(callback.id);
@@ -40,10 +40,11 @@ export class TelegramBot {
       }
 
       const result = await checkProxyIP(ipPort);
-      if (result.status !== 'ACTIVE') {
-        await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
-        return new Response('OK', { status: 200 });
-      }
+if (result.status !== 'ACTIVE') {
+  // Baris ini dihapus supaya tidak balas apapun
+  // await this.answerCallback(callback.id, 'Proxy tidak aktif atau format salah');
+  return new Response('OK', { status: 200 });
+}
 
       await this.editMessage(
         chatId,
@@ -207,7 +208,7 @@ if (ipPortPattern.test(text)) {
   await this.editMessage(
     chatId,
     loadingMsg.result.message_id,
-    `Pilih konfigurasi untuk \`${text}\`:`,
+    `Tombol Akan merespon IP ✅ ACTIVE \`${text}\`:`,
     this.getMainKeyboard(text)
   );
   return new Response('OK', { status: 200 });
