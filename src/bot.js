@@ -116,7 +116,7 @@ try {
 }
 
 return new Response('OK', { status: 200 });
-}
+
 
   getTLSConfig(result, action) {
     switch (action) {
