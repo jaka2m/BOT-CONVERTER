@@ -28,6 +28,12 @@ export default class TelegramBot {
       const data = callback.data;
 
       const [action, ipPort] = data.split('|');
+      
+      if (message) {
+      const chatId = message.chat.id;
+      const userId = message.from.id;
+      const text = message.text || '';
+
 
       if (action === 'back') {
         await this.editMessage(
