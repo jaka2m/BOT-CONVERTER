@@ -15,10 +15,31 @@ export default class TelegramBot {
   }
 
   async handleUpdate(update) {
-    // Abaikan jika bukan message atau callback_query
-    if (!update.message && !update.callback_query) {
-      return new Response('OK', { status: 200 });
-    }
+  const message = update.message;
+  const callback = update.callback_query;
+
+  // Abaikan jika bukan message atau callback_query
+  if (!message && !callback) {
+    return new Response('OK', { status: 200 });
+  }
+
+  const chatId = message?.chat?.id || callback?.message?.chat?.id;
+  const userId = message?.from?.id || callback?.from?.id;
+  const text = message?.text || callback?.data;
+
+  if (callback) {
+    await handleCallback({
+      callback,
+      sendMessage: this.sendMessage.bind(this),
+      answerCallback: this.answerCallback.bind(this),
+      editMessageReplyMarkup: this.editMessageReplyMarkup.bind(this),
+      token: this.token,
+      apiUrl: this.apiUrl,
+    });
+
+    return new Response('OK', { status: 200 });
+  }
+
 
     // ======= HANDLE CALLBACK (TOMBOL) =======
     if (update.callback_query) {
@@ -26,6 +47,7 @@ export default class TelegramBot {
       const chatId = callback.message.chat.id;
       const messageId = callback.message.message_id;
       const data = callback.data;
+      
 
       const [action, ipPort] = data.split('|');
 
@@ -148,23 +170,6 @@ Catatan:
 
   // Kamu harus juga buat definisi fungsi seperti sendMessage, sendDocument, editMessage, answerCallback, getMainKeyboard, getConfigKeyboard, getTLSConfig, getNonTLSConfig di class ini atau import dari modul lain sesuai kebutuhan
 
-async function handleUpdate(req, res) {
-  const body = await req.json();
-  const { message, callback_query } = body;
-
-  if (callback_query) {
-    await handleCallback({
-      callback: callback_query,
-      sendMessage: this.sendMessage.bind(this),
-      answerCallback: this.answerCallback.bind(this),
-      editMessageReplyMarkup: this.editMessageReplyMarkup.bind(this),
-      token: this.token,
-      apiUrl: this.apiUrl
-    });
-  }
-
-  return new Response('OK', { status: 200 });
-}
 
 
   getTLSConfig(result, action) {
