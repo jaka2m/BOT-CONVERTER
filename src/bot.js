@@ -127,24 +127,43 @@ Catatan:
     }
 
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-    if (ipPortPattern.test(text)) {
-      const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-      await this.editMessage(
-        chatId,
-        loadingMsg.result.message_id,
-        `Pilih konfigurasi untuk \`${text}\`:`,
-        this.getMainKeyboard(text)
-      );
-      return new Response('OK', { status: 200 });
-    }
 
-    // Tambahkan ini supaya handleCommand berjalan di dalam blok yang valid (misalnya di else)
-    await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
-
-    // Jika input tidak dikenali
-    await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
+if (text) {
+  if (ipPortPattern.test(text)) {
+    const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+    await this.editMessage(
+      chatId,
+      loadingMsg.result.message_id,
+      `Pilih konfigurasi untuk \`${text}\`:`,
+      this.getMainKeyboard(text)
+    );
     return new Response('OK', { status: 200 });
+  } else {
+    // Run other command handling when text is not IP/IP:PORT
+    await handleCommand({
+      text,
+      chatId,
+      userId,
+      sendMessage: this.sendMessage.bind(this)
+    });
   }
+} else if (callback) {
+  // Handle callback queries
+  await handleCallback({
+    callback,
+    sendMessage: this.sendMessage.bind(this),
+    answerCallback: answerCallback.bind(this),
+    editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
+    token: this.token,
+    apiUrl: this.apiUrl
+  });
+} else {
+  // Unrecognized input fallback
+  await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
+}
+
+return new Response('OK', { status: 200 });
+}
 
   // Kamu harus juga buat definisi fungsi seperti sendMessage, sendDocument, editMessage, answerCallback, getMainKeyboard, getConfigKeyboard, getTLSConfig, getNonTLSConfig di class ini atau import dari modul lain sesuai kebutuhan
 
