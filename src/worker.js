@@ -1,5 +1,5 @@
 import { TelegramBot as Bot1 } from './bot.js';
-import { TelegramBotku as Bot2 } from './bot2.js';
+import { TelegramBotku as Bot2 } from './randomip/bot2.js';
 
 export default {
   async fetch(request, env) {
