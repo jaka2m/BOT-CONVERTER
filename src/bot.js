@@ -326,6 +326,16 @@ async sendDocument(chatId, content, filename, mimeType) {
   return response.json();
 }
 
+async deleteMessage(chatId, messageId) {
+    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId })
+    });
+    return res.json();
+  }
+
 async answerCallback(callbackQueryId, text = '') {
   const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
   const body = {
