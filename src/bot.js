@@ -6,11 +6,12 @@ import { botku, TelegramBotku } from './randomip/bot2.js';
 
 const HOSTKU = 'example.com';
 
-export default class TelegramBot {
+export class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
   }
+
 
   async handleUpdate(update) {
     // Abaikan jika bukan message atau callback_query
