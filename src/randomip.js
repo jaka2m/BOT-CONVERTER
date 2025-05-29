@@ -71,12 +71,17 @@ export function generateCountryIPsMessage(ipList, countryCode) {
   if (filteredIPs.length === 0) return null;
 
   let msg = `🌐 *Proxy IP untuk negara ${countryCode} ${getFlagEmoji(countryCode)}:*\n\n`;
-  filteredIPs.slice(0, 20).forEach(line => {
-    const [ip, port, _code, isp] = line.split(',');
-    msg += `📍 \`${ip}:${port}\` - ${isp}\n`;
-  });
 
-  return msg;
+filteredIPs.slice(0, 20).forEach(line => {
+  const [ip, port, _code, isp] = line.split(',');
+  msg += `
+📍 *IP:PORT* : \`${ip}:${port}\` 
+🌐 *Country* : ${_code} ${getFlagEmoji(_code)}
+💻 *ISP* : ${isp}\n\n
+`;
+});
+
+return msg;
 }
 
 // Handler untuk command /randomip
