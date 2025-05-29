@@ -28,6 +28,7 @@ export default class TelegramBot {
       const data = callback.data;
 
       const [action, ipPort] = data.split('|');
+      const isCommand = text.startsWith('/');
 
       if (action === 'back') {
         await this.editMessage(
