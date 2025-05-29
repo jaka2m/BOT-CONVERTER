@@ -1,7 +1,7 @@
 import {
   handleRandomIpCommand,
   handleCallbackQuery,
-} from './randomip/randomip.js';
+} from './randomip.js';
 
 export default class TelegramBotku {
   constructor(token, apiUrl = 'https://api.telegram.org') {
