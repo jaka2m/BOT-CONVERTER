@@ -130,29 +130,29 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-    // /listwildcard command
-if (text.startsWith('/listwildcard')) {
-  const wildcards = [
-    "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
-    "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
-    "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
-    "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
-  ];
+      // /listwildcard command
+      if (text.startsWith('/listwildcard')) {
+        const wildcards = [
+          "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
+          "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
+          "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
+          "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
+        ];
 
-  const configText =
-    `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
-    wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
-    `\n\n📦 *Total:* ${wildcards.length} wildcard` +
-    `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
+        const configText =
+          `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
+          wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
+          `\n\n📦 *Total:* ${wildcards.length} wildcard` +
+          `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
 
-  await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
-  return new Response('OK', { status: 200 });
-}
+        await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
+        return new Response('OK', { status: 200 });
+      }
 
-if (text.startsWith('/converter')) {
-  await this.sendMessage(
-    chatId,
-    `🤖 Stupid World Converter Bot
+    if (text.startsWith('/converter')) {
+    await this.sendMessage(
+      chatId,
+      `🤖 Stupid World Converter Bot
 
 Kirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox dan Clash.
 
@@ -166,73 +166,24 @@ Catatan:
 - Maksimal 10 link per permintaan.
 - Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.
 `
-  );
-  return new Response('OK', { status: 200 });
-}
-
-// Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
-if (text.includes('://')) {
-  try {
-    // Ambil baris yang mengandung link valid, maksimal 10
-    const links = text
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.includes('://'))
-      .slice(0, 10);
-
-    if (links.length === 0) {
-      await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
-      return new Response('OK', { status: 200 });
-    }
-
-    await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
-
-    // Generate konfigurasi
-    const clashConfig = generateClashConfig(links, true);
-    const nekoboxConfig = generateNekoboxConfig(links, true);
-    const singboxConfig = generateSingboxConfig(links, true);
-
-    // Kirim file konfigurasi
-    await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
-    await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
-    await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
-  } catch (error) {
-    console.error('Error processing links:', error);
-    await this.sendMessage(chatId, `Error: ${error.message}`);
+    );
+    return new Response('OK', { status: 200 });
   }
-  return new Response('OK', { status: 200 });
-}
 
-// Jika terdapat callback
-if (callback) {
-  await handleCallback({
-    callback,
-    sendMessage: this.sendMessage.bind(this),
-    answerCallback: answerCallback.bind(this),
-    editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
-    token: this.token,
-    apiUrl: this.apiUrl
-  });
-  return new Response('OK', { status: 200 });
-}
+  // Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
+  if (text.includes('://')) {
+    try {
+      // Ambil baris yang mengandung link valid
+      const links = text
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.includes('://'))
+        .slice(0, 10); // Batasi maksimal 10 link
 
-// Jika input adalah IP atau IP:PORT
-const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-if (ipPortPattern.test(text)) {
-  const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-  await this.editMessage(
-    chatId,
-    loadingMsg.result.message_id,
-    `Pilih konfigurasi untuk \`${text}\`:`,
-    this.getMainKeyboard(text)
-  );
-  return new Response('OK', { status: 200 });
-}
-
-// Jika input tidak dikenali
-await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
-return new Response('OK', { status: 200 });
-}  
+      if (links.length === 0) {
+        await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
+        return new Response('OK', { status: 200 });
+      }
 
       // Generate konfigurasi
       const clashConfig = generateClashConfig(links, true);
@@ -422,4 +373,4 @@ async answerCallback(callbackQueryId, text = '') {
 
   return response.json();
 }
-}
+} 
