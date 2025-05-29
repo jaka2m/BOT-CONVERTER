@@ -149,10 +149,30 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-  if (text.startsWith('/converter')) {
-        await this.sendMessage(
-          chatId,
-          `🤖 Stupid World Converter Bot
+   // /listwildcard command
+if (text.startsWith('/listwildcard')) {
+  const wildcards = [
+    "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
+    "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
+    "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
+    "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
+  ];
+
+  const configText =
+    `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
+    wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
+    `\n\n📦 *Total:* ${wildcards.length} wildcard` +
+    `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
+
+  await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
+  return new Response('OK', { status: 200 });
+}
+
+// /converter command
+if (text.startsWith('/converter')) {
+  await this.sendMessage(
+    chatId,
+    `🤖 Stupid World Converter Bot
 
 Kirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox dan Clash.
 
@@ -166,72 +186,76 @@ Catatan:
 - Maksimal 10 link per permintaan.
 - Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.
 `
-        );
-        return new Response('OK', { status: 200 });
-      }
+  );
+  return new Response('OK', { status: 200 });
+}
 
-      // Jika pesan mengandung link konfigurasi
-      if (text.includes('://')) {
-        try {
-          const links = text
-            .split('\n')
-            .map(line => line.trim())
-            .filter(line => line.includes('://'))
-            .slice(0, 10); // Maksimal 10 link
+// Jika pesan mengandung protokol proxy
+if (text.includes('://')) {
+  try {
+    const links = text
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.includes('://'))
+      .slice(0, 10); // Maksimal 10 link
 
-          if (links.length === 0) {
-            await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
-            return new Response('OK', { status: 200 });
-          }
-
-          // Generate konfigurasi
-          const clashConfig = generateClashConfig(links, true);
-          const nekoboxConfig = generateNekoboxConfig(links, true);
-          const singboxConfig = generateSingboxConfig(links, true);
-
-          // Kirim file konfigurasi
-          await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
-          await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
-          await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
-        } catch (error) {
-          console.error('Error processing links:', error);
-          await this.sendMessage(chatId, `Error: ${error.message}`);
-        }
-        return new Response('OK', { status: 200 });
-      }
-
-      // Jika format IP atau IP:PORT
-      const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-      if (ipPortPattern.test(text)) {
-        const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
-        await this.editMessage(
-          chatId,
-          loadingMsg.result.message_id,
-          `Pilih konfigurasi untuk \`${text}\`:`,
-          this.getMainKeyboard(text)
-        );
-        return new Response('OK', { status: 200 });
-      }
-
-      // Tidak dikenali
-      await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
+    if (links.length === 0) {
+      await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
       return new Response('OK', { status: 200 });
     }
 
-    // Callback handler
-    if (callback) {
-      await handleCallback({
-        callback,
-        sendMessage: this.sendMessage.bind(this),
-        answerCallback: this.answerCallback.bind(this),
-        editMessageReplyMarkup: this.editMessageReplyMarkup.bind(this),
-        token: this.token,
-        apiUrl: this.apiUrl,
-      });
-    }
+    await handleCommand({ text, chatId, userId, sendMessage: this.sendMessage.bind(this) });
 
-    return new Response('OK', { status: 200 });
+    // Generate konfigurasi
+    const clashConfig = generateClashConfig(links, true);
+    const nekoboxConfig = generateNekoboxConfig(links, true);
+    const singboxConfig = generateSingboxConfig(links, true);
+
+    // Kirim file konfigurasi
+    await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
+    await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
+    await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
+
+  } catch (error) {
+    console.error('Error processing links:', error);
+    await this.sendMessage(chatId, `Error: ${error.message}`);
   }
+
+  return new Response('OK', { status: 200 });
+}
+
+// Jika callback tersedia
+if (callback) {
+  await handleCallback({
+    callback,
+    sendMessage: this.sendMessage.bind(this),
+    answerCallback: answerCallback.bind(this),
+    editMessageReplyMarkup: editMessageReplyMarkup.bind(this),
+    token: this.token,
+    apiUrl: this.apiUrl
+  });
+
+  return new Response('OK', { status: 200 });
+}
+
+// Jika input adalah IP atau IP:PORT
+const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+if (ipPortPattern.test(text)) {
+  const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memeriksa proxy...');
+  await this.editMessage(
+    chatId,
+    loadingMsg.result.message_id,
+    `Pilih konfigurasi untuk \`${text}\`:`,
+    this.getMainKeyboard(text)
+  );
+  return new Response('OK', { status: 200 });
+}
+
+// Jika input tidak dikenali
+  await this.sendMessage(chatId, 'Mohon kirim IP, IP:PORT, atau link konfigurasi V2Ray (VMess, VLESS, Trojan, SS).');
+  return new Response('OK', { status: 200 });
+}
+
 
   getTLSConfig(result, action) {
     switch (action) {
@@ -281,104 +305,109 @@ Catatan:
     };
   }
 
-  async sendMessage(chatId, text, replyMarkup) {
-    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const body = {
-      chat_id: chatId,
-      text,
-      parse_mode: 'Markdown',
-    };
+  // Mengirim pesan ke chat
+async sendMessage(chatId, text, replyMarkup) {
+  const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+  const body = {
+    chat_id: chatId,
+    text,
+    parse_mode: 'Markdown',
+  };
 
-    if (replyMarkup) {
-      body.reply_markup = replyMarkup;
-    }
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return response.json();
+  if (replyMarkup) {
+    body.reply_markup = replyMarkup;
   }
 
-  async editMessage(chatId, messageId, text, replyMarkup) {
-    const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
-    const body = {
-      chat_id: chatId,
-      message_id: messageId,
-      text,
-      parse_mode: 'Markdown',
-    };
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
-    if (replyMarkup) {
-      body.reply_markup = replyMarkup;
-    }
+  return response.json();
+}
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+// Mengedit pesan yang sudah dikirim
+async editMessage(chatId, messageId, text, replyMarkup) {
+  const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
+  const body = {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    parse_mode: 'Markdown',
+  };
 
-    return response.json();
+  if (replyMarkup) {
+    body.reply_markup = replyMarkup;
   }
 
-  async sendDocument(chatId, content, filename, mimeType) {
-    const formData = new FormData();
-    const blob = new Blob([content], { type: mimeType });
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
-    formData.append('document', blob, filename);
-    formData.append('chat_id', chatId.toString());
+  return response.json();
+}
 
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
-      method: 'POST',
-      body: formData,
-    });
+// Mengirim file (dokumen) ke chat
+async sendDocument(chatId, content, filename, mimeType) {
+  const formData = new FormData();
+  const blob = new Blob([content], { type: mimeType });
 
-    return response.json();
-  }
+  formData.append('document', blob, filename);
+  formData.append('chat_id', chatId.toString());
 
-  async sendMessageWithDelete(chatId, text) {
-    try {
-      const res = await this.sendMessage(chatId, text);
-      return res.result;
-    } catch (e) {
-      console.error('Gagal mengirim pesan:', e);
-      return null;
-    }
-  }
+  const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+    method: 'POST',
+    body: formData,
+  });
 
-  async deleteMessage(chatId, messageId) {
-    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+  return response.json();
+}
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        message_id: messageId,
-      }),
-    });
-
-    return res.json();
-  }
-
-  async answerCallback(callbackQueryId, text = '') {
-    const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
-    const body = {
-      callback_query_id: callbackQueryId,
-      text,
-      show_alert: !!text,
-    };
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return response.json();
+// Mengirim pesan lalu menyimpan message_id
+async sendMessageWithDelete(chatId, text) {
+  try {
+    const res = await this.sendMessage(chatId, text);
+    return res.result;
+  } catch (e) {
+    console.error('Gagal mengirim pesan:', e);
+    return null;
   }
 }
 
+// Menghapus pesan dari chat
+async deleteMessage(chatId, messageId) {
+  const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+    }),
+  });
+
+  return res.json();
+}
+
+// Menjawab callback query (dari inline keyboard)
+async answerCallback(callbackQueryId, text = '') {
+  const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
+  const body = {
+    callback_query_id: callbackQueryId,
+    text,
+    show_alert: !!text,
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+}
+}
