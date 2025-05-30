@@ -1,9 +1,13 @@
-const APIKU = 'https://api.checker-ip.web.id/check?ip=';
-const DEFAULT_HOST = 'your.domain.com';
 
+const APIKU = 'https://api.checker-ip.web.id/check?ip='; // Ganti dengan URL asli API status IP
+const DEFAULT_HOST = 'your.domain.com'; // Ganti dengan host default
+
+// Simpan pesan yang sudah dikirim ke user (chatId) supaya tidak spam
 const sentMessages = new Map();
 
+// Fungsi untuk generate UUID (simple version)
 export function generateUUID() {
+  // Random UUID v4 generator sederhana
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0,
       v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -17,6 +21,7 @@ export function getFlagEmoji(countryCode) {
   return String.fromCodePoint(...codePoints);
 }
 
+// Fungsi untuk mencegah spam pesan berulang
 export function canSendMessage(chatId, key, interval = 30000) {
   const now = Date.now();
   if (!sentMessages.has(chatId)) sentMessages.set(chatId, {});
@@ -29,10 +34,9 @@ export function canSendMessage(chatId, key, interval = 30000) {
 }
 
 const PAGE_SIZE = 16; // 4x4 grid
-
-// Simpan halaman saat user pilih negara untuk paging tombol
 const userPages = new Map();
 
+// Handler command /proxyip
 export async function handleProxyipCommand(bot, msg) {
   const chatId = msg.chat.id;
   if (!canSendMessage(chatId, 'proxyip_command')) return;
@@ -224,7 +228,7 @@ export async function handleCallbackQuery(bot, callbackQuery) {
       const pathh = `/Geo-Project/${ip}-${port}`;
       const prov = encodeURIComponent(`${provider} ${getFlagEmoji(countryCode)}`);
       const prov1 = `${provider} ${getFlagEmoji(countryCode)}`;
-      const toBase64 = (str) => Buffer.from(str).toString('base64');
+      const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
       let configText = '';
 
