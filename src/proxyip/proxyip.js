@@ -1,4 +1,3 @@
-
 const APIKU = 'https://api.checker-ip.web.id/check?ip='; // Ganti dengan URL asli API status IP
 const DEFAULT_HOST = 'your.domain.com'; // Ganti dengan host default
 
