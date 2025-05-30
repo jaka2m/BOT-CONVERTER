@@ -116,7 +116,7 @@ Pilih protokol:`;
         const [_, protocol, ip, port] = parts;
 
         await this.sendChatAction(chatId, 'typing');
-        const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memproses konfigurasi...');
+        const loadingMsg = await this.sendMessage(chatId, '⏳');
 
         const dataInfo = await fetchIPData(ip, port);
         if (!dataInfo) {
@@ -126,7 +126,7 @@ Pilih protokol:`;
         }
 
         const configText = generateConfig(dataInfo, protocol, null);
-        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} tanpa wildcard:\n\n\`\`\`\n${configText}\n\`\`\``, {
+        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} tanpa wildcard:\n\n\n${configText}\n`, {
           parse_mode: 'Markdown'
         });
 
@@ -142,7 +142,7 @@ Pilih protokol:`;
         const [_, protocol, ip, port, wildcardKey] = parts;
 
         await this.sendChatAction(chatId, 'typing');
-        const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memproses konfigurasi...');
+        const loadingMsg = await this.sendMessage(chatId, '⏳');
 
         const dataInfo = await fetchIPData(ip, port);
         if (!dataInfo) {
@@ -152,7 +152,7 @@ Pilih protokol:`;
         }
 
         const configText = generateConfig(dataInfo, protocol, wildcardKey);
-        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} dengan wildcard *${wildcardKey}*:\n\n\`\`\`\n${configText}\n\`\`\``, {
+        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} dengan wildcard *${wildcardKey}*:\n\n\n${configText}\n`, {
           parse_mode: 'Markdown'
         });
 
