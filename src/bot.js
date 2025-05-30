@@ -198,7 +198,17 @@ Pilih protokol:`;
           return new Response('OK', { status: 200 });
         }
 
-        const infoText = `Data untuk IP ${ip}:${port}:\nISP: ${dataInfo.isp}\nCountry: ${dataInfo.country}\n\nPilih protokol:`;
+        const { isp, country, delay, status } = data;
+      const infoText = `\`\`\`INFORMATION
+IP     : ${ip}
+PORT   : ${port}
+ISP    : ${isp}
+Country: ${country || '-'}
+Delay  : ${delay || '-'}
+Status : ${status || '-'}
+\`\`\`
+Pilih protokol:`;
+
         await this.editMessage(chatId, messageId, infoText, {
           reply_markup: createProtocolInlineKeyboard(ip, port)
         });
