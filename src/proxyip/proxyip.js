@@ -4,9 +4,10 @@ const DEFAULT_HOST = 'your.domain.com'; // Ganti dengan host default
 // Simpan pesan yang sudah dikirim ke user (chatId) supaya tidak spam
 const sentMessages = new Map();
 
-// Simpan messageId pagination agar bisa dihapus saat pindah page
-const paginationMessage = new Map();
+// Pagination state per user chatId
+const paginationStates = new Map();
 
+// Fungsi untuk generate UUID (simple version)
 export function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0,
@@ -21,6 +22,7 @@ export function getFlagEmoji(countryCode) {
   return String.fromCodePoint(...codePoints);
 }
 
+// Fungsi untuk mencegah spam pesan berulang
 export function canSendMessage(chatId, key, interval = 30000) {
   const now = Date.now();
   if (!sentMessages.has(chatId)) sentMessages.set(chatId, {});
@@ -32,7 +34,7 @@ export function canSendMessage(chatId, key, interval = 30000) {
   return false;
 }
 
-// Handle command /proxyip
+// Handler command /proxyip
 export async function handleProxyipCommand(bot, msg) {
   const chatId = msg.chat.id;
   if (!canSendMessage(chatId, 'proxyip_command')) return;
@@ -49,28 +51,30 @@ export async function handleProxyipCommand(bot, msg) {
 
     const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))].sort();
 
-    // Paginasi 4x4 tombol (16 negara per halaman)
-    const pageSize = 16;
-    const page = 0;
+    // Simpan pagination state user
+    paginationStates.set(chatId, { countryCodes, page: 0 });
 
-    await sendCountryPage(bot, chatId, countryCodes, page, pageSize);
+    // Kirim page pertama
+    await sendCountryPage(bot, chatId, countryCodes, 0);
 
   } catch (error) {
     console.error('Error fetching IP list:', error);
-    await bot.sendMessage(msg.chat.id, `⚠️ *Terjadi kesalahan saat mengambil daftar IP: ${error.message}*`, { parse_mode: 'Markdown' });
+    await bot.sendMessage(chatId, `⚠️ *Terjadi kesalahan saat mengambil daftar IP: ${error.message}*`, { parse_mode: 'Markdown' });
   }
 }
 
-// Fungsi kirim tombol negara dengan paginasi
-async function sendCountryPage(bot, chatId, countryCodes, page, pageSize) {
-  // Hitung slice data
-  const totalPages = Math.ceil(countryCodes.length / pageSize);
-  const pageItems = countryCodes.slice(page * pageSize, (page + 1) * pageSize);
+async function sendCountryPage(bot, chatId, countryCodes, page) {
+  const perPage = 16; // 4x4 tombol
+  const totalPages = Math.ceil(countryCodes.length / perPage);
+  const start = page * perPage;
+  const end = start + perPage;
 
-  // Tombol 4 per baris, maksimal 4 baris
-  const buttons = [];
+  const pageItems = countryCodes.slice(start, end);
+
+  // Generate tombol 4 per baris
+  const countryButtons = [];
   for (let i = 0; i < pageItems.length; i += 4) {
-    buttons.push(
+    countryButtons.push(
       pageItems.slice(i, i + 4).map(code => ({
         text: `${getFlagEmoji(code)} ${code}`,
         callback_data: `select_${code}`
@@ -78,32 +82,56 @@ async function sendCountryPage(bot, chatId, countryCodes, page, pageSize) {
     );
   }
 
-  // Tambahkan tombol navigasi di bawah tombol negara
+  // Tombol Prev, Next, Back di bawah tombol negara
   const navButtons = [];
 
   if (page > 0) {
     navButtons.push({ text: '⬅️ Prev', callback_data: `page_${page - 1}` });
   }
-
   if (page < totalPages - 1) {
     navButtons.push({ text: 'Next ➡️', callback_data: `page_${page + 1}` });
   }
 
-  if (navButtons.length) buttons.push(navButtons);
+  // Tombol Back (kembali ke protokol)
+  navButtons.push({ text: '🔙 Back', callback_data: 'back_to_protocols' });
 
-  // Jika ada pesan paginasi sebelumnya, hapus dulu supaya gak spam tombol
-  if (paginationMessage.has(chatId)) {
+  // Tombol protokol tetap di atas
+  const protocolButtons = [
+    [
+      { text: '⚡ VLESS', callback_data: 'protocol_vless' },
+      { text: '⚡ TROJAN', callback_data: 'protocol_trojan' },
+      { text: '⚡ VMESS', callback_data: 'protocol_vmess' },
+      { text: '⚡ SHADOWSOCKS', callback_data: 'protocol_ss' }
+    ]
+  ];
+
+  // Gabungkan tombol protokol + tombol negara + tombol navigasi
+  const keyboard = [
+    ...protocolButtons,
+    ...countryButtons,
+    navButtons
+  ];
+
+  // Hapus pesan lama jika ada untuk mencegah spam tombol
+  if (paginationStates.has(chatId) && paginationStates.get(chatId).messageId) {
     try {
-      await bot.deleteMessage(chatId, paginationMessage.get(chatId));
-    } catch { /* ignore if message already deleted */ }
+      await bot.deleteMessage(chatId, paginationStates.get(chatId).messageId);
+    } catch {
+      // abaikan error kalau sudah dihapus
+    }
   }
 
-  const sentMsg = await bot.sendMessage(chatId, '🌍 *Pilih negara:*', {
+  const sentMsg = await bot.sendMessage(chatId, `🌍 *Pilih negara:* (Halaman ${page + 1}/${totalPages})`, {
     parse_mode: 'Markdown',
-    reply_markup: { inline_keyboard: buttons }
+    reply_markup: { inline_keyboard: keyboard }
   });
 
-  paginationMessage.set(chatId, sentMsg.message_id);
+  // Simpan messageId supaya bisa dihapus saat pagination berubah
+  paginationStates.set(chatId, {
+    ...paginationStates.get(chatId),
+    page,
+    messageId: sentMsg.message_id
+  });
 }
 
 // Handler callback query
@@ -114,34 +142,85 @@ export async function handleCallbackQuery(bot, callbackQuery) {
   // Handle pagination tombol negara
   if (data.startsWith('page_')) {
     if (!canSendMessage(chatId, `page_${data}`)) {
-      await bot.answerCallbackQuery(callbackQuery.id);
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Tunggu sebentar...' });
       return;
     }
-
-    try {
-      const page = parseInt(data.split('_')[1], 10);
-      const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
-      const ipText = await response.text();
-      const ipList = ipText.split('\n').filter(line => line.trim() !== '');
-      const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))].sort();
-
-      await sendCountryPage(bot, chatId, countryCodes, page, 16);
-      await bot.answerCallbackQuery(callbackQuery.id);
-    } catch (error) {
-      console.error('Error pagination:', error);
-      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Gagal memuat halaman.' });
+    const page = parseInt(data.split('_')[1]);
+    const state = paginationStates.get(chatId);
+    if (!state) {
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'State pagination hilang. Ketik /proxyip ulang.' });
+      return;
     }
+    await sendCountryPage(bot, chatId, state.countryCodes, page);
+    await bot.answerCallbackQuery(callbackQuery.id);
     return;
   }
 
-  // Handle pilih negara
+  if (data === 'back_to_protocols') {
+    // Kembali ke tampilan protokol saja, tanpa tombol negara
+    const protocolButtons = [
+      [
+        { text: '⚡ VLESS', callback_data: 'protocol_vless' },
+        { text: '⚡ TROJAN', callback_data: 'protocol_trojan' },
+        { text: '⚡ VMESS', callback_data: 'protocol_vmess' },
+        { text: '⚡ SHADOWSOCKS', callback_data: 'protocol_ss' }
+      ]
+    ];
+
+    // Hapus pesan lama kalau ada
+    if (paginationStates.has(chatId) && paginationStates.get(chatId).messageId) {
+      try {
+        await bot.deleteMessage(chatId, paginationStates.get(chatId).messageId);
+      } catch {}
+    }
+
+    const sentMsg = await bot.sendMessage(chatId, '⚡ *Pilih protokol:*', {
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: protocolButtons }
+    });
+
+    paginationStates.delete(chatId);
+    // Save message id supaya bisa dihapus saat paging nanti
+    paginationStates.set(chatId, { messageId: sentMsg.message_id });
+    await bot.answerCallbackQuery(callbackQuery.id);
+    return;
+  }
+
+  // Protokol dipilih -> tampil IP random sesuai protokol & country jika sudah dipilih
+  if (data.startsWith('protocol_')) {
+    const proto = data.split('_')[1];
+    // Simpan protokol di paginationState untuk digunakan di select country
+    let state = paginationStates.get(chatId) || {};
+    state.selectedProtocol = proto;
+    paginationStates.set(chatId, state);
+
+    // Langsung tampilkan tombol negara, halaman pertama
+    if (state.countryCodes && state.countryCodes.length > 0) {
+      await sendCountryPage(bot, chatId, state.countryCodes, 0);
+      await bot.answerCallbackQuery(callbackQuery.id);
+      return;
+    } else {
+      // Kalau belum ada countryCodes, minta ketik /proxyip dulu
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Ketik dulu /proxyip untuk memuat daftar negara' });
+      return;
+    }
+  }
+
   if (data.startsWith('select_')) {
     if (!canSendMessage(chatId, `select_${data}`)) {
-      await bot.answerCallbackQuery(callbackQuery.id);
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Tunggu sebentar...' });
       return;
     }
 
     const countryCode = data.split('_')[1];
+    let state = paginationStates.get(chatId);
+    const proto = state?.selectedProtocol;
+
+    if (!proto) {
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Pilih protokol dulu' });
+      return;
+    }
+
     try {
       const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
       const ipText = await response.text();
@@ -163,18 +242,16 @@ export async function handleCallbackQuery(bot, callbackQuery) {
 
       const safeProvider = provider.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
 
-      // Tombol protokol 1 baris 4 tombol
       const buttons = [
         [
           { text: '⚡ VLESS', callback_data: `config_vless_${ip}_${port}_${countryCode}_${safeProvider}` },
-          { text: '⚡ TROJAN', callback_data: `config_trojan_${ip}_${port}_${countryCode}_${safeProvider}` },
-          { text: '⚡ VMESS', callback_data: `config_vmess_${ip}_${port}_${countryCode}_${safeProvider}` },
-          { text: '⚡ SHADOWSOCKS', callback_data: `config_ss_${ip}_${port}_${countryCode}_${safeProvider}` }
+          { text: '⚡ TROJAN', callback_data: `config_trojan_${ip}_${port}_${countryCode}_${safeProvider}` }
         ],
         [
-          { text: '⬅️ Prev', callback_data: `select_prev_${countryCode}_${ip}_${port}_${safeProvider}` },
-          { text: 'Back 🔙', callback_data: 'back_to_countries' },
-          { text: 'Next ➡️', callback_data: `select_next_${countryCode}_${ip}_${port}_${safeProvider}` }
+          { text: '⚡ VMESS', callback_data: `config_vmess_${ip}_${port}_${countryCode}_${safeProvider}` }
+        ],
+        [
+          { text: '⚡ SHADOWSOCKS', callback_data: `config_ss_${ip}_${port}_${countryCode}_${safeProvider}` }
         ]
       ];
 
@@ -183,148 +260,101 @@ export async function handleCallbackQuery(bot, callbackQuery) {
         `IP      : ${ip}\nPORT    : ${port}\nISP     : ${provider}\nCOUNTRY : ${ipData.country}\nSTATUS  : ${status}\n` +
         "```";
 
-      if (ipData.latitude && ipData.longitude) {
-        messageText += `\n👉 🌍 [View Google Maps](https://www.google.com/maps?q=${ipData.latitude},${ipData.longitude})`;
-      }
-
       await bot.sendMessage(chatId, messageText, {
         parse_mode: 'Markdown',
         reply_markup: { inline_keyboard: buttons }
       });
 
       await bot.answerCallbackQuery(callbackQuery.id);
-
-    } catch (error) {
-      console.error('❌ Error fetching IP status:', error);
-      await bot.sendMessage(chatId, `⚠️ *Terjadi kesalahan saat memverifikasi IP.*`, { parse_mode: 'Markdown' });
-      await bot.answerCallbackQuery(callbackQuery.id);
+    } catch (err) {
+      console.error(err);
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Error saat mengambil data proxy' });
     }
     return;
   }
 
-  // Handle tombol Prev/Next dalam pilihan proxy (bisa implementasi sederhana pindah proxy lain)
-  if (data.startsWith('select_prev_') || data.startsWith('select_next_')) {
-    if (!canSendMessage(chatId, data)) {
-      await bot.answerCallbackQuery(callbackQuery.id);
+  // Tangani tombol config protocol (VLESS, TROJAN, VMESS, SS)
+  if (data.startsWith('config_')) {
+    // Contoh: config_vless_1.2.3.4_443_ID_ISP
+    const parts = data.split('_');
+    if (parts.length < 6) {
+      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Data konfigurasi tidak valid' });
       return;
     }
+    const proto = parts[1];
+    const ip = parts[2];
+    const port = parts[3];
+    const countryCode = parts[4];
+    const provider = parts.slice(5).join('_');
 
-    try {
-      const parts = data.split('_');
-      const action = parts[1]; // prev or next
-      const countryCode = parts[2];
-      let currentIp = parts[3];
-      let currentPort = parts[4];
-      let provider = parts.slice(5).join('_');
+    // Kirim konfigurasi (contoh sederhana)
+    let configText = '';
 
-      // Ambil proxy list untuk negara ini
-      const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
-      const ipText = await response.text();
-      const ipList = ipText.split('\n').filter(line => line.trim() !== '');
-      const filteredIPs = ipList.filter(line => line.split(',')[2] === countryCode);
+      if (type === 'vmess') {
+        const vmessJSON_TLS = {
+          v: "2",
+          ps: `${countryCode} - ${prov1} [VMess-TLS]`,
+          add: DEFAULT_HOST,
+          port: "443",
+          id: uuid1,
+          aid: "0",
+          net: "ws",
+          type: "none",
+          host: DEFAULT_HOST,
+          path: pathh,
+          tls: "tls",
+          sni: DEFAULT_HOST,
+          scy: "zero"
+        };
 
-      // Cari index current proxy
-      const currentIndex = filteredIPs.findIndex(line => {
-        const [ip, port] = line.split(',');
-        return ip === currentIp && port === currentPort;
-      });
+        const vmessJSON_NTLS = {
+          ...vmessJSON_TLS,
+          port: "80",
+          tls: "none",
+          ps: `${countryCode} - ${prov1} [VMess-NTLS]`
+        };
 
-      if (currentIndex === -1) {
-        await bot.answerCallbackQuery(callbackQuery.id, { text: 'Proxy tidak ditemukan' });
+        configText = "``````VMESS-TLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_TLS)) + "``````\n" +
+          "``````VMESS-NTLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_NTLS)) + "``````";
+
+      } else if (type === 'vless') {
+        configText = `\`\`\`\`\`\`VLESS-TLS
+vless://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
+\`\`\`\`\`\`\n\`\`\`\`\`\`VLESS-NTLS
+vless://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
+\`\`\`\`\`\``;
+
+      } else if (type === 'trojan') {
+        configText = `\`\`\`\`\`\`TROJAN-TLS
+trojan://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
+\`\`\`\`\`\`\n\`\`\`\`\`\`TROJAN-NTLS
+trojan://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
+\`\`\`\`\`\``;
+
+      } else if (type === 'ss') {
+        configText = `\`\`\`\`\`\`SHADOWSOCKS-TLS
+ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:443?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=tls&sni=${DEFAULT_HOST}#${prov}
+\`\`\`\`\`\`\n\`\`\`\`\`\`SHADOWSOCKS-NTLS
+ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:80?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=none&sni=${DEFAULT_HOST}#${prov}
+\`\`\`\`\`\``;
+
+      } else {
+        await bot.answerCallbackQuery(callbackQuery.id, { text: "Protokol tidak dikenali." });
         return;
       }
 
-      let newIndex = currentIndex;
-      if (action === 'prev') {
-        newIndex = (currentIndex === 0) ? filteredIPs.length - 1 : currentIndex - 1;
-      } else {
-        newIndex = (currentIndex === filteredIPs.length - 1) ? 0 : currentIndex + 1;
-      }
+      const infoText = `✅ *Konfigurasi ${type.toUpperCase()} untuk ${getFlagEmoji(countryCode)} ${countryCode} :*\n` +
+        "```" + configText + "```";
 
-      const newProxy = filteredIPs[newIndex];
-      const [ip, port, , providerNew] = newProxy.split(',');
-
-      // Panggil ulang info proxy dan tombol config sama tombol navigasi Prev/Next/Back
-      const statusResponse = await fetch(`${APIKU}${ip}:${port}`);
-      const ipData = await statusResponse.json();
-      const status = ipData.status === "ACTIVE" ? "✅ ACTIVE" : "❌ DEAD";
-
-      const safeProvider = providerNew.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
-
-      const buttons = [
-        [
-          { text: '⚡ VLESS', callback_data: `config_vless_${ip}_${port}_${countryCode}_${safeProvider}` },
-          { text: '⚡ TROJAN', callback_data: `config_trojan_${ip}_${port}_${countryCode}_${safeProvider}` },
-          { text: '⚡ VMESS', callback_data: `config_vmess_${ip}_${port}_${countryCode}_${safeProvider}` },
-          { text: '⚡ SHADOWSOCKS', callback_data: `config_ss_${ip}_${port}_${countryCode}_${safeProvider}` }
-        ],
-        [
-          { text: '⬅️ Prev', callback_data: `select_prev_${countryCode}_${ip}_${port}_${safeProvider}` },
-          { text: 'Back 🔙', callback_data: 'back_to_countries' },
-          { text: 'Next ➡️', callback_data: `select_next_${countryCode}_${ip}_${port}_${safeProvider}` }
-        ]
-      ];
-
-      let messageText = `✅ *Info IP untuk ${getFlagEmoji(countryCode)} ${countryCode} :*\n` +
-        "```\nINFORMATION\n" +
-        `IP      : ${ip}\nPORT    : ${port}\nISP     : ${providerNew}\nCOUNTRY : ${ipData.country}\nSTATUS  : ${status}\n` +
-        "```";
-
-      if (ipData.latitude && ipData.longitude) {
-        messageText += `\n👉 🌍 [View Google Maps](https://www.google.com/maps?q=${ipData.latitude},${ipData.longitude})`;
-      }
-
-      // Edit pesan callback agar tombol navigasi tetap rapi dan tanpa spam
-      try {
-        await bot.editMessageText(messageText, {
-          chat_id: chatId,
-          message_id: callbackQuery.message.message_id,
-          parse_mode: 'Markdown',
-          reply_markup: { inline_keyboard: buttons }
-        });
-        await bot.answerCallbackQuery(callbackQuery.id);
-      } catch {
-        // fallback send new message jika edit gagal
-        await bot.sendMessage(chatId, messageText, {
-          parse_mode: 'Markdown',
-          reply_markup: { inline_keyboard: buttons }
-        });
-        await bot.answerCallbackQuery(callbackQuery.id);
-      }
-
-    } catch (error) {
-      console.error('❌ Error Prev/Next:', error);
-      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Gagal memuat proxy berikutnya.' });
-    }
-    return;
-  }
-
-  // Handle tombol Back
-  if (data === 'back_to_countries') {
-    try {
-      const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
-      const ipText = await response.text();
-      const ipList = ipText.split('\n').filter(line => line.trim() !== '');
-      const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))].sort();
-
-      // Kirim halaman 0 negara lagi
-      await sendCountryPage(bot, chatId, countryCodes, 0, 16);
-
-      // Hapus pesan lama jika ada
-      try {
-        await bot.deleteMessage(chatId, callbackQuery.message.message_id);
-      } catch {}
-
+      await bot.sendMessage(chatId, infoText, { parse_mode: 'Markdown' });
       await bot.answerCallbackQuery(callbackQuery.id);
 
     } catch (error) {
-      console.error('❌ Error Back:', error);
-      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Gagal kembali ke negara.' });
+      console.error('Error generating config:', error);
+      await bot.sendMessage(chatId, `⚠️ *Gagal membuat konfigurasi: ${error.message}*`, { parse_mode: 'Markdown' });
     }
     return;
   }
-
-  // TODO: Handle tombol config_vless, config_trojan, config_vmess, config_ss jika mau bikin config
 
   await bot.answerCallbackQuery(callbackQuery.id);
 }
