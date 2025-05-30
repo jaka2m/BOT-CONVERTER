@@ -279,9 +279,6 @@ Terima kasih atas dukungannya! 🙏
       return new Response('OK', { status: 200 });
     }
 
-    return new Response('OK', { status: 200 });
-  }
-
 
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
