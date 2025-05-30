@@ -95,7 +95,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
       if (text.startsWith('/converter')) {
         await this.sendMessage(
           chatId,
-          `🤖 *Stupid World Converter Bot*\n\nKirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format *Singbox*, *Nekobox*, dan *Clash*.\n\nContoh:\n\`vless://...\`\n\`vmess://...\`\n\`trojan://...\`\n\`ss://...\`\n\nCatatan:\n- Maksimal 10 link per permintaan.\n- Disarankan menggunakan *Singbox versi 1.10.3* atau *1.11.8* untuk hasil terbaik.`,
+          `🤖 *Geo Project Bot*\n\nKirimkan link konfigurasi V2Ray dan saya *SPIDERMAN* akan mengubahnya ke format *Singbox*, *Nekobox*, dan *Clash*.\n\nContoh:\n\`vless://...\`\n\`vmess://...\`\n\`trojan://...\`\n\`ss://...\`\n\nCatatan:\n- Maksimal 10 link per permintaan.\n- Disarankan menggunakan *Singbox versi 1.10.3* atau *1.11.8*.`,
         );
         return new Response('OK', { status: 200 });
       }
