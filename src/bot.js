@@ -40,7 +40,7 @@ export default class TelegramBot {
 
   async handleUpdate(update) {
     if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
-
+}
 
   const chatId = update.message.chat.id;
   const messageId = update.message.message_id;
