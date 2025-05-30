@@ -1,4 +1,11 @@
+import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
 import { checkProxyIP } from './checkip.js';
+import { randomconfig } from './randomconfig.js';
+import { rotateconfig } from './config.js';
+import { botku, TelegramBotku } from './randomip/bot2.js';
+import { proxyBot, TelegramProxyBot } from './proxyip/bot3.js';
+
+const HOSTKU = 'joss.checker-ip.xyz';
 
 export class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
@@ -64,6 +71,13 @@ export class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text?.trim() || '';
 
+    // ✅ Tangani /start
+    if (text === '/start') {
+      await this.sendMessage(chatId, `👋 Selamat datang di *Proxy Config Bot*!\n\nKirim IP:PORT untuk mengecek status dan mendapatkan link konfigurasi dalam berbagai format:\n\nContoh:\n\`123.456.789.0:443\``);
+      return new Response('OK', { status: 200 });
+    }
+
+    // Tangani input IP:PORT
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
     if (ipPortPattern.test(text)) {
       const loading = await this.sendMessage(chatId, '⏳ Memeriksa proxy...');
