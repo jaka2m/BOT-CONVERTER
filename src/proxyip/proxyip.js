@@ -287,23 +287,23 @@ vmess://${toBase64(JSON.stringify(vmessJSON_NTLS))}
 \`\`\``;
 
       } else if (type === 'vless') {
-        configText = `\`\`\`\nVLESS-TLS
+        configText = `\`\`\`VLESS-TLS
 vless://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\n\`\`\`\nVLESS-NTLS
+\`\`\`\`\`\`VLESS-NTLS
 vless://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
 \`\`\``;
 
       } else if (type === 'trojan') {
-        configText = `\`\`\`\nTROJAN-TLS
+        configText = `\`\`\`TROJAN-TLS
 trojan://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\n\`\`\`\nTROJAN-NTLS
+\`\`\`\`\`\`TROJAN-NTLS
 trojan://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
 \`\`\``;
 
       } else if (type === 'ss') {
         configText = `\`\`\`\nSHADOWSOCKS-TLS
 ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:443?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=tls&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\n\`\`\`\nSHADOWSOCKS-NTLS
+\`\`\`\`\`\`SHADOWSOCKS-NTLS
 ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:80?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=none&sni=${DEFAULT_HOST}#${prov}
 \`\`\``;
       }
