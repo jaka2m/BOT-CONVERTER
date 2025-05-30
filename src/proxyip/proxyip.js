@@ -249,7 +249,7 @@ export async function handleCallbackQuery(bot, callbackQuery) {
       const pathh = `/Geo-Project/${ip}-${port}`;
       const prov = encodeURIComponent(`${provider} ${getFlagEmoji(countryCode)}`);
       const prov1 = `${provider} ${getFlagEmoji(countryCode)}`;
-      const toBase64 = (str) => Buffer.from(str).toString('base64');
+      const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
       let configText = '';
 
@@ -277,30 +277,29 @@ export async function handleCallbackQuery(bot, callbackQuery) {
           ps: `${countryCode} - ${prov1} [VMess-NTLS]`
         };
 
-        configText = "``````VMESS-TLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_TLS)) +
-          "\n\nVMESS-NTLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_NTLS)) + "``````";
+        configText = "``````VMESS-TLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_TLS)) + "``````\n" +
+          "``````VMESS-NTLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_NTLS)) + "``````";
 
       } else if (type === 'vless') {
-        configText =
-          `\`\`\`\n` +
-          `vless://${uuid}@${DEFAULT_HOST}:443?path=${path}&security=tls&encryption=none&type=ws#${prov}\n\n` +
-          `vless://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&type=ws#${prov}\n` +
-          `\`\`\``;
+        configText = `\`\`\`\`\`\`VLESS-TLS
+vless://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
+\`\`\`\`\`\`\n\`\`\`\`\`\`VLESS-NTLS
+vless://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
+\`\`\`\`\`\``;
 
       } else if (type === 'trojan') {
-        configText =
-          `\`\`\`\n` +
-          `trojan://${uuid}@${DEFAULT_HOST}:443?path=${path}&security=tls&type=ws#${prov}\n\n` +
-          `trojan://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&type=ws#${prov}\n` +
-          `\`\`\``;
+        configText = `\`\`\`\`\`\`TROJAN-TLS
+trojan://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
+\`\`\`\`\`\`\n\`\`\`\`\`\`TROJAN-NTLS
+trojan://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
+\`\`\`\`\`\``;
 
       } else if (type === 'ss') {
-        const ssMethod = 'aes-128-gcm';
-        const ssPass = uuid;
-        const ssBase = toBase64(`${ssMethod}:${ssPass}@${DEFAULT_HOST}:${port}`);
-        const ssURI = `ss://${ssBase}#${prov}`;
-        configText = `\`\`\`\n${ssURI}\n\`\`\``;
-      }
+        configText = `\`\`\`\`\`\`SHADOWSOCKS-TLS
+ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:443?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=tls&sni=${DEFAULT_HOST}#${prov}
+\`\`\`\`\`\`\n\`\`\`\`\`\`SHADOWSOCKS-NTLS
+ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:80?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=none&sni=${DEFAULT_HOST}#${prov}
+\`\`\`\`\`\``;
 
       await bot.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
 
