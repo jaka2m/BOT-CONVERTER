@@ -126,7 +126,7 @@ Pilih protokol:`;
         }
 
         const configText = generateConfig(dataInfo, protocol, null);
-        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} tanpa wildcard:\n\n\n${configText}\n`, {
+        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} tanpa wildcard:\n${configText}\n`, {
           parse_mode: 'Markdown'
         });
 
@@ -152,7 +152,7 @@ Pilih protokol:`;
         }
 
         const configText = generateConfig(dataInfo, protocol, wildcardKey);
-        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} dengan wildcard *${wildcardKey}*:\n\n\n${configText}\n`, {
+        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} dengan wildcard *${wildcardKey}*:\n${configText}\n`, {
           parse_mode: 'Markdown'
         });
 
