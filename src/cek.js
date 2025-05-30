@@ -71,7 +71,7 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-      const { isp, country } = data;
+      const { isp, country, delay, status } = data;
       const infoText = `\`\`\`INFORMATION
 IP     : ${ip}
 PORT   : ${port}
