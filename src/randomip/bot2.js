@@ -242,19 +242,38 @@ Terima kasih atas dukungannya! 🙏
     }
 
     if (text === '/start') {
-      const welcomeText = `
+  const chatId = msg.chat.id;
+  const userId = msg.from.id;
+
+  try {
+    const welcomeMessage = `
 ━━━━━━━━━━━━━━━━━        
 ≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡
 ━━━━━━━━━━━━━━━━━
-Halo! Saya siap membantu kamu.
-Gunakan /menu untuk melihat daftar perintah yang tersedia.
+» *Name:* ${msg.from.first_name}  
+» *Username:* @${msg.from.username || "Tidak Ada"}  
+» *User ID:* ${userId}  
+━━━━━━━━━━━━━━━━━
+
+🔍 *Cara Penggunaan:*
+1. Masukkan alamat IP dan port yang ingin Anda cek.
+2. Jika tidak memasukkan port, maka default adalah *443*.
+3. Tunggu beberapa detik untuk hasilnya
+
+💡KETIK /menu UNTUK MELIHAT COMMAND
+
+💡 *Format IP yang Diterima:*
+• \`176.97.78.80\`
+• \`176.97.78.80:2053\`
+
+⚠️ *Catatan:*
+- Jika status *DEAD*, maka akun *VMESS*,*VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
 
 👨‍💻 Modded By : [Geo Project](https://t.me/sampiiiiu)
 
 🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
 📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
 👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
-━━━━━━━━━━━━━━━━━
 `;
       await this.sendMessage(chatId, welcomeText, { parse_mode: "Markdown" });
       return new Response('OK', { status: 200 });
@@ -262,6 +281,7 @@ Gunakan /menu untuk melihat daftar perintah yang tersedia.
 
     return new Response('OK', { status: 200 });
   }
+
 
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
