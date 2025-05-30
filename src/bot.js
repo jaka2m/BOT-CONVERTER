@@ -1,5 +1,4 @@
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
-import { checkProxyIP } from './checkip.js';
 import { randomconfig } from './randomconfig.js';
 import { rotateconfig } from './config.js';
 import { botku, TelegramBotku } from './randomip/bot2.js';
