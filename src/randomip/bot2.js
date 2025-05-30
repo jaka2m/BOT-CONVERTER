@@ -280,13 +280,14 @@ Terima kasih atas dukungannya! 🙏
             }
           })
         });
-      await this.sendMessage(chatId, welcomeText, { parse_mode: "Markdown" });
+      } catch (error) {
+        console.error(error);
+      }
       return new Response('OK', { status: 200 });
     }
 
     return new Response('OK', { status: 200 });
   }
-
 
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
