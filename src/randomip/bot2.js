@@ -250,9 +250,9 @@ Terima kasih atas dukungannya! 🙏
             chat_id: chatId,
             photo: imageUrl,
             caption: `
-━━━━━━━━━━━━━━━━━        
-≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡
-━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━
+≡             𝗪𝗘𝗟𝗖𝗢𝗠𝗘                ≡
+━━━━━━━━━━━━━━━━━━━
 🔍 *Cara Penggunaan:*
 1. Masukkan alamat IP dan port yang ingin Anda cek.
 2. Jika tidak memasukkan port, maka default adalah *443*.
@@ -270,7 +270,7 @@ Terima kasih atas dukungannya! 🙏
 🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
 📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
 👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
-━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━
             `.trim(),
             parse_mode: "Markdown",
             reply_markup: {
