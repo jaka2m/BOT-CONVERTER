@@ -30,29 +30,11 @@ export class TelegramBotku {
       return new Response('OK', { status: 200 });
     }
 
-if (text === '/start') {
-  const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg";
+if (text === '/start' || (message.photo && message.photo.length > 0)) {
+  const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg"; // URL gambar tetap sama
 
-  // Coba hapus foto lama jika sebelumnya ada
-  const oldMessageId = lastMessageMap[chatId];
-  if (oldMessageId) {
-    try {
-      await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          message_id: oldMessageId
-        })
-      });
-    } catch (err) {
-      console.warn(`Gagal hapus pesan sebelumnya [${oldMessageId}]:`, err.message);
-    }
-  }
-
-  // Kirim foto baru
   try {
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendPhoto`, {
+    await fetch(`${this.apiUrl}/bot${this.token}/sendPhoto`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -74,13 +56,13 @@ if (text === '/start') {
 • \`176.97.78.80:2053\`
 
 ⚠️ *Catatan:*
-- Jika status *DEAD*, Akun *VMESS*, *VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
+- Jika status *DEAD*, Akun *VMESS*,*VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
 
 🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
 📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
 👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
 ━━━━━━━━━━━━━━━━━━━
-        `.trim(),
+            `.trim(),
         parse_mode: "Markdown",
         reply_markup: {
           inline_keyboard: [
@@ -89,18 +71,8 @@ if (text === '/start') {
         }
       })
     });
-
-    const result = await res.json();
-
-    if (!res.ok || !result.ok) {
-      throw new Error(result.description || "Gagal mengirim foto");
-    }
-
-    // Simpan message_id terbaru
-    lastMessageMap[chatId] = result.result.message_id;
-
   } catch (error) {
-    console.error("❌ Gagal kirim foto baru:", error.message);
+    console.error(error);
   }
 
   return new Response('OK', { status: 200 });
