@@ -26,12 +26,48 @@ export class TelegramBotku {
     const messageId = update.message.message_id;
 
     if (text === '/proxy') {
-      await handleRandomIpCommand(this, chatId);
-      return new Response('OK', { status: 200 });
-    }
+    await handleRandomIpCommand(this, chatId);
+    return new Response('OK', { status: 200 });
+  }
 
-    if (text === '/menu') {
-      const menuText = `
+  if (text === '/start') {
+    const userId = msg.from.id;
+
+    const welcomeMessage = `
+━━━━━━━━━━━━━━━━━        
+≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡
+━━━━━━━━━━━━━━━━━
+» *Name:* ${msg.from.first_name}  
+» *Username:* @${msg.from.username || "Tidak Ada"}  
+» *User ID:* ${userId}  
+━━━━━━━━━━━━━━━━━
+
+🔍 *Cara Penggunaan:*
+1. Masukkan alamat IP dan port yang ingin Anda cek.
+2. Jika tidak memasukkan port, maka default adalah *443*.
+3. Tunggu beberapa detik untuk hasilnya
+
+💡KETIK /menu UNTUK MELIHAT COMMAND
+
+💡 *Format IP yang Diterima:*
+• \`176.97.78.80\`
+• \`176.97.78.80:2053\`
+
+⚠️ *Catatan:*
+- Jika status *DEAD*, maka akun *VMESS*,*VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
+
+👨‍💻 Modded By : [Geo Project](https://t.me/sampiiiiu)
+
+🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
+📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
+👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
+`;
+    await this.sendMessage(chatId, welcomeMessage, { parse_mode: "Markdown" });
+    return new Response('OK', { status: 200 });
+  }
+
+  if (text === '/menu') {
+    const menuText = `
 ══════════════════
 ≡      MENU UTAMA BOT      ≡
 ══════════════════
@@ -52,9 +88,13 @@ SUPPORT
 /donate → Bantu admin 😘 !
 ══════════════════
 `;
-      await this.sendMessage(chatId, menuText);
-      return new Response('OK', { status: 200 });
-    }
+    await this.sendMessage(chatId, menuText);
+    return new Response('OK', { status: 200 });
+  }
+
+  // Default response for other messages
+  return new Response('OK', { status: 200 });
+}
 
 if (text === '/findproxy') {
       const menuText = `
