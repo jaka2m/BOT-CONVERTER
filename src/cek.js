@@ -74,13 +74,6 @@ function toBase64(str) {
   return btoa(String.fromCharCode(...new Uint8Array(data.buffer)));
 }
 
-/**
- * Generate config string based on protocol, data, and wildcardKey
- * @param {object} config {ip, port, isp, latitude, longitude}
- * @param {string} protocol "VMESS" | "VLESS" | "TROJAN" | "SHADOWSOCKS"
- * @param {string|null} wildcardKey key for WILDCARD_MAP or null
- * @returns {string} config string with markdown formatting
- */
 export function generateConfig(config, protocol, wildcardKey = null) {
   if (!config || !config.ip || !config.port || !config.isp) {
     return "❌ Data tidak valid!";
