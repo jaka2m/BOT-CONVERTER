@@ -38,13 +38,12 @@ export class TelegramBotku {
 Pilih command sesuai kebutuhan !
 ══════════════════
 /start → mulai bot !
-/randomcc → Config random sesuai tombol Flag CC
+/proxyip → Config random sesuai tombol Flag CC
 /traffic → Daftar pemakain akun Cloudflare ! 
 /listwildcard → Daftar bug wildcard ! 
 /findproxy → Cara Cari Proxy ! 
 /converter → Converter Akun V2ray ! 
 /randomconfig → Config random mix protocol! 
-/proxyip → Buat konfigurasi proxy
 /proxy → Generate Proxy IPs! ! 
 /config → Generate config auto-rotate! 
 ══════════════════
