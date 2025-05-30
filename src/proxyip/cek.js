@@ -1,7 +1,20 @@
 const WILDCARD_MAP = {
   ava: "ava.game.naver.com",
-  api: "api.midtrans.com"
+  api: "api.midtrans.com",
+  blibli: "business.blibli.com",
+  ig: "graph.instagram.com",
+  vidio: "quiz.int.vidio.com",
+  iflix: "live.iflix.com",
+  zoom: "support.zoom.us",
+  webex: "blog.webex.com",
+  spotify: "investors.spotify.com",
+  netflix: "cache.netflix.com",
+  viu: "zaintest.vuclip.com",
+  ruangguru: "io.ruangguru.com",
+  fb: "investor.fb.com",
+  bakrie: "bakrie.ac.id"
 };
+
 
 const WILDCARD_OPTIONS = Object.entries(WILDCARD_MAP).map(
   ([value, text]) => ({ text, value })
