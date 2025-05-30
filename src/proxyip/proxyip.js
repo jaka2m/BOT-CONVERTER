@@ -1,3 +1,4 @@
+
 export function getFlagEmoji(countryCode) {
   if (!countryCode) return '';
   const codePoints = [...countryCode.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt());
@@ -95,7 +96,6 @@ export async function handleCallbackQuery(bot, callbackQuery) {
     return;
   }
 
- 
       const randomProxy = filteredIPs[Math.floor(Math.random() * filteredIPs.length)];
       const [ip, port, , provider] = randomProxy.split(',');
 
