@@ -40,11 +40,12 @@ export default class TelegramBot {
 
   async handleUpdate(update) {
     if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
-}
 
-  const chatId = update.message.chat.id;
-  const messageId = update.message.message_id;
-  const text = update.message.text.trim();
+    // Handle text messages (expecting IP:PORT)
+    if (update.message && update.message.text) {
+      const chatId = update.message.chat.id;
+      const messageId = update.message.message_id;
+      const text = update.message.text.trim();
 
   // Cocokkan hanya IP atau IP:PORT
   const ipOnlyMatch = text.match(/^(\d{1,3}(?:\.\d{1,3}){3})$/);
