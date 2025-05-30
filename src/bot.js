@@ -131,7 +131,7 @@ Pilih protokol:`;
         });
 
         await this.deleteMessage(chatId, loadingMsg.result.message_id);
-        await this.sendMessage(chatId, `⬅️ Kembali ke menu:`, {
+        await this.sendMessage(chatId, ` `, {
           reply_markup: createProtocolInlineKeyboard(ip, port)
         });
 
