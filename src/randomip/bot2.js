@@ -240,110 +240,35 @@ Terima kasih atas dukungannya! 🙏
       return new Response('OK', { status: 200 });
     }
 
-const lastMessageMap = {};
-
-const sendMessage = async (chatId, text, options = {}) => {
-  const url = `${apiUrl}/bot${token}/sendMessage`;
-  const body = { chat_id: chatId, text, ...options };
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-
-  return response.json();
-};
-
-const editMessageReplyMarkup = async ({ chat_id, message_id, reply_markup }) => {
-  const url = `${apiUrl}/bot${token}/editMessageReplyMarkup`;
-  const body = { chat_id, message_id, reply_markup };
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-
-  return response.json();
-};
-
-// Handler /start
-const handleStart = async (chatId, text) => {
-  if (text !== '/start') return;
-
-  const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg";
-
-  // Hapus pesan lama
-  const oldMessageId = lastMessageMap[chatId];
-  if (oldMessageId) {
-    try {
-      await fetch(`${apiUrl}/bot${token}/deleteMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          message_id: oldMessageId
-        })
-      });
-    } catch (err) {
-      console.warn(`Gagal hapus pesan sebelumnya [${oldMessageId}]:`, err.message);
-    }
+    
+    return new Response('OK', { status: 200 });
   }
 
-  // Kirim foto baru
-  try {
-    const res = await fetch(`${apiUrl}/bot${token}/sendPhoto`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        photo: imageUrl,
-        caption: `
-━━━━━━━━━━━━━━━━━━━
-≡             𝗪𝗘𝗟𝗖𝗢𝗠𝗘                ≡
-━━━━━━━━━━━━━━━━━━━
-🔍 *Cara Penggunaan:*
-1. Masukkan alamat IP dan port yang ingin Anda cek.
-2. Jika tidak memasukkan port, maka default adalah *443*.
-3. Tunggu beberapa detik untuk hasilnya
+  async sendMessage(chatId, text, options = {}) {
+    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+    const body = { chat_id: chatId, text, ...options };
 
-💡KETIK /menu UNTUK MELIHAT COMMAND
-
-💡 *Format IP yang Diterima:*
-• \`176.97.78.80\`
-• \`176.97.78.80:2053\`
-
-⚠️ *Catatan:*
-- Jika status *DEAD*, Akun *VMESS*, *VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
-
-🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
-📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
-👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
-━━━━━━━━━━━━━━━━━━━
-        `.trim(),
-        parse_mode: "Markdown",
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "📢 GEO PROJECT", url: "https://t.me/sampiiiiu" }]
-          ]
-        }
-      })
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
     });
 
-    const result = await res.json();
-
-    if (!res.ok || !result.ok) {
-      throw new Error(result.description || "Gagal mengirim foto");
-    }
-
-    lastMessageMap[chatId] = result.result.message_id;
-  } catch (error) {
-    console.error("❌ Gagal kirim foto baru:", error.message);
+    return response.json();
   }
 
-  return new Response('OK', { status: 200 });
-};
+  async editMessageReplyMarkup({ chat_id, message_id, reply_markup }) {
+    const url = `${this.apiUrl}/bot${this.token}/editMessageReplyMarkup`;
+    const body = { chat_id, message_id, reply_markup };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    return response.json();
+  }
 
   async answerCallbackQuery(callbackQueryId) {
     const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
