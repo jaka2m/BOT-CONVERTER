@@ -60,11 +60,14 @@ export default class TelegramBot {
   }
 
   async handleUpdate(update) {
-    if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
+    if (!update.message && !update.callback_query) {
+      return new Response('OK', { status: 200 });
+    }
 
-    // Handle message text (IP:port)
+    // === Handle Text Message ===
     if (update.message && update.message.text) {
       const chatId = update.message.chat.id;
+      const messageId = update.message.message_id;
       const text = update.message.text.trim();
 
       const ipPortMatch = text.match(/^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/);
@@ -76,73 +79,61 @@ export default class TelegramBot {
       const ip = ipPortMatch[1];
       const port = ipPortMatch[2];
 
+      // Hapus pesan user
+      await this.deleteMessage(chatId, messageId);
+
+      // Tampilkan loading
+      const loadingMsg = await this.sendMessage(chatId, '⏳ Mengecek data IP...');
+
       const data = await fetchIPData(ip, port);
       if (!data) {
-        await this.sendMessage(chatId, `❌ Gagal mengambil data untuk IP ${ip}:${port}`);
+        await this.editMessage(chatId, loadingMsg.result.message_id, `❌ Gagal mengambil data untuk IP ${ip}:${port}`);
         return new Response('OK', { status: 200 });
       }
 
-      const { isp, country, latitude, longitude } = data;
-
-      const countryFlag = country ? `` : "";
-      const countryName = country ? country : "";
-
+      const { isp, country } = data;
       const infoText = `\`\`\`INFORMATION
 IP     : ${ip}
 PORT   : ${port}
 ISP    : ${isp}
-Country: ${countryName} ${countryFlag}
+Country: ${country || '-'}
 \`\`\`
 
 Pilih protokol:`;
 
-await this.sendMessage(chatId, infoText, {
-  reply_markup: createProtocolInlineKeyboard(ip, port)
-});
+      await this.editMessage(chatId, loadingMsg.result.message_id, infoText, {
+        reply_markup: createProtocolInlineKeyboard(ip, port)
+      });
 
-return new Response('OK', { status: 200 });
-}
+      return new Response('OK', { status: 200 });
+    }
 
-    // Handle callback query (button pressed)
+    // === Handle Callback Button ===
     if (update.callback_query) {
       const callback = update.callback_query;
       const chatId = callback.message.chat.id;
       const messageId = callback.message.message_id;
       const data = callback.data;
-
-      // Format data: PROTOCOL|VLESS|ip|port
       const parts = data.split('|');
 
       if (parts[0] === "PROTOCOL") {
-        const protocol = parts[1];
-        const ip = parts[2];
-        const port = parts[3];
-
-        // Tampilkan tombol wildcard / no wildcard
+        const [_, protocol, ip, port] = parts;
         await this.editMessage(chatId, messageId, `Pilih opsi wildcard untuk protokol ${protocol} pada ${ip}:${port}`, {
           reply_markup: createInitialWildcardInlineKeyboard(ip, port, protocol)
         });
-
         return new Response('OK', { status: 200 });
       }
 
       if (parts[0] === "SHOW_WILDCARD") {
-        const protocol = parts[1];
-        const ip = parts[2];
-        const port = parts[3];
-
+        const [_, protocol, ip, port] = parts;
         await this.editMessage(chatId, messageId, `Pilih wildcard untuk protokol ${protocol} pada ${ip}:${port}`, {
           reply_markup: createWildcardOptionsInlineKeyboard(ip, port, protocol)
         });
-
         return new Response('OK', { status: 200 });
       }
 
       if (parts[0] === "NOWILDCARD") {
-        const protocol = parts[1];
-        const ip = parts[2];
-        const port = parts[3];
-
+        const [_, protocol, ip, port] = parts;
         const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memproses konfigurasi...');
 
         const dataInfo = await fetchIPData(ip, port);
@@ -153,13 +144,11 @@ return new Response('OK', { status: 200 });
         }
 
         const configText = generateConfig(dataInfo, protocol, null);
-
         await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} tanpa wildcard:\n\n\`\`\`\n${configText}\n\`\`\``, {
           parse_mode: 'Markdown'
         });
 
         await this.deleteMessage(chatId, loadingMsg.result.message_id);
-
         await this.sendMessage(chatId, `⬅️ Kembali ke menu:`, {
           reply_markup: createProtocolInlineKeyboard(ip, port)
         });
@@ -168,11 +157,7 @@ return new Response('OK', { status: 200 });
       }
 
       if (parts[0] === "WILDCARD") {
-        const protocol = parts[1];
-        const ip = parts[2];
-        const port = parts[3];
-        const wildcardKey = parts[4];
-
+        const [_, protocol, ip, port, wildcardKey] = parts;
         const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memproses konfigurasi...');
 
         const dataInfo = await fetchIPData(ip, port);
@@ -183,13 +168,11 @@ return new Response('OK', { status: 200 });
         }
 
         const configText = generateConfig(dataInfo, protocol, wildcardKey);
-
         await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} dengan wildcard *${wildcardKey}*:\n\n\`\`\`\n${configText}\n\`\`\``, {
           parse_mode: 'Markdown'
         });
 
         await this.deleteMessage(chatId, loadingMsg.result.message_id);
-
         await this.sendMessage(chatId, `⬅️ Kembali ke menu:`, {
           reply_markup: createProtocolInlineKeyboard(ip, port)
         });
@@ -198,8 +181,7 @@ return new Response('OK', { status: 200 });
       }
 
       if (parts[0] === "BACK") {
-        const ip = parts[1];
-        const port = parts[2];
+        const [_, ip, port] = parts;
 
         const dataInfo = await fetchIPData(ip, port);
         if (!dataInfo) {
@@ -208,7 +190,6 @@ return new Response('OK', { status: 200 });
         }
 
         const infoText = `Data untuk IP ${ip}:${port}:\nISP: ${dataInfo.isp}\nCountry: ${dataInfo.country}\n\nPilih protokol:`;
-
         await this.editMessage(chatId, messageId, infoText, {
           reply_markup: createProtocolInlineKeyboard(ip, port)
         });
