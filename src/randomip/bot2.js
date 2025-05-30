@@ -241,15 +241,34 @@ Terima kasih atas dukungannya! 🙏
     }
 
     if (text === '/start') {
-      const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg"; // Ganti dengan URL QRIS yang valid
-      try {
-        await fetch(`${this.apiUrl}/bot${this.token}/sendPhoto`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: chatId,
-            photo: imageUrl,
-            caption: `
+  const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg";
+
+  // Hapus foto lama jika ada
+  const oldMessageId = lastMessageMap[chatId];
+  if (oldMessageId) {
+    try {
+      await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          message_id: oldMessageId
+        })
+      });
+    } catch (err) {
+      console.warn("Gagal hapus pesan sebelumnya:", err.message);
+    }
+  }
+
+  // Kirim foto baru
+  try {
+    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        photo: imageUrl,
+        caption: `
 ━━━━━━━━━━━━━━━━━━━
 ≡             𝗪𝗘𝗟𝗖𝗢𝗠𝗘                ≡
 ━━━━━━━━━━━━━━━━━━━
@@ -271,23 +290,27 @@ Terima kasih atas dukungannya! 🙏
 📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
 👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
 ━━━━━━━━━━━━━━━━━━━
-            `.trim(),
-            parse_mode: "Markdown",
-            reply_markup: {
-              inline_keyboard: [
-                [{ text: "📢 GEO PROJECT", url: "https://t.me/sampiiiiu" }]
-              ]
-            }
-          })
-        });
-      } catch (error) {
-        console.error(error);
-      }
-      return new Response('OK', { status: 200 });
-    }
+        `.trim(),
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "📢 GEO PROJECT", url: "https://t.me/sampiiiiu" }]
+          ]
+        }
+      })
+    });
 
-    return new Response('OK', { status: 200 });
+    const data = await res.json();
+
+    // Simpan message_id terbaru untuk bisa dihapus nanti
+    lastMessageMap[chatId] = data.result.message_id;
+
+  } catch (error) {
+    console.error("Gagal kirim foto:", error);
   }
+
+  return new Response('OK', { status: 200 });
+}
 
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
