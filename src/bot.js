@@ -87,14 +87,22 @@ export default class TelegramBot {
       const countryFlag = country ? `` : "";
       const countryName = country ? country : "";
 
-      const infoText = `Data untuk IP ${ip}:${port}:\nISP: ${isp}\nCountry: ${countryName} ${countryFlag}\n\nPilih protokol:`;
+      const infoText = `\`\`\`INFORMATION
+IP     : ${ip}
+PORT   : ${port}
+ISP    : ${isp}
+Country: ${countryName} ${countryFlag}
+Status    : ${status}
+\`\`\`
 
-      await this.sendMessage(chatId, infoText, {
-        reply_markup: createProtocolInlineKeyboard(ip, port)
-      });
+Pilih protokol:`;
 
-      return new Response('OK', { status: 200 });
-    }
+await this.sendMessage(chatId, infoText, {
+  reply_markup: createProtocolInlineKeyboard(ip, port)
+});
+
+return new Response('OK', { status: 200 });
+}
 
     // Handle callback query (button pressed)
     if (update.callback_query) {
