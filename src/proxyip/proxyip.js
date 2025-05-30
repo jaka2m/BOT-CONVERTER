@@ -279,12 +279,9 @@ export async function handleCallbackQuery(bot, callbackQuery) {
           ps: `${countryCode} - ${prov1} [VMess-NTLS]`
         };
 
-        configText = `\`\`\`
-VMESS-TLS
+        configText = `\`\`\`VMESS-TLS
 vmess://${toBase64(JSON.stringify(vmessJSON_TLS))}
-\`\`\`
-
-\`\`\`
+\`\`\`\`\`\`
 VMESS-NTLS
 vmess://${toBase64(JSON.stringify(vmessJSON_NTLS))}
 \`\`\``;
