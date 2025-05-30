@@ -71,14 +71,15 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-      const { isp, country } = data;
+      const { isp, country, delay, status } = data;
       const infoText = `\`\`\`INFORMATION
 IP     : ${ip}
 PORT   : ${port}
 ISP    : ${isp}
 Country: ${country || '-'}
+Delay: ${delay || '-'}
+Status: ${status || '-'}
 \`\`\`
-
 Pilih protokol:`;
 
       await this.editMessage(chatId, loadingMsg.result.message_id, infoText, {
@@ -131,7 +132,7 @@ Pilih protokol:`;
         });
 
         await this.deleteMessage(chatId, loadingMsg.result.message_id);
-        await this.sendMessage(chatId, `⬅️:`, {
+        await this.sendMessage(chatId, `🔙`, {
           reply_markup: createProtocolInlineKeyboard(ip, port)
         });
 
@@ -157,7 +158,7 @@ Pilih protokol:`;
         });
 
         await this.deleteMessage(chatId, loadingMsg.result.message_id);
-        await this.sendMessage(chatId, `⬅️ `, {
+        await this.sendMessage(chatId, `🔙 `, {
           reply_markup: createProtocolInlineKeyboard(ip, port)
         });
 
