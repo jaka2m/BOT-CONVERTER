@@ -288,73 +288,15 @@ export async function handleCallbackQuery(bot, callbackQuery) {
     const provider = parts.slice(5).join('_');
 
     // Kirim konfigurasi (contoh sederhana)
-    let configText = '';
+    let configText = `⚡ *Config ${proto.toUpperCase()} untuk ${ip}:${port}*\n`;
+    configText += `Country: ${getFlagEmoji(countryCode)} ${countryCode}\nProvider: ${provider}\n\n`;
+    configText += `Config link atau detail lainnya di sini...`;
 
-      if (type === 'vmess') {
-        const vmessJSON_TLS = {
-          v: "2",
-          ps: `${countryCode} - ${prov1} [VMess-TLS]`,
-          add: DEFAULT_HOST,
-          port: "443",
-          id: uuid1,
-          aid: "0",
-          net: "ws",
-          type: "none",
-          host: DEFAULT_HOST,
-          path: pathh,
-          tls: "tls",
-          sni: DEFAULT_HOST,
-          scy: "zero"
-        };
-
-        const vmessJSON_NTLS = {
-          ...vmessJSON_TLS,
-          port: "80",
-          tls: "none",
-          ps: `${countryCode} - ${prov1} [VMess-NTLS]`
-        };
-
-        configText = "``````VMESS-TLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_TLS)) + "``````\n" +
-          "``````VMESS-NTLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_NTLS)) + "``````";
-
-      } else if (type === 'vless') {
-        configText = `\`\`\`\`\`\`VLESS-TLS
-vless://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\`\`\`\n\`\`\`\`\`\`VLESS-NTLS
-vless://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\``;
-
-      } else if (type === 'trojan') {
-        configText = `\`\`\`\`\`\`TROJAN-TLS
-trojan://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\`\`\`\n\`\`\`\`\`\`TROJAN-NTLS
-trojan://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\``;
-
-      } else if (type === 'ss') {
-        configText = `\`\`\`\`\`\`SHADOWSOCKS-TLS
-ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:443?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=tls&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\`\n\`\`\`\`\`\`SHADOWSOCKS-NTLS
-ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:80?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=none&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\``;
-
-      } else {
-        await bot.answerCallbackQuery(callbackQuery.id, { text: "Protokol tidak dikenali." });
-        return;
-      }
-
-      const infoText = `✅ *Konfigurasi ${type.toUpperCase()} untuk ${getFlagEmoji(countryCode)} ${countryCode} :*\n` +
-        "```" + configText + "```";
-
-      await bot.sendMessage(chatId, infoText, { parse_mode: 'Markdown' });
-      await bot.answerCallbackQuery(callbackQuery.id);
-
-    } catch (error) {
-      console.error('Error generating config:', error);
-      await bot.sendMessage(chatId, `⚠️ *Gagal membuat konfigurasi: ${error.message}*`, { parse_mode: 'Markdown' });
-    }
+    await bot.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
+    await bot.answerCallbackQuery(callbackQuery.id);
     return;
   }
 
-  await bot.answerCallbackQuery(callbackQuery.id);
+  // Default fallback
+  await bot.answerCallbackQuery(callbackQuery.id, { text: 'Aksi tidak dikenali.' });
 }
