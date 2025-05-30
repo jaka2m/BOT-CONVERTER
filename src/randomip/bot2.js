@@ -240,10 +240,10 @@ Terima kasih atas dukungannya! 🙏
       return new Response('OK', { status: 200 });
     }
 
-    if (text === '/start') {
+  if (text === '/start') {
   const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg";
 
-  // Hapus foto lama jika ada
+  // Coba hapus foto lama jika sebelumnya ada
   const oldMessageId = lastMessageMap[chatId];
   if (oldMessageId) {
     try {
@@ -256,7 +256,7 @@ Terima kasih atas dukungannya! 🙏
         })
       });
     } catch (err) {
-      console.warn("Gagal hapus pesan sebelumnya:", err.message);
+      console.warn(`Gagal hapus pesan sebelumnya [${oldMessageId}]:`, err.message);
     }
   }
 
@@ -284,7 +284,7 @@ Terima kasih atas dukungannya! 🙏
 • \`176.97.78.80:2053\`
 
 ⚠️ *Catatan:*
-- Jika status *DEAD*, Akun *VMESS*,*VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
+- Jika status *DEAD*, Akun *VMESS*, *VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
 
 🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
 📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
@@ -300,13 +300,17 @@ Terima kasih atas dukungannya! 🙏
       })
     });
 
-    const data = await res.json();
+    const result = await res.json();
 
-    // Simpan message_id terbaru untuk bisa dihapus nanti
-    lastMessageMap[chatId] = data.result.message_id;
+    if (!res.ok || !result.ok) {
+      throw new Error(result.description || "Gagal mengirim foto");
+    }
+
+    // Simpan message_id terbaru
+    lastMessageMap[chatId] = result.result.message_id;
 
   } catch (error) {
-    console.error("Gagal kirim foto:", error);
+    console.error("❌ Gagal kirim foto baru:", error.message);
   }
 
   return new Response('OK', { status: 200 });
