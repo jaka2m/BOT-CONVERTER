@@ -33,8 +33,29 @@ export function canSendMessage(chatId, key, interval = 30000) {
   return false;
 }
 
-const PAGE_SIZE = 16; // 4x4 grid
-const userPages = new Map();
+function getCountryKeyboard(countryCodes, page, totalPages) {
+  const start = page * 16;
+  const selectedCodes = countryCodes.slice(start, start + 16);
+  const rows = [];
+
+  for (let i = 0; i < selectedCodes.length; i += 4) {
+    const row = selectedCodes.slice(i, i + 4).map(code => ({
+      text: `${getFlagEmoji(code)} ${code}`,
+      callback_data: `select_${code}`
+    }));
+    rows.push(row);
+  }
+
+  // Tombol navigasi
+  const navButtons = [];
+
+  if (page > 0) navButtons.push({ text: '⬅️ Prev', callback_data: `page_${page - 1}` });
+  if (page < totalPages - 1) navButtons.push({ text: '➡️ Next', callback_data: `page_${page + 1}` });
+  navButtons.push({ text: '🔙 Back', callback_data: 'back_menu' });
+
+  rows.push(navButtons);
+  return rows;
+}
 
 // Handler command /proxyip
 export async function handleProxyipCommand(bot, msg) {
@@ -51,16 +72,21 @@ export async function handleProxyipCommand(bot, msg) {
       return;
     }
 
-    const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))].sort();
+    const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))];
+    const buttons = [];
 
-    // Simpan negara di userPages page 0
-    userPages.set(chatId, { countryCodes, page: 0 });
-
-    const keyboard = buildCountryKeyboard(countryCodes, 0);
+    for (let i = 0; i < countryCodes.length; i += 4) {
+      buttons.push(
+        countryCodes.slice(i, i + 4).map(code => ({
+          text: `${getFlagEmoji(code)} ${code}`,
+          callback_data: `select_${code}`
+        }))
+      );
+    }
 
     await bot.sendMessage(chatId, '🌍 *Pilih negara:*', {
       parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard }
+      reply_markup: { inline_keyboard: buttons }
     });
 
   } catch (error) {
@@ -69,77 +95,80 @@ export async function handleProxyipCommand(bot, msg) {
   }
 }
 
-function buildCountryKeyboard(countryCodes, page) {
-  const start = page * PAGE_SIZE;
-  const slice = countryCodes.slice(start, start + PAGE_SIZE);
-
-  // 4 tombol per baris
-  const rows = [];
-  for (let i = 0; i < slice.length; i += 4) {
-    rows.push(
-      slice.slice(i, i + 4).map(code => ({
-        text: `${getFlagEmoji(code)} ${code}`,
-        callback_data: `select_${code}`
-      }))
-    );
-  }
-
-  // Tombol Prev Next jika perlu
-  const navButtons = [];
-  if (page > 0) {
-    navButtons.push({ text: '⬅️ Prev', callback_data: `page_prev` });
-  }
-  if ((page + 1) * PAGE_SIZE < countryCodes.length) {
-    navButtons.push({ text: 'Next ➡️', callback_data: `page_next` });
-  }
-  if (navButtons.length) rows.push(navButtons);
-
-  return rows;
-}
-
+// Handler callback query
+// Handler callback query
 export async function handleCallbackQuery(bot, callbackQuery) {
   const chatId = callbackQuery.message.chat.id;
   const data = callbackQuery.data;
 
-  if (data === 'page_prev' || data === 'page_next') {
-    // Pagination tombol negara
-    if (!userPages.has(chatId)) {
-      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Tidak ada halaman aktif.' });
-      return;
-    }
-    const pageData = userPages.get(chatId);
-    let newPage = pageData.page + (data === 'page_next' ? 1 : -1);
-    if (newPage < 0) newPage = 0;
-    if (newPage > Math.floor(pageData.countryCodes.length / PAGE_SIZE)) newPage = pageData.page; // batas max
+  // Handle pagination for country list
+  if (data.startsWith('page_')) {
+    const page = parseInt(data.split('_')[1], 10);
+    if (isNaN(page) || page < 1) return; // Validasi page
 
-    userPages.set(chatId, { ...pageData, page: newPage });
-
-    // Edit pesan dengan keyboard baru (pagination tombol negara)
     try {
-      await bot.editMessageReplyMarkup(
-        { inline_keyboard: buildCountryKeyboard(pageData.countryCodes, newPage) },
-        { chat_id: chatId, message_id: callbackQuery.message.message_id }
+      const response = await fetch(
+        'https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt'
       );
-      await bot.answerCallbackQuery(callbackQuery.id);
+      if (!response.ok) throw new Error('Failed to fetch proxy list');
+
+      const ipText = await response.text();
+      const ipList = ipText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line !== '');
+
+      const countryCodes = [...new Set(ipList.map(line => line.split(',')[2]))];
+      const totalPages = Math.ceil(countryCodes.length / 16);
+
+      const keyboard = getCountryKeyboard(countryCodes, page, totalPages);
+      const msgId = sentMessages.get(chatId)?.proxy_keyboard;
+
+      if (msgId) {
+        await bot.editMessageReplyMarkup(
+          { inline_keyboard: keyboard },
+          { chat_id: chatId, message_id: msgId }
+        );
+      }
     } catch (error) {
-      console.error('Error saat pagination:', error);
-      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Gagal memperbarui halaman.' });
+      console.error('Error handling page callback:', error);
+      // Optionally notify user of error
     }
+
     return;
   }
 
+  // Handle back to main menu
+  if (data === 'back_menu') {
+    await handleProxyipCommand(bot, { chat: { id: chatId } });
+    return;
+  }
+
+  // Handle country selection
   if (data.startsWith('select_')) {
-    if (!canSendMessage(chatId, `select_${data}`)) return;
+    if (!canSendMessage(chatId, data)) return;
 
     const countryCode = data.split('_')[1];
+    if (!countryCode) return;
+
     try {
-      const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt');
+      const response = await fetch(
+        'https://raw.githubusercontent.com/jaka2m/botak/refs/heads/main/cek/proxyList.txt'
+      );
+      if (!response.ok) throw new Error('Failed to fetch proxy list');
+
       const ipText = await response.text();
-      const ipList = ipText.split('\n').filter(line => line.trim() !== '');
+      const ipList = ipText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line !== '');
+
       const filteredIPs = ipList.filter(line => line.split(',')[2] === countryCode);
 
       if (filteredIPs.length === 0) {
-        await bot.sendMessage(chatId, `⚠️ *Tidak ada IP tersedia untuk negara ${countryCode}.*`, { parse_mode: 'Markdown' });
+        await bot.sendMessage(chatId, `⚠️ *Tidak ada IP tersedia untuk negara ${countryCode}.*`, {
+          parse_mode: 'Markdown',
+        });
         return;
       }
 
@@ -147,27 +176,20 @@ export async function handleCallbackQuery(bot, callbackQuery) {
       const [ip, port, , provider] = randomProxy.split(',');
 
       const statusResponse = await fetch(`${APIKU}${ip}:${port}`);
+      if (!statusResponse.ok) throw new Error('Failed to fetch proxy status');
+
       const ipData = await statusResponse.json();
-      const status = ipData.status === "ACTIVE" ? "✅ ACTIVE" : "❌ DEAD";
+      const status = ipData.status === 'ACTIVE' ? '✅ ACTIVE' : '❌ DEAD';
 
       const safeProvider = provider.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
 
-      // Tombol protokol
-      const protocolButtons = [
+      const buttons = [
         [
           { text: '⚡ VLESS', callback_data: `config_vless_${ip}_${port}_${countryCode}_${safeProvider}` },
-          { text: '⚡ TROJAN', callback_data: `config_trojan_${ip}_${port}_${countryCode}_${safeProvider}` }
+          { text: '⚡ TROJAN', callback_data: `config_trojan_${ip}_${port}_${countryCode}_${safeProvider}` },
         ],
-        [
-          { text: '⚡ VMESS', callback_data: `config_vmess_${ip}_${port}_${countryCode}_${safeProvider}` },
-          { text: '⚡ SHADOWSOCKS', callback_data: `config_ss_${ip}_${port}_${countryCode}_${safeProvider}` }
-        ],
-        // Tombol navigasi dibawah tombol protokol
-        [
-          { text: '⬅️ Prev', callback_data: `page_prev` },
-          { text: 'Next ➡️', callback_data: `page_next` },
-          { text: '🔙 Back', callback_data: `back_to_countries` }
-        ]
+        [{ text: '⚡ VMESS', callback_data: `config_vmess_${ip}_${port}_${countryCode}_${safeProvider}` }],
+        [{ text: '⚡ SHADOWSOCKS', callback_data: `config_ss_${ip}_${port}_${countryCode}_${safeProvider}` }],
       ];
 
       let messageText = `✅ *Info IP untuk ${getFlagEmoji(countryCode)} ${countryCode} :*\n` +
@@ -179,39 +201,14 @@ export async function handleCallbackQuery(bot, callbackQuery) {
         messageText += `\n👉 🌍 [View Google Maps](https://www.google.com/maps?q=${ipData.latitude},${ipData.longitude})`;
       }
 
-      await bot.editMessageText(messageText, {
-        chat_id: chatId,
-        message_id: callbackQuery.message.message_id,
+      await bot.sendMessage(chatId, messageText, {
         parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: protocolButtons }
+        reply_markup: { inline_keyboard: buttons }
       });
-
-      await bot.answerCallbackQuery(callbackQuery.id);
 
     } catch (error) {
       console.error('❌ Error fetching IP status:', error);
       await bot.sendMessage(chatId, `⚠️ *Terjadi kesalahan saat memverifikasi IP.*`, { parse_mode: 'Markdown' });
-    }
-    return;
-  }
-
-  if (data === 'back_to_countries') {
-    if (!userPages.has(chatId)) {
-      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Tidak ada halaman negara aktif.' });
-      return;
-    }
-    const pageData = userPages.get(chatId);
-    try {
-      await bot.editMessageText('🌍 *Pilih negara:*', {
-        chat_id: chatId,
-        message_id: callbackQuery.message.message_id,
-        parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: buildCountryKeyboard(pageData.countryCodes, pageData.page) }
-      });
-      await bot.answerCallbackQuery(callbackQuery.id);
-    } catch (error) {
-      console.error('Error back to countries:', error);
-      await bot.answerCallbackQuery(callbackQuery.id, { text: 'Gagal kembali ke daftar negara.' });
     }
     return;
   }
