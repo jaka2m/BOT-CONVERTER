@@ -110,6 +110,7 @@ export async function handleProxyipCommand(bot, msg) {
 }
 
 // Handler callback query
+// Handler callback query
 export async function handleCallbackQuery(bot, callbackQuery) {
   const chatId = callbackQuery.message.chat.id;
   const data = callbackQuery.data;
@@ -143,6 +144,7 @@ export async function handleCallbackQuery(bot, callbackQuery) {
         page = newPage;
         paginationState.set(chatId, { countryCodes, page });
         const buttons = generateCountryButtons(countryCodes, page);
+        // Perbaikan: editMessageReplyMarkup parameter yang benar adalah object kedua, bukan pertama
         await bot.editMessageReplyMarkup({ inline_keyboard: buttons }, {
           chat_id: chatId,
           message_id: callbackQuery.message.message_id
@@ -277,29 +279,30 @@ export async function handleCallbackQuery(bot, callbackQuery) {
           ps: `${countryCode} - ${prov1} [VMess-NTLS]`
         };
 
-        configText = "``````VMESS-TLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_TLS)) + "``````\n" +
-          "``````VMESS-NTLS\nvmess://" + toBase64(JSON.stringify(vmessJSON_NTLS)) + "``````";
+        configText = "```\nVMESS-TLS\n```vmess://" + toBase64(JSON.stringify(vmessJSON_TLS)) + "```\n" +
+          "```\nVMESS-NTLS\n```vmess://" + toBase64(JSON.stringify(vmessJSON_NTLS)) + "```";
 
       } else if (type === 'vless') {
-        configText = `\`\`\`\`\`\`VLESS-TLS
+        configText = `\`\`\`\nVLESS-TLS
 vless://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\`\`\`\n\`\`\`\`\`\`VLESS-NTLS
+\`\`\`\n\`\`\`\nVLESS-NTLS
 vless://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\``;
+\`\`\``;
 
       } else if (type === 'trojan') {
-        configText = `\`\`\`\`\`\`TROJAN-TLS
+        configText = `\`\`\`\nTROJAN-TLS
 trojan://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
-\`\`\`\`\`\`\n\`\`\`\`\`\`TROJAN-NTLS
+\`\`\`\n\`\`\`\nTROJAN-NTLS
 trojan://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&host=${DEFAULT_HOST}&fp=randomized&type=ws&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\``;
+\`\`\``;
 
       } else if (type === 'ss') {
-        configText = `\`\`\`\`\`\`SHADOWSOCKS-TLS
+        configText = `\`\`\`\nSHADOWSOCKS-TLS
 ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:443?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=tls&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\`\n\`\`\`\`\`\`SHADOWSOCKS-NTLS
+\`\`\`\n\`\`\`\nSHADOWSOCKS-NTLS
 ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:80?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=none&sni=${DEFAULT_HOST}#${prov}
-\`\`\`\`\`\``;
+\`\`\``;
+      }
 
       await bot.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
 
