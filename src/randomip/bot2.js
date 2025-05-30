@@ -136,7 +136,6 @@ not autonomous_system.name: "CLOUDFLARE*" and services: (software.product: "Clou
 👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)
 `;
 
-    `;
       await this.sendMessage(chatId, menuText);
       return new Response('OK', { status: 200 });
     }
