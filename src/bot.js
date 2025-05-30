@@ -92,7 +92,6 @@ IP     : ${ip}
 PORT   : ${port}
 ISP    : ${isp}
 Country: ${countryName} ${countryFlag}
-Status    : ${status}
 \`\`\`
 
 Pilih protokol:`;
