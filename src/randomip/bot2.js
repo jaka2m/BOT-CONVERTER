@@ -1,14 +1,18 @@
 import {
   handleRandomIpCommand,
   handleCallbackQuery,
-  globalIpList,
 } from './randomip.js';
+
+export async function botku(link) {
+  console.log("Bot link:", link);
+}
 
 export class TelegramBotku {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
   }
+
 
   async handleUpdate(update) {
     if (update.callback_query) {
