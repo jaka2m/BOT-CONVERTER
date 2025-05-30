@@ -140,7 +140,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
     if (text.startsWith('/converter')) {
     await this.sendMessage(
       chatId,
-      `🤖 Stupid World Converter Bot
+      `🤖 Geo Project Bot
 
 Kirimkan link konfigurasi V2Ray dan saya SPIDER - MAN akan mengubahnya ke format Singbox, Nekobox dan Clash.
 
