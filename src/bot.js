@@ -4,7 +4,6 @@ import { randomconfig } from './randomconfig.js';
 import { rotateconfig } from './config.js';
 import { botku, TelegramBotku } from './randomip/bot2.js';
 import { proxyBot, TelegramProxyBot } from './proxyip/bot3.js';
-import { converterku, ConverterBotku } from './converter/converter.js';
 
 const HOSTKU = 'joss.checker-ip.xyz';
 
@@ -135,6 +134,42 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
           `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
 
         await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
+        return new Response('OK', { status: 200 });
+      }
+
+    if (text.startsWith('/converter')) {
+    await this.sendMessage(
+      chatId,
+      `🤖 Stupid World Converter Bot
+
+Kirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox dan Clash.
+
+Contoh:
+vless://...
+vmess://...
+trojan://...
+ss://...
+
+Catatan:
+- Maksimal 10 link per permintaan.
+- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.
+`
+    );
+    return new Response('OK', { status: 200 });
+  }
+
+  // Jika pesan mengandung protokol proxy (vless://, vmess://, trojan://, ss://)
+  if (text.includes('://')) {
+    try {
+      // Ambil baris yang mengandung link valid
+      const links = text
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.includes('://'))
+        .slice(0, 10); // Batasi maksimal 10 link
+
+      if (links.length === 0) {
+        await this.sendMessage(chatId, 'Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
         return new Response('OK', { status: 200 });
       }
 
