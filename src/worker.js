@@ -15,14 +15,14 @@ export default {
       const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN);
       const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN);
       const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN);
-      const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN);
+      const bot4 = new Bot3(env.TELEGRAM_BOT_TOKEN);
       
       // Jalankan handleUpdate di kedua bot secara berurutan
       // Biasanya cuma butuh return salah satu response (misalnya dari bot1)
       await bot1.handleUpdate(update);
       await bot2.handleUpdate(update);
       await bot3.handleUpdate(update);
-      await bot3.handleUpdate(update);
+      await bot4.handleUpdate(update);
       
       // Kembalikan response 200 OK
       return new Response('OK', { status: 200 });
