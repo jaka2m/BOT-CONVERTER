@@ -39,34 +39,29 @@ export default class TelegramBot {
   }
 
   async handleUpdate(update) {
-  if (!update.message || !update.message.text) {
-    return new Response('OK', { status: 200 }); // Abaikan jika bukan pesan teks
-  }
+    if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
+
 
   const chatId = update.message.chat.id;
   const messageId = update.message.message_id;
   const text = update.message.text.trim();
 
-  // Cocokkan IP atau IP:PORT
+  // Cocokkan hanya IP atau IP:PORT
   const ipOnlyMatch = text.match(/^(\d{1,3}(?:\.\d{1,3}){3})$/);
   const ipPortMatch = text.match(/^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/);
 
-  // Jika tidak cocok format IP atau IP:PORT, abaikan saja tanpa membalas
+  // Abaikan jika bukan IP atau IP:PORT
   if (!ipOnlyMatch && !ipPortMatch) {
     return new Response('OK', { status: 200 });
   }
 
   const ip = ipPortMatch ? ipPortMatch[1] : ipOnlyMatch[1];
-  const port = ipPortMatch ? ipPortMatch[2] : '443'; // Default port jika tidak disertakan
+  const port = ipPortMatch ? ipPortMatch[2] : '443'; // default port
 
-  // Hapus pesan user
   await this.deleteMessage(chatId, messageId);
-
-  // Kirim typing dan loading
   await this.sendChatAction(chatId, 'typing');
   const loadingMsg = await this.sendMessage(chatId, '⏳');
 
-  // Ambil data IP
   const data = await fetchIPData(ip, port);
   if (!data) {
     await this.editMessage(chatId, loadingMsg.result.message_id, `❌ Gagal mengambil data untuk IP ${ip}:${port}`);
