@@ -1,6 +1,6 @@
 import { TelegramBot as Bot1 } from './bot.js';
 import { TelegramBotku as Bot2 } from './randomip/bot2.js';
-import { TelegramProxyBot as Bot3 } from './proxyip/bot3.js';
+import { TelegramProxyCekBot as Bot3 } from './proxyip/bot3.js';
 
 export default {
   async fetch(request, env) {
