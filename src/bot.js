@@ -99,7 +99,7 @@ Pilih protokol:`;
 
       if (parts[0] === "PROTOCOL") {
         const [_, protocol, ip, port] = parts;
-        await this.editMessage(chatId, messageId, `Pilih opsi wildcard untuk protokol ${protocol} pada ${ip}:${port}`, {
+        await this.editMessage(chatId, messageId, `⚙️Opsi wildcard untuk ${protocol}`, {
           reply_markup: createInitialWildcardInlineKeyboard(ip, port, protocol)
         });
         return new Response('OK', { status: 200 });
@@ -107,7 +107,7 @@ Pilih protokol:`;
 
       if (parts[0] === "SHOW_WILDCARD") {
         const [_, protocol, ip, port] = parts;
-        await this.editMessage(chatId, messageId, `Pilih wildcard untuk protokol ${protocol} pada ${ip}:${port}`, {
+        await this.editMessage(chatId, messageId, `⚙️Opsi wildcard untuk ${protocol}`, {
           reply_markup: createWildcardOptionsInlineKeyboard(ip, port, protocol)
         });
         return new Response('OK', { status: 200 });
