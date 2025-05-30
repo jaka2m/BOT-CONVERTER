@@ -142,7 +142,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
       chatId,
       `🤖 Stupid World Converter Bot
 
-Kirimkan saya link konfigurasi V2Ray dan saya akan mengubahnya ke format Singbox, Nekobox dan Clash.
+Kirimkan link konfigurasi V2Ray dan saya SPIDER - MAN akan mengubahnya ke format Singbox, Nekobox dan Clash.
 
 Contoh:
 vless://...
@@ -151,8 +151,8 @@ trojan://...
 ss://...
 
 Catatan:
-- Maksimal 10 link per permintaan.
-- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8 untuk hasil terbaik.
+- Maksimal 10 link per INPUT.
+- Disarankan menggunakan Singbox versi 1.10.3 atau 1.11.8.
 `
     );
     return new Response('OK', { status: 200 });
