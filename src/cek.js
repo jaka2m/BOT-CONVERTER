@@ -1,188 +1,189 @@
-import {
-  fetchIPData,
-  createProtocolInlineKeyboard,
-  createInitialWildcardInlineKeyboard,
-  createWildcardOptionsInlineKeyboard,
-  generateConfig
-} from './cek.js';
+const WILDCARD_MAP = {
+  ava: "ava.game.naver.com",
+  api: "api.midtrans.com"
+};
 
-export default class TelegramBot {
-  constructor(token, apiUrl = 'https://api.telegram.org') {
-    this.token = token;
-    this.apiUrl = apiUrl;
+const WILDCARD_OPTIONS = Object.entries(WILDCARD_MAP).map(
+  ([value, text]) => ({ text, value })
+);
+
+const DEFAULT_HOST = "joss.checker-ip.xyz"; 
+const API_URL = "https://api.checker-ip.web.id/check?ip=";
+
+export async function fetchIPData(ip, port) {
+  try {
+    const response = await fetch(`${API_URL}${encodeURIComponent(ip)}:${encodeURIComponent(port)}`);
+    if (!response.ok) throw new Error("Gagal mengambil data dari API.");
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching IP data:", error);
+    return null;
+  }
+}
+
+export function createProtocolInlineKeyboard(ip, port) {
+  return {
+    inline_keyboard: [
+      [
+        { text: "⚡ VLESS", callback_data: `PROTOCOL|VLESS|${ip}|${port}` },
+        { text: "⚡ TROJAN", callback_data: `PROTOCOL|TROJAN|${ip}|${port}` }
+      ],
+      [
+        { text: "⚡ VMESS", callback_data: `PROTOCOL|VMESS|${ip}|${port}` }
+      ],
+      [
+        { text: "⚡ SHADOWSOCKS", callback_data: `PROTOCOL|SHADOWSOCKS|${ip}|${port}` }
+      ]
+    ]
+  };
+}
+
+export function createInitialWildcardInlineKeyboard(ip, port, protocol) {
+  return {
+    inline_keyboard: [
+      [
+        { text: "🚫 NO WILDCARD", callback_data: `NOWILDCARD|${protocol}|${ip}|${port}` },
+        { text: "🔅 WILDCARD", callback_data: `SHOW_WILDCARD|${protocol}|${ip}|${port}` }
+      ],
+      [
+        { text: "🔙 Kembali", callback_data: `BACK|${ip}|${port}` }
+      ]
+    ]
+  };
+}
+
+export function createWildcardOptionsInlineKeyboard(ip, port, protocol) {
+  const buttons = WILDCARD_OPTIONS.map((option, index) => [
+    { text: `🔅 ${index + 1}. ${option.text}`, callback_data: `WILDCARD|${protocol}|${ip}|${port}|${option.value}` }
+  ]);
+  buttons.push([{ text: "🔙 Kembali", callback_data: `BACK|${ip}|${port}` }]);
+  return { inline_keyboard: buttons };
+}
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+function toBase64(str) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  return btoa(String.fromCharCode(...new Uint8Array(data.buffer)));
+}
+
+export function generateConfig(config, protocol, wildcardKey = null) {
+  if (!config || !config.ip || !config.port || !config.isp) {
+    return "❌ Data tidak valid!";
   }
 
-  async sendRequest(method, body) {
-    const url = `${this.apiUrl}/bot${this.token}/${method}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
-  }
+  const host = wildcardKey ? `${WILDCARD_MAP[wildcardKey]}.${DEFAULT_HOST}` : DEFAULT_HOST;
+  const sni = host;
+  const uuid = generateUUID();
+  const path = encodeURIComponent(`/Geo-Project/${config.ip}=${config.port}`);
+  const pathh = `/Geo-Project/${config.ip}-${config.port}`;
+  const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1'; // fixed UUID for VMESS
+  const ispEncoded = encodeURIComponent(config.isp);
+  let qrUrl = "";
 
-  async sendMessage(chatId, text, extra = {}) {
-    return this.sendRequest('sendMessage', { chat_id: chatId, text, parse_mode: 'Markdown', ...extra });
-  }
+  // VMess Config
+  if (protocol === "VMESS") {
+    const vmessTLS = {
+      v: "2",
+      ps: "[VMess-TLS]",
+      add: sni,
+      port: "443",
+      id: uuid1,
+      aid: "0",
+      net: "ws",
+      type: "none",
+      host: host,
+      path: pathh,
+      tls: "tls",
+      sni: sni,
+      scy: "zero"
+    };
 
-  async editMessage(chatId, messageId, text, extra = {}) {
-    return this.sendRequest('editMessageText', { chat_id: chatId, message_id: messageId, text, parse_mode: 'Markdown', ...extra });
-  }
+    const vmessNTLS = {
+      ...vmessTLS,
+      port: "80",
+      tls: "none",
+      ps: "[VMess-NTLS]"
+    };
 
-  async deleteMessage(chatId, messageId) {
-    return this.sendRequest('deleteMessage', { chat_id: chatId, message_id: messageId });
-  }
 
-  async sendChatAction(chatId, action = 'typing') {
-    return this.sendRequest('sendChatAction', { chat_id: chatId, action });
-  }
+    const configStringTLS = `vmess://${toBase64(JSON.stringify(vmessTLS))}`;
+    const configStringNTLS = `vmess://${toBase64(JSON.stringify(vmessNTLS))}`;
+    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configStringTLS)}&size=400x400`;
 
-  async handleUpdate(update) {
-    if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
-
-    // Handle text messages (expecting IP:PORT)
-    if (update.message && update.message.text) {
-      const chatId = update.message.chat.id;
-      const messageId = update.message.message_id;
-      const text = update.message.text.trim();
-
-      const ipPortMatch = text.match(/^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/);
-      if (!ipPortMatch) {
-        await this.sendMessage(chatId, "Masukkan IP dan port dengan format: `IP:PORT`\nContoh: `103.102.231.103:2053`");
-        return new Response('OK', { status: 200 });
-      }
-
-      const ip = ipPortMatch[1];
-      const port = ipPortMatch[2];
-
-      // Hapus pesan user
-      await this.deleteMessage(chatId, messageId);
-
-      // Tampilkan typing action
-      await this.sendChatAction(chatId, 'typing');
-
-      // Kirim pesan loading
-      const loadingMsg = await this.sendMessage(chatId, '⏳ Mengecek data IP...');
-
-      const data = await fetchIPData(ip, port);
-      if (!data) {
-        await this.editMessage(chatId, loadingMsg.result.message_id, `❌ Gagal mengambil data untuk IP ${ip}:${port}`);
-        return new Response('OK', { status: 200 });
-      }
-
-      const { isp, country, delay, status } = data;
-      const infoText = `\`\`\`INFORMATION
-IP     : ${ip}
-PORT   : ${port}
-ISP    : ${isp}
-Country: ${country || '-'}
-Delay: ${delay || '-'}
-Status: ${status || '-'}
+    return `
+\`\`\`VMESS-TLS
+${configStringTLS}
+\`\`\`\`\`\`VMESS-NTLS
+${configStringNTLS}
 \`\`\`
-Pilih protokol:`;
 
-      await this.editMessage(chatId, loadingMsg.result.message_id, infoText, {
-        reply_markup: createProtocolInlineKeyboard(ip, port)
-      });
-
-      return new Response('OK', { status: 200 });
-    }
-
-    // Handle callback queries (button presses)
-    if (update.callback_query) {
-      const callback = update.callback_query;
-      const chatId = callback.message.chat.id;
-      const messageId = callback.message.message_id;
-      const data = callback.data;
-      const parts = data.split('|');
-
-      if (parts[0] === "PROTOCOL") {
-        const [_, protocol, ip, port] = parts;
-        await this.editMessage(chatId, messageId, `Pilih opsi wildcard untuk protokol ${protocol} pada ${ip}:${port}`, {
-          reply_markup: createInitialWildcardInlineKeyboard(ip, port, protocol)
-        });
-        return new Response('OK', { status: 200 });
-      }
-
-      if (parts[0] === "SHOW_WILDCARD") {
-        const [_, protocol, ip, port] = parts;
-        await this.editMessage(chatId, messageId, `Pilih wildcard untuk protokol ${protocol} pada ${ip}:${port}`, {
-          reply_markup: createWildcardOptionsInlineKeyboard(ip, port, protocol)
-        });
-        return new Response('OK', { status: 200 });
-      }
-
-      if (parts[0] === "NOWILDCARD") {
-        const [_, protocol, ip, port] = parts;
-
-        await this.sendChatAction(chatId, 'typing');
-        const loadingMsg = await this.sendMessage(chatId, '⏳');
-
-        const dataInfo = await fetchIPData(ip, port);
-        if (!dataInfo) {
-          await this.editMessage(chatId, messageId, `❌ Gagal mengambil data untuk IP ${ip}:${port}`);
-          await this.deleteMessage(chatId, loadingMsg.result.message_id);
-          return new Response('OK', { status: 200 });
-        }
-
-        const configText = generateConfig(dataInfo, protocol, null);
-        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} tanpa wildcard:\n${configText}\n`, {
-          parse_mode: 'Markdown'
-        });
-
-        await this.deleteMessage(chatId, loadingMsg.result.message_id);
-        await this.sendMessage(chatId, `🔙`, {
-          reply_markup: createProtocolInlineKeyboard(ip, port)
-        });
-
-        return new Response('OK', { status: 200 });
-      }
-
-      if (parts[0] === "WILDCARD") {
-        const [_, protocol, ip, port, wildcardKey] = parts;
-
-        await this.sendChatAction(chatId, 'typing');
-        const loadingMsg = await this.sendMessage(chatId, '⏳');
-
-        const dataInfo = await fetchIPData(ip, port);
-        if (!dataInfo) {
-          await this.editMessage(chatId, messageId, `❌ Gagal mengambil data untuk IP ${ip}:${port}`);
-          await this.deleteMessage(chatId, loadingMsg.result.message_id);
-          return new Response('OK', { status: 200 });
-        }
-
-        const configText = generateConfig(dataInfo, protocol, wildcardKey);
-        await this.editMessage(chatId, messageId, `✅ Config untuk ${protocol} dengan wildcard *${wildcardKey}*:\n${configText}\n`, {
-          parse_mode: 'Markdown'
-        });
-
-        await this.deleteMessage(chatId, loadingMsg.result.message_id);
-        await this.sendMessage(chatId, `🔙 `, {
-          reply_markup: createProtocolInlineKeyboard(ip, port)
-        });
-
-        return new Response('OK', { status: 200 });
-      }
-
-      if (parts[0] === "BACK") {
-        const [_, ip, port] = parts;
-
-        const dataInfo = await fetchIPData(ip, port);
-        if (!dataInfo) {
-          await this.editMessage(chatId, messageId, `❌ Gagal mengambil data untuk IP ${ip}:${port}`);
-          return new Response('OK', { status: 200 });
-        }
-
-        const infoText = `Data untuk IP ${ip}:${port}:\nISP: ${dataInfo.isp}\nCountry: ${dataInfo.country}\n\nPilih protokol:`;
-        await this.editMessage(chatId, messageId, infoText, {
-          reply_markup: createProtocolInlineKeyboard(ip, port)
-        });
-
-        return new Response('OK', { status: 200 });
-      }
-
-      return new Response('OK', { status: 200 });
-    }
+👉 [QR Code URL](${qrUrl})
+🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+`;
   }
+
+  if (protocol === "VLESS") {
+    const vlessTLS = `vless://${uuid}@${host}:443?encryption=none&security=tls&sni=${sni}&fp=randomized&type=ws&host=${host}&path=${path}#${ispEncoded}`;
+    const vlessNTLS = `vless://${uuid}@${host}:80?path=${path}&security=none&encryption=none&host=${host}&fp=randomized&type=ws&sni=${host}#${ispEncoded}`;
+
+    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(vlessTLS)}&size=400x400`;
+
+    return `
+\`\`\`VLESS-TLS
+${vlessTLS}
+\`\`\`\`\`\`VLESS-NTLS
+${vlessNTLS}
+\`\`\`
+👉 [QR Code URL](${qrUrl})
+🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+`;
+  }
+
+  if (protocol === "TROJAN") {
+    const configString1 = `trojan://${uuid}@${host}:443?security=tls&sni=${sni}&fp=randomized&type=ws&host=${host}&path=${path}#${ispEncoded}`;
+    const configString2 = `trojan://${uuid}@${host}:80?path=${path}&security=none&encryption=none&host=${host}&fp=randomized&type=ws&sni=${host}#${ispEncoded}`;
+
+    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configString1)}&size=400x400`;
+
+    return `
+\`\`\`TROJAN-TLS
+${configString1}
+\`\`\`\`\`\`TROJAN-NTLS
+${configString2}
+\`\`\`
+👉 [QR Code URL](${qrUrl})
+🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+`;
+  }
+
+  if (protocol === "SHADOWSOCKS") {
+    const configString1 = `ss://${toBase64(`none:${uuid}`)}@${host}:443?encryption=none&type=ws&host=${host}&path=${path}&security=tls&sni=${sni}#${ispEncoded}`;
+    const configString2 = `ss://${toBase64(`none:${uuid}`)}@${host}:80?encryption=none&type=ws&host=${host}&path=${path}&security=none&sni=${sni}#${ispEncoded}`;
+
+    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configString1)}&size=400x400`;
+
+    return `
+\`\`\`SHADOWSOCKS-TLS
+${configString1}
+\`\`\`\`\`\`SHADOWSOCKS-NTLS
+${configString2}
+\`\`\`
+👉 [QR Code URL](${qrUrl})
+🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+`;
+  }
+
+  return "❌ Unknown protocol!";
 }
