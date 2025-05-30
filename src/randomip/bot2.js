@@ -30,54 +30,6 @@ export class TelegramBotku {
       return new Response('OK', { status: 200 });
     }
 
-if (text === '/start' || (message.photo && message.photo.length > 0)) {
-  const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg"; // URL gambar tetap sama
-
-  try {
-    await fetch(`${this.apiUrl}/bot${this.token}/sendPhoto`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        photo: imageUrl,
-        caption: `
-━━━━━━━━━━━━━━━━━━━
-≡             𝗪𝗘𝗟𝗖𝗢𝗠𝗘                ≡
-━━━━━━━━━━━━━━━━━━━
-🔍 *Cara Penggunaan:*
-1. Masukkan alamat IP dan port yang ingin Anda cek.
-2. Jika tidak memasukkan port, maka default adalah *443*.
-3. Tunggu beberapa detik untuk hasilnya
-
-💡KETIK /menu UNTUK MELIHAT COMMAND
-
-💡 *Format IP yang Diterima:*
-• \`176.97.78.80\`
-• \`176.97.78.80:2053\`
-
-⚠️ *Catatan:*
-- Jika status *DEAD*, Akun *VMESS*,*VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
-
-🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
-📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
-👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
-━━━━━━━━━━━━━━━━━━━
-            `.trim(),
-        parse_mode: "Markdown",
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "📢 GEO PROJECT", url: "https://t.me/sampiiiiu" }]
-          ]
-        }
-      })
-    });
-  } catch (error) {
-    console.error(error);
-  }
-
-  return new Response('OK', { status: 200 });
-}
-
     if (text === '/menu') {
       const menuText = `
 ══════════════════
@@ -288,7 +240,52 @@ Terima kasih atas dukungannya! 🙏
       return new Response('OK', { status: 200 });
     }
 
-    
+    if (text === '/start') {
+      const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg"; // Ganti dengan URL QRIS yang valid
+      try {
+        await fetch(`${this.apiUrl}/bot${this.token}/sendPhoto`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: chatId,
+            photo: imageUrl,
+            caption: `
+━━━━━━━━━━━━━━━━━━━
+≡             𝗪𝗘𝗟𝗖𝗢𝗠𝗘                ≡
+━━━━━━━━━━━━━━━━━━━
+🔍 *Cara Penggunaan:*
+1. Masukkan alamat IP dan port yang ingin Anda cek.
+2. Jika tidak memasukkan port, maka default adalah *443*.
+3. Tunggu beberapa detik untuk hasilnya
+
+💡KETIK /menu UNTUK MELIHAT COMMAND
+
+💡 *Format IP yang Diterima:*
+• \`176.97.78.80\`
+• \`176.97.78.80:2053\`
+
+⚠️ *Catatan:*
+- Jika status *DEAD*, Akun *VMESS*,*VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
+
+🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
+📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
+👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
+━━━━━━━━━━━━━━━━━━━
+            `.trim(),
+            parse_mode: "Markdown",
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "📢 GEO PROJECT", url: "https://t.me/sampiiiiu" }]
+              ]
+            }
+          })
+        });
+      } catch (error) {
+        console.error(error);
+      }
+      return new Response('OK', { status: 200 });
+    }
+
     return new Response('OK', { status: 200 });
   }
 
