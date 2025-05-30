@@ -240,14 +240,45 @@ Terima kasih atas dukungannya! 🙏
       return new Response('OK', { status: 200 });
     }
 
-  if (text === '/start') {
+const lastMessageMap = {};
+
+const sendMessage = async (chatId, text, options = {}) => {
+  const url = `${apiUrl}/bot${token}/sendMessage`;
+  const body = { chat_id: chatId, text, ...options };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+};
+
+const editMessageReplyMarkup = async ({ chat_id, message_id, reply_markup }) => {
+  const url = `${apiUrl}/bot${token}/editMessageReplyMarkup`;
+  const body = { chat_id, message_id, reply_markup };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  return response.json();
+};
+
+// Handler /start
+const handleStart = async (chatId, text) => {
+  if (text !== '/start') return;
+
   const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg";
 
-  // Coba hapus foto lama jika sebelumnya ada
+  // Hapus pesan lama
   const oldMessageId = lastMessageMap[chatId];
   if (oldMessageId) {
     try {
-      await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
+      await fetch(`${apiUrl}/bot${token}/deleteMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -262,7 +293,7 @@ Terima kasih atas dukungannya! 🙏
 
   // Kirim foto baru
   try {
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendPhoto`, {
+    const res = await fetch(`${apiUrl}/bot${token}/sendPhoto`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -306,41 +337,13 @@ Terima kasih atas dukungannya! 🙏
       throw new Error(result.description || "Gagal mengirim foto");
     }
 
-    // Simpan message_id terbaru
     lastMessageMap[chatId] = result.result.message_id;
-
   } catch (error) {
     console.error("❌ Gagal kirim foto baru:", error.message);
   }
 
   return new Response('OK', { status: 200 });
-}
-
-  async sendMessage(chatId, text, options = {}) {
-    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const body = { chat_id: chatId, text, ...options };
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return response.json();
-  }
-
-  async editMessageReplyMarkup({ chat_id, message_id, reply_markup }) {
-    const url = `${this.apiUrl}/bot${this.token}/editMessageReplyMarkup`;
-    const body = { chat_id, message_id, reply_markup };
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return response.json();
-  }
+};
 
   async answerCallbackQuery(callbackQueryId) {
     const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
