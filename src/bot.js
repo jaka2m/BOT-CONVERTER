@@ -77,8 +77,8 @@ IP     : ${ip}
 PORT   : ${port}
 ISP    : ${isp}
 Country: ${country || '-'}
-Delay: ${delay || '-'}
-Status: ${status || '-'}
+Delay  : ${delay || '-'}
+Status : ${status || '-'}
 \`\`\`
 Pilih protokol:`;
 
@@ -132,7 +132,7 @@ Pilih protokol:`;
         });
 
         await this.deleteMessage(chatId, loadingMsg.result.message_id);
-        await this.sendMessage(chatId, `🔙`, {
+        await this.sendMessage(chatId, `🔙 Back`, {
           reply_markup: createProtocolInlineKeyboard(ip, port)
         });
 
@@ -158,7 +158,7 @@ Pilih protokol:`;
         });
 
         await this.deleteMessage(chatId, loadingMsg.result.message_id);
-        await this.sendMessage(chatId, `🔙 `, {
+        await this.sendMessage(chatId, `🔙 Back `, {
           reply_markup: createProtocolInlineKeyboard(ip, port)
         });
 
