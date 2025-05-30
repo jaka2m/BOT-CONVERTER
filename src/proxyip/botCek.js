@@ -65,7 +65,11 @@ export class TelegramProxyCekBot {
 
       await this.deleteMessage(chatId, messageId);
       await this.sendChatAction(chatId, 'typing');
-      const loadingMsg = await this.sendMessage(chatId, '⏳');
+      const loadingMsg = await this.sendMessage(chatId, '
+\`\`\`Running
+Please wait while it is being processed...
+\`\`\`
+');
 
       const data = await fetchIPData(ip, port);
       if (!data) {
