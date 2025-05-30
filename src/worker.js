@@ -1,5 +1,5 @@
 import { TelegramBot as Bot1 } from './bot.js';
-import { TelegramProxyBot as Bot3 } from './proxyip/bot3.js';
+import { TelegramBotku as Bot3 } from './proxyip/bot2.js';
 import { TelegramProxyCekBot as Bot4 } from './proxyip/botCek.js';
 
 export default {
