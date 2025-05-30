@@ -12,59 +12,36 @@ export default class TelegramBot {
     this.apiUrl = apiUrl;
   }
 
-  async sendMessage(chatId, text, extra = {}) {
-    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const body = {
-      chat_id: chatId,
-      text,
-      parse_mode: 'Markdown',
-      ...extra
-    };
+  async sendRequest(method, body) {
+    const url = `${this.apiUrl}/bot${this.token}/${method}`;
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
     return response.json();
+  }
+
+  async sendMessage(chatId, text, extra = {}) {
+    return this.sendRequest('sendMessage', { chat_id: chatId, text, parse_mode: 'Markdown', ...extra });
   }
 
   async editMessage(chatId, messageId, text, extra = {}) {
-    const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
-    const body = {
-      chat_id: chatId,
-      message_id: messageId,
-      text,
-      parse_mode: 'Markdown',
-      ...extra
-    };
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
+    return this.sendRequest('editMessageText', { chat_id: chatId, message_id: messageId, text, parse_mode: 'Markdown', ...extra });
   }
 
   async deleteMessage(chatId, messageId) {
-    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
-    const body = {
-      chat_id: chatId,
-      message_id: messageId
-    };
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
+    return this.sendRequest('deleteMessage', { chat_id: chatId, message_id: messageId });
+  }
+
+  async sendChatAction(chatId, action = 'typing') {
+    return this.sendRequest('sendChatAction', { chat_id: chatId, action });
   }
 
   async handleUpdate(update) {
-    if (!update.message && !update.callback_query) {
-      return new Response('OK', { status: 200 });
-    }
+    if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
 
-    // === Handle Text Message ===
+    // Handle text messages (expecting IP:PORT)
     if (update.message && update.message.text) {
       const chatId = update.message.chat.id;
       const messageId = update.message.message_id;
@@ -82,7 +59,10 @@ export default class TelegramBot {
       // Hapus pesan user
       await this.deleteMessage(chatId, messageId);
 
-      // Tampilkan loading
+      // Tampilkan typing action
+      await this.sendChatAction(chatId, 'typing');
+
+      // Kirim pesan loading
       const loadingMsg = await this.sendMessage(chatId, '⏳ Mengecek data IP...');
 
       const data = await fetchIPData(ip, port);
@@ -108,7 +88,7 @@ Pilih protokol:`;
       return new Response('OK', { status: 200 });
     }
 
-    // === Handle Callback Button ===
+    // Handle callback queries (button presses)
     if (update.callback_query) {
       const callback = update.callback_query;
       const chatId = callback.message.chat.id;
@@ -134,6 +114,8 @@ Pilih protokol:`;
 
       if (parts[0] === "NOWILDCARD") {
         const [_, protocol, ip, port] = parts;
+
+        await this.sendChatAction(chatId, 'typing');
         const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memproses konfigurasi...');
 
         const dataInfo = await fetchIPData(ip, port);
@@ -158,6 +140,8 @@ Pilih protokol:`;
 
       if (parts[0] === "WILDCARD") {
         const [_, protocol, ip, port, wildcardKey] = parts;
+
+        await this.sendChatAction(chatId, 'typing');
         const loadingMsg = await this.sendMessage(chatId, '⏳ Sedang memproses konfigurasi...');
 
         const dataInfo = await fetchIPData(ip, port);
