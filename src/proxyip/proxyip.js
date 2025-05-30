@@ -1,6 +1,3 @@
-const APIKU = 'https://api.checker-ip.web.id/check?ip='; // Ganti dengan URL asli API status IP
-const DEFAULT_HOST = 'your.domain.com'; // Ganti dengan host default
-
 export function getFlagEmoji(countryCode) {
   if (!countryCode) return '';
   const codePoints = [...countryCode.toUpperCase()].map(c => 0x1F1E6 - 65 + c.charCodeAt());
