@@ -70,7 +70,7 @@ export default class TelegramBot {
 
       const { isp, country, latitude, longitude } = data;
 
-      const countryFlag = flag ? flag : "";
+      const countryFlag = country ? `` : "";
       const countryName = country ? country : "";
 
       const infoText = `Data untuk IP ${ip}:${port}:\nISP: ${isp}\nCountry: ${countryName} ${countryFlag}\n\nPilih protokol:`;
