@@ -20,7 +20,7 @@ function generateUUID() {
 // Fungsi utama generate config proxy random
 export async function randomconfig() {
   try {
-    const HOSTKU = 'example.com';
+    const HOSTKU = 'joss.checker-ip.xyz';
 
     // Ambil list proxy dari file txt
     const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/main/cek/proxyList.txt');
