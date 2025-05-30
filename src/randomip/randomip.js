@@ -1,6 +1,5 @@
 // randomip.js
 
-import fs from 'fs/promises';
 
 export let globalIpList = [];
 export let globalCountryCodes = [];
