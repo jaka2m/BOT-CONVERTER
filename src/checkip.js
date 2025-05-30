@@ -1,189 +1,184 @@
-import { checkProxyIP } from './checkip.js';
+export async function checkProxyIP(link) {
+  try {
+    let ip = '';
+    let port = '443';
 
-export class TelegramBot {
-  constructor(token, apiUrl = 'https://api.telegram.org') {
-    this.token = token;
-    this.apiUrl = apiUrl;
-  }
+    const clean = link.trim();
+    [ip, port = '443'] = clean.split(':');
 
-  async handleUpdate(update) {
-    if (!update.message && !update.callback_query) {
-      return new Response('OK', { status: 200 });
+    const isValidIP = ip.match(/^(\d{1,3}\.){3}\d{1,3}$/);
+    if (!isValidIP) throw new Error('Invalid IP format');
+
+    const res = await fetch(`https://api.checker-ip.web.id/check?ip=${ip}:${port}`);
+    const data = await res.json();
+
+    const result = {
+      ip: data.ip || ip,
+      port: data.port || port,
+      status: data.status || 'UNKNOWN',
+      delay: data.delay || '-',
+      country: data.country || '-',
+      flag: '',
+      city: data.city || '-',
+      isp: data.isp || '-',
+      regionName: data.regionName || '-',
+      asn: data.asn ? `AS${data.asn}` : '-',
+      timezone: data.timezone || '-',
+      org: data.org || '-',
+      configText: '',
+      vmessTLSLink: '',
+      vmessNTLSLink: '',
+      vlessTLSLink: '',
+      vlessNTLSLink: '',
+      trojanTLSLink: '',
+      trojanNTLSLink: '',
+      ssTLSLink: '',
+      ssNTLSLink: ''
+    };
+
+    const toBase64 = (str) => {
+      if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
+      return Buffer.from(str, 'utf-8').toString('base64');
+    };
+
+    const getFlagEmoji = (countryCode) => {
+      if (!countryCode) return '';
+      return countryCode
+        .toUpperCase()
+        .replace(/./g, char => String.fromCodePoint(127397 + char.charCodeAt()));
+    };
+
+    const generateUUID = () =>
+      crypto.randomUUID?.() || '11111111-1111-1111-1111-111111111111';
+
+    if (result.status === 'ACTIVE') {
+      const flag = getFlagEmoji(data.country);
+      result.flag = flag;
+
+      const rawCountry = data.country || 'UNKNOWN';
+      const rawProvider = data.org || data.isp || 'UNKNOWN';
+
+      const country = encodeURIComponent(rawCountry);
+      const provider = encodeURIComponent(rawProvider);
+
+      const HOSTKU = 'joss.checker-ip.xyz';
+      const path = encodeURIComponent(`/Geo-Project/${ip}-${port}`);
+
+      const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1';
+      const vlessUUID = generateUUID();
+      const trojanUUID = generateUUID();
+      const ssPassword = generateUUID();
+
+      // VMess
+      const vmessTLS = {
+        v: "2",
+        ps: `${country} - ${provider} [VMess-TLS]`,
+        add: HOSTKU,
+        port: "443",
+        id: uuid1,
+        aid: "0",
+        net: "ws",
+        type: "none",
+        host: HOSTKU,
+        path: path,
+        tls: "tls",
+        sni: HOSTKU,
+        scy: "zero"
+      };
+
+      const vmessNTLS = {
+        ...vmessTLS,
+        ps: `${country} - ${provider} [VMess-NTLS]`,
+        port: "80",
+        tls: "none"
+      };
+
+      result.vmessTLSLink = `vmess://${toBase64(JSON.stringify(vmessTLS))}`;
+      result.vmessNTLSLink = `vmess://${toBase64(JSON.stringify(vmessNTLS))}`;
+
+      // VLESS
+      result.vlessTLSLink = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#${provider}`;
+      result.vlessNTLSLink = `vless://${vlessUUID}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#${provider}`;
+
+      // Trojan
+      result.trojanTLSLink = `trojan://${trojanUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#${provider}`;
+      result.trojanNTLSLink = `trojan://${trojanUUID}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#${provider}`;
+
+      // Shadowsocks
+      const ssBase = toBase64(`none:${ssPassword}`);
+      result.ssTLSLink = `ss://${ssBase}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=tls&sni=${HOSTKU}#${provider}`;
+      result.ssNTLSLink = `ss://${ssBase}@${HOSTKU}:80?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=none#${provider}`;
+
+      // Informasi lengkap
+      const infoMessage = `
+IP      : ${result.ip}
+Port    : ${result.port}
+ISP     : ${result.isp}
+Country : ${result.country}
+Delay   : ${result.delay}
+Status  : ✅ ${result.status}
+`;
+
+      const configText = `
+\`\`\`INFORMATION
+${infoMessage.trim()}
+\`\`\`
+\`\`\`VMESS-TLS
+${result.vmessTLSLink}
+\`\`\`
+\`\`\`VMESS-NTLS
+${result.vmessNTLSLink}
+\`\`\`
+\`\`\`VLESS-TLS
+${result.vlessTLSLink}
+\`\`\`
+\`\`\`VLESS-NTLS
+${result.vlessNTLSLink}
+\`\`\`
+\`\`\`TROJAN-TLS
+${result.trojanTLSLink}
+\`\`\`
+\`\`\`TROJAN-NTLS
+${result.trojanNTLSLink}
+\`\`\`
+\`\`\`SHADOWSOCKS-TLS
+${result.ssTLSLink}
+\`\`\`
+\`\`\`SHADOWSOCKS-NTLS
+${result.ssNTLSLink}
+\`\`\`
+\`\`\`
+👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
+\`\`\`
+`.trim();
+
+      result.configText = configText;
     }
 
-    if (update.callback_query) {
-      const callback = update.callback_query;
-      const chatId = callback.message.chat.id;
-      const messageId = callback.message.message_id;
-      const data = callback.data;
-
-      const [action, ipPort] = data.split('|');
-
-      if (action === 'back') {
-        await this.editMessage(
-          chatId,
-          messageId,
-          `IP:PORT *${ipPort}*\nSilakan pilih salah satu jenis konfigurasi:`,
-          this.getMainKeyboard(ipPort)
-        );
-        await this.answerCallback(callback.id);
-        return new Response('OK', { status: 200 });
-      }
-
-      const result = await checkProxyIP(ipPort);
-      if (result.status !== 'ACTIVE') {
-        await this.editMessage(chatId, messageId, `❌ Proxy ${ipPort} tidak aktif.`, null);
-        await this.answerCallback(callback.id);
-        return new Response('OK', { status: 200 });
-      }
-
-      await this.editMessage(
-        chatId,
-        messageId,
-        '```INFORMATION\n' +
-        `IP       :${result.ip}\n` +
-        `PORT     :${result.port}\n` +
-        `ISP      :${result.isp}\n` +
-        `COUNTRY  :${result.country}\n` +
-        `DELAY    :${result.delay}\n` +
-        `STATUS   :✅ ${result.status}\n` +
-        '```' +
-        '```TLS\n' +
-        `${this.getTLSConfig(result, action)}\n` +
-        '```' +
-        '```Non-TLS\n' +
-        `${this.getNonTLSConfig(result, action)}\n` +
-        '```',
-        this.getConfigKeyboard(ipPort)
-      );
-
-      await this.answerCallback(callback.id);
-      return new Response('OK', { status: 200 });
-    }
-
-    const chatId = update.message.chat.id;
-    const text = update.message.text?.trim() || '';
-
-    const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
-    if (ipPortPattern.test(text)) {
-      const loading = await this.sendMessage(chatId, '⏳ Memeriksa proxy...');
-
-      const result = await checkProxyIP(text);
-      if (result.status !== 'ACTIVE') {
-        await this.editMessage(chatId, loading.result.message_id, `❌ Proxy ${text} tidak aktif.`);
-        return new Response('OK', { status: 200 });
-      }
-
-      await this.editMessage(
-        chatId,
-        loading.result.message_id,
-        `✅ Proxy *${text}* aktif.\nPilih jenis konfigurasi:`,
-        this.getMainKeyboard(text)
-      );
-
-      return new Response('OK', { status: 200 });
-    }
-
-    return new Response('OK', { status: 200 });
-  }
-
-  getTLSConfig(result, action) {
-    switch (action) {
-      case 'vless': return result.vlessTLSLink || '';
-      case 'trojan': return result.trojanTLSLink || '';
-      case 'vmess': return result.vmessTLSLink || '';
-      case 'ss': return result.ssTLSLink || '';
-      default: return '';
-    }
-  }
-
-  getNonTLSConfig(result, action) {
-    switch (action) {
-      case 'vless': return result.vlessNTLSLink || '';
-      case 'trojan': return result.trojanNTLSLink || '';
-      case 'vmess': return result.vmessNTLSLink || '';
-      case 'ss': return result.ssNTLSLink || '';
-      default: return '';
-    }
-  }
-
-  getMainKeyboard(ipPort) {
+    return result;
+  } catch (error) {
     return {
-      inline_keyboard: [
-        [
-          { text: 'VLESS', callback_data: `vless|${ipPort}` },
-          { text: 'TROJAN', callback_data: `trojan|${ipPort}` }
-        ],
-        [
-          { text: 'VMESS', callback_data: `vmess|${ipPort}` },
-          { text: 'SHADOWSOCKS', callback_data: `ss|${ipPort}` }
-        ],
-        [
-          { text: 'BACK', callback_data: `back|${ipPort}` }
-        ]
-      ]
+      ip: '-',
+      port: '-',
+      status: 'ERROR',
+      delay: '-',
+      country: '-',
+      flag: '',
+      city: '-',
+      isp: '-',
+      regionName: '-',
+      asn: '-',
+      timezone: '-',
+      org: '-',
+      configText: '',
+      vmessTLSLink: '',
+      vmessNTLSLink: '',
+      vlessTLSLink: '',
+      vlessNTLSLink: '',
+      trojanTLSLink: '',
+      trojanNTLSLink: '',
+      ssTLSLink: '',
+      ssNTLSLink: ''
     };
-  }
-
-  getConfigKeyboard(ipPort) {
-    return {
-      inline_keyboard: [
-        [
-          { text: 'Kembali ke menu', callback_data: `back|${ipPort}` }
-        ]
-      ]
-    };
-  }
-
-  async sendMessage(chatId, text, replyMarkup) {
-    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const body = {
-      chat_id: chatId,
-      text,
-      parse_mode: 'Markdown',
-    };
-    if (replyMarkup) {
-      body.reply_markup = replyMarkup;
-    }
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    return response.json();
-  }
-
-  async editMessage(chatId, messageId, text, replyMarkup) {
-    const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
-    const body = {
-      chat_id: chatId,
-      message_id: messageId,
-      text,
-      parse_mode: 'Markdown',
-    };
-    if (replyMarkup) {
-      body.reply_markup = replyMarkup;
-    }
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    return response.json();
-  }
-
-  async answerCallback(callbackQueryId, text = '') {
-    const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
-    const body = {
-      callback_query_id: callbackQueryId,
-      text,
-      show_alert: !!text,
-    };
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    return response.json();
   }
 }
