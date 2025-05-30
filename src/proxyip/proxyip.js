@@ -281,8 +281,7 @@ export async function handleCallbackQuery(bot, callbackQuery) {
 
         configText = `\`\`\`VMESS-TLS
 vmess://${toBase64(JSON.stringify(vmessJSON_TLS))}
-\`\`\`\`\`\`
-VMESS-NTLS
+\`\`\`\`\`\`VMESS-NTLS
 vmess://${toBase64(JSON.stringify(vmessJSON_NTLS))}
 \`\`\``;
 
@@ -301,7 +300,7 @@ trojan://${uuid}@${DEFAULT_HOST}:80?path=${path}&security=none&encryption=none&h
 \`\`\``;
 
       } else if (type === 'ss') {
-        configText = `\`\`\`\nSHADOWSOCKS-TLS
+        configText = `\`\`\`SHADOWSOCKS-TLS
 ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:443?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=tls&sni=${DEFAULT_HOST}#${prov}
 \`\`\`\`\`\`SHADOWSOCKS-NTLS
 ss://${toBase64(`none:${uuid}`)}@${DEFAULT_HOST}:80?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=none&sni=${DEFAULT_HOST}#${prov}
