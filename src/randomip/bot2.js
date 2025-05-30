@@ -13,19 +13,6 @@ export class TelegramBotku {
     this.apiUrl = apiUrl;
   }
 
-  async sendMessage(chatId, text, options = {}) {
-    // You need to implement this method to send messages via Telegram API
-    await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        ...options,
-      }),
-    });
-  }
-
   async handleUpdate(update) {
     if (update.callback_query) {
       await handleCallbackQuery(this, update.callback_query);
@@ -40,42 +27,6 @@ export class TelegramBotku {
 
     if (text === '/proxy') {
       await handleRandomIpCommand(this, chatId);
-      return new Response('OK', { status: 200 });
-    }
-
-    if (text === '/start') {
-      const userId = update.message.from.id;
-
-      const welcomeMessage = `
-━━━━━━━━━━━━━━━━━        
-≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡
-━━━━━━━━━━━━━━━━━
-» *Name:* ${update.message.from.first_name}  
-» *Username:* @${update.message.from.username || "Tidak Ada"}  
-» *User ID:* ${userId}  
-━━━━━━━━━━━━━━━━━
-
-🔍 *Cara Penggunaan:*
-1. Masukkan alamat IP dan port yang ingin Anda cek.
-2. Jika tidak memasukkan port, maka default adalah *443*.
-3. Tunggu beberapa detik untuk hasilnya
-
-💡KETIK /menu UNTUK MELIHAT COMMAND
-
-💡 *Format IP yang Diterima:*
-• \`176.97.78.80\`
-• \`176.97.78.80:2053\`
-
-⚠️ *Catatan:*
-- Jika status *DEAD*, maka akun *VMESS*,*VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
-
-👨‍💻 Modded By : [Geo Project](https://t.me/sampiiiiu)
-
-🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
-📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
-👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
-`;
-      await this.sendMessage(chatId, welcomeMessage, { parse_mode: "Markdown" });
       return new Response('OK', { status: 200 });
     }
 
@@ -105,7 +56,7 @@ SUPPORT
       return new Response('OK', { status: 200 });
     }
 
-    if (text === '/findproxy') {
+if (text === '/findproxy') {
       const menuText = `
 ══════════════════
 🏷️ *TUTORIAL CARI PROXY* 🏷️
@@ -185,7 +136,7 @@ not autonomous_system.name: "CLOUDFLARE*" and services: (software.product: "Clou
 👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)
 `;
 
-      await this.sendMessage(chatId, menuText, { parse_mode: 'Markdown' });
+      await this.sendMessage(chatId, menuText);
       return new Response('OK', { status: 200 });
     }
 
@@ -272,7 +223,7 @@ Terima kasih atas dukungannya! 🙏
         let usageText = "*📊 Data Pemakaian 10 Hari Terakhir:*\n\n";
         result.data.viewer.zones[0].httpRequests1dGroups.forEach((day) => {
           const tanggal = day.dimensions.date;
-          const totalData = (day.sum.bytes / (1024 ** 4)).toFixed(2); // TB
+          const totalData = (day.sum.bytes / (1024 ** 4)).toFixed(2); // dalam TB
           const totalRequests = day.sum.requests.toLocaleString();
 
           usageText += `📅 *Tanggal:* ${tanggal}\n📦 *Total Data:* ${totalData} TB\n📊 *Total Requests:* ${totalRequests}\n\n`;
@@ -282,18 +233,59 @@ Terima kasih atas dukungannya! 🙏
       } catch (error) {
         await this.sendMessage(
           chatId,
-          `⚠️ Gagal mengambil data pemakaian.\n${error.message}`
+          `⚠️ Gagal mengambil data pemakaian.\n\n_Error:_ ${error.message}`,
+          { parse_mode: "Markdown" }
         );
       }
+
       return new Response('OK', { status: 200 });
     }
 
-    // Add any other commands here...
+    if (text === '/start') {
+      const welcomeText = `
+━━━━━━━━━━━━━━━━━        
+≡          𝗪𝗘𝗟𝗖𝗢𝗠𝗘             ≡
+━━━━━━━━━━━━━━━━━
+🔍 *Cara Penggunaan:*
+1. Masukkan alamat IP dan port yang ingin Anda cek.
+2. Jika tidak memasukkan port, maka default adalah *443*.
+3. Tunggu beberapa detik untuk hasilnya
 
-    // If command not recognized, you can optionally reply or ignore
+💡KETIK /menu UNTUK MELIHAT COMMAND
+
+💡 *Format IP yang Diterima:*
+• \`176.97.78.80\`
+• \`176.97.78.80:2053\`
+
+⚠️ *Catatan:*
+- Jika status *DEAD*, maka tombol *VMESS*,*VLESS*, *SS*, dan *TROJAN* tidak akan respon dan akun tidak dibuat.
+
+👨‍💻 Modded By : [Geo Project](https://t.me/sampiiiiu)
+
+🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
+📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
+👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
+━━━━━━━━━━━━━━━━━
+`;
+      await this.sendMessage(chatId, welcomeText, { parse_mode: "Markdown" });
+      return new Response('OK', { status: 200 });
+    }
+
     return new Response('OK', { status: 200 });
   }
-}
+
+  async sendMessage(chatId, text, options = {}) {
+    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+    const body = { chat_id: chatId, text, ...options };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    return response.json();
+  }
 
   async editMessageReplyMarkup({ chat_id, message_id, reply_markup }) {
     const url = `${this.apiUrl}/bot${this.token}/editMessageReplyMarkup`;
