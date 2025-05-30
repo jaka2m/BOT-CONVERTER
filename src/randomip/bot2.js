@@ -38,20 +38,105 @@ export class TelegramBotku {
 Pilih command sesuai kebutuhan !
 ══════════════════
 /start → mulai bot !
-/cek IP:PORT → Cek proxy ACTIVE / DEAD !
 /randomcc → Config random sesuai tombol Flag CC
 /traffic → Daftar pemakain akun Cloudflare ! 
 /listwildcard → Daftar bug wildcard ! 
 /findproxy → Cara Cari Proxy ! 
 /converter → Converter Akun V2ray ! 
-/random → Config random mix protocol! 
-/randomip → random Proxy IPs! 
+/randomconfig → Config random mix protocol! 
+/proxyip → Buat konfigurasi proxy
+/proxy → Generate Proxy IPs! ! 
 /config → Generate config auto-rotate! 
 ══════════════════
 SUPPORT
 /donate → Bantu admin 😘 !
 ══════════════════
 `;
+      await this.sendMessage(chatId, menuText);
+      return new Response('OK', { status: 200 });
+    }
+
+if (text === '/findproxy') {
+      const menuText = `
+══════════════════
+🏷️ *TUTORIAL CARI PROXY* 🏷️
+══════════════════
+📌 **FOFA (fofa.info)**  
+🔗 Situs: [en.fofa.info](https://en.fofa.info)  
+🔍 Kueri pencarian:  
+\`\`\`query
+server=="cloudflare" && is_domain=false && banner="Content-Length: 155" && protocol="http" && org!="CLOUDFLARENET" && country="ID" && asn!="59134"
+\`\`\`
+💡 **Catatan:**  
+- Ubah \`asn="63949"\` untuk ISP tertentu  
+- Ubah \`country="ID"\` ke kode negara lain  
+- Tambahkan filter port: \`&& port="443"\`
+
+══════════════════
+📌 **HUNTER.HOW**  
+🔗 Situs: [hunter.how](https://hunter.how)  
+🔍 Kueri pencarian:  
+\`\`\`query
+as.org!="Cloudflare London, LLC"&&product.name="CloudFlare"&&header.status_code=="400"&&protocol=="http"&&header.content_length=="655"&&ip.country=="ID"
+\`\`\`
+💡 **Catatan:**  
+- Tambah \`&&as.number="59134"\` untuk filter ASN  
+- Tambah \`&&ip.port="443"\` untuk fokus ke port 443  
+- Ubah negara dengan \`ip.country="SG"\`  
+
+══════════════════
+📌 **SHODAN.IO**  
+🔗 Situs: [shodan.io](https://shodan.io)  
+🔍 Kueri pencarian:  
+\`\`\`query
+product:"Cloudflare" country:"ID"
+\`\`\`
+💡 **Catatan:**  
+- Filter port: \`port:443\`  
+- Filter provider: \`org:"Akamai"\`  
+
+══════════════════
+📌 **ZOOMEYE.HK**  
+🔗 Situs: [zoomeye.hk](https://zoomeye.hk)  
+🔍 Kueri pencarian:  
+\`\`\`query
++app:"Cloudflare" +service:"http" +title:"400 The plain HTTP request was sent to HTTPS port" +country:"Singapore"
+\`\`\`
+💡 **Catatan:**  
+- Tambah \`+asn:59134\` untuk filter ASN  
+- Spesifikkan port dengan \`+port:"443"\`  
+- Ubah negara dengan \`+country:"Indonesia"\`  
+
+══════════════════
+📌 **BINARYEDGE.IO**  
+🔗 Situs: [app.binaryedge.io](https://app.binaryedge.io)  
+🔍 Kueri pencarian:  
+\`\`\`query
+country:ID title:"400 The plain HTTP request was sent to HTTPS port" product:nginx protocol:"tcp" name:http banner:"Server: cloudflare" banner:"CF-RAY: -" NOT asn:209242
+\`\`\`
+💡 **Catatan:**  
+- Hapus \`NOT\` untuk mencari ASN tertentu (\`asn:59134\`)  
+- Tambah filter port dengan \`port:443\`  
+- Filter provider: \`as_name:Digitalocean\`  
+
+══════════════════
+📌 **CENSYS.IO**  
+🔗 Situs: [search.censys.io](https://search.censys.io)  
+🔍 Kueri pencarian dasar:  
+\`\`\`query
+not autonomous_system.name: "CLOUDFLARE*" and services: (software.product: "CloudFlare Load Balancer" and http.response.html_title: "400 The plain HTTP request was sent to HTTPS port") and location.country: "Indonesia"
+\`\`\`
+💡 **Catatan:**  
+- Tambahkan filter port dengan \`and services.port=443\`  
+- Filter provider: \`autonomous_system.name: "nama_provider"\`  
+
+══════════════════
+🔎 Untuk mengecek status proxy, kirim hasil pencarian langsung ke bot ini.  
+
+👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)
+`;
+
+    `;
       await this.sendMessage(chatId, menuText);
       return new Response('OK', { status: 200 });
     }
