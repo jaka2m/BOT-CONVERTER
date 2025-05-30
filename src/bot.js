@@ -62,6 +62,7 @@ export default class TelegramBot {
   async handleUpdate(update) {
     if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
 
+    // Handle message text (IP:port)
     if (update.message && update.message.text) {
       const chatId = update.message.chat.id;
       const text = update.message.text.trim();
@@ -81,9 +82,12 @@ export default class TelegramBot {
         return new Response('OK', { status: 200 });
       }
 
-      const { isp, country } = data;
+      const { isp, country, latitude, longitude } = data;
 
-      const infoText = `Data untuk IP ${ip}:${port}:\nISP: ${isp}\nCountry: ${country}\n\nPilih protokol:`;
+      const countryFlag = country ? `` : "";
+      const countryName = country ? country : "";
+
+      const infoText = `Data untuk IP ${ip}:${port}:\nISP: ${isp}\nCountry: ${countryName} ${countryFlag}\n\nPilih protokol:`;
 
       await this.sendMessage(chatId, infoText, {
         reply_markup: createProtocolInlineKeyboard(ip, port)
@@ -92,12 +96,14 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
+    // Handle callback query (button pressed)
     if (update.callback_query) {
       const callback = update.callback_query;
       const chatId = callback.message.chat.id;
       const messageId = callback.message.message_id;
       const data = callback.data;
 
+      // Format data: PROTOCOL|VLESS|ip|port
       const parts = data.split('|');
 
       if (parts[0] === "PROTOCOL") {
@@ -105,6 +111,7 @@ export default class TelegramBot {
         const ip = parts[2];
         const port = parts[3];
 
+        // Tampilkan tombol wildcard / no wildcard
         await this.editMessage(chatId, messageId, `Pilih opsi wildcard untuk protokol ${protocol} pada ${ip}:${port}`, {
           reply_markup: createInitialWildcardInlineKeyboard(ip, port, protocol)
         });
