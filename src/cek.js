@@ -7,8 +7,8 @@ const WILDCARD_OPTIONS = Object.entries(WILDCARD_MAP).map(
   ([value, text]) => ({ text, value })
 );
 
-const DEFAULT_HOST = "your.default.host"; // ganti sesuai kebutuhan
-const API_URL = "https://api.checker-ip.web.id/check?ip="; // ganti sesuai API Anda
+const DEFAULT_HOST = "joss.checker-ip.xyz"; 
+const API_URL = "https://api.checker-ip.web.id/check?ip=";
 
 export async function fetchIPData(ip, port) {
   try {
@@ -88,6 +88,7 @@ export function generateConfig(config, protocol, wildcardKey = null) {
   const ispEncoded = encodeURIComponent(config.isp);
   let qrUrl = "";
 
+  // VMess Config
   if (protocol === "VMESS") {
     const vmessTLS = {
       v: "2",
@@ -98,20 +99,32 @@ export function generateConfig(config, protocol, wildcardKey = null) {
       aid: "0",
       net: "ws",
       type: "none",
-      host,
+      host: host,
       path: pathh,
       tls: "tls",
-      sni,
+      sni: sni,
       scy: "zero"
     };
 
+    const vmessNTLS = {
+      ...vmessTLS,
+      port: "80",
+      tls: "none",
+      ps: "[VMess-NTLS]"
+    };
+
+
     const configStringTLS = `vmess://${toBase64(JSON.stringify(vmessTLS))}`;
+    const configStringNTLS = `vmess://${toBase64(JSON.stringify(vmessNTLS))}`;
     qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configStringTLS)}&size=200x200`;
 
     return `
 \`\`\`VMESS-TLS
 ${configStringTLS}
+\`\`\`\`\`\`VMESS-NTLS
+${configStringNTLS}
 \`\`\`
+
 👉 [QR Code URL](${qrUrl})
 🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
 👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
@@ -120,11 +133,15 @@ ${configStringTLS}
 
   if (protocol === "VLESS") {
     const vlessTLS = `vless://${uuid}@${host}:443?encryption=none&security=tls&sni=${sni}&fp=randomized&type=ws&host=${host}&path=${path}#${ispEncoded}`;
+    const vlessNTLS = `vless://${uuid}@${host}:80?path=${path}&security=none&encryption=none&host=${host}&fp=randomized&type=ws&sni=${host}#${ispEncoded}`;
+
     qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(vlessTLS)}&size=200x200`;
 
     return `
 \`\`\`VLESS-TLS
 ${vlessTLS}
+\`\`\`\`\`\`VLESS-NTLS
+${vlessNTLS}
 \`\`\`
 👉 [QR Code URL](${qrUrl})
 🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
@@ -133,12 +150,16 @@ ${vlessTLS}
   }
 
   if (protocol === "TROJAN") {
-    const trojanConfig = `trojan://${uuid}@${host}:443?security=tls&sni=${sni}&fp=randomized&type=ws&host=${host}&path=${path}#${ispEncoded}`;
-    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(trojanConfig)}&size=200x200`;
+    const configString1 = `trojan://${uuid}@${host}:443?security=tls&sni=${sni}&fp=randomized&type=ws&host=${host}&path=${path}#${ispEncoded}`;
+    const configString2 = `trojan://${uuid}@${host}:80?path=${path}&security=none&encryption=none&host=${host}&fp=randomized&type=ws&sni=${host}#${ispEncoded}`;
+
+    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configString1)}&size=200x200`;
 
     return `
 \`\`\`TROJAN-TLS
-${trojanConfig}
+${configString1}
+\`\`\`\`\`\`TROJAN-NTLS
+${configString2}
 \`\`\`
 👉 [QR Code URL](${qrUrl})
 🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
@@ -147,12 +168,16 @@ ${trojanConfig}
   }
 
   if (protocol === "SHADOWSOCKS") {
-    const ssConfig = `ss://${toBase64(`none:${uuid}`)}@${host}:443?encryption=none&type=ws&host=${host}&path=${path}&security=tls&sni=${sni}#${ispEncoded}`;
-    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(ssConfig)}&size=200x200`;
+    const configString1 = `ss://${toBase64(`none:${uuid}`)}@${host}:443?encryption=none&type=ws&host=${host}&path=${path}&security=tls&sni=${sni}#${ispEncoded}`;
+    const configString2 = `ss://${toBase64(`none:${uuid}`)}@${host}:80?encryption=none&type=ws&host=${host}&path=${path}&security=none&sni=${sni}#${ispEncoded}`;
+
+    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configString1)}&size=200x200`;
 
     return `
 \`\`\`SHADOWSOCKS-TLS
-${ssConfig}
+${configString1}
+\`\`\`\`\`\`SHADOWSOCKS-NTLS
+${configString2}
 \`\`\`
 👉 [QR Code URL](${qrUrl})
 🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
