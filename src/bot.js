@@ -71,11 +71,67 @@ export class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text?.trim() || '';
 
-    // ✅ Tangani /start
-    if (text === '/start') {
-      await this.sendMessage(chatId, `👋 Selamat datang di *Proxy Config Bot*!\n\nKirim IP:PORT untuk mengecek status dan mendapatkan link konfigurasi dalam berbagai format:\n\nContoh:\n\`123.456.789.0:443\``);
-      return new Response('OK', { status: 200 });
-    }
+    // /config command
+      if (text.startsWith('/config')) {
+        const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
+
+Ketik perintah berikut untuk mendapatkan config rotate berdasarkan negara:
+
+\`/rotate + kode_negara\`
+
+Negara tersedia:
+id, sg, my, us, ca, in, gb, ir, ae, fi, tr, md, tw, ch, se, nl, es, ru, ro, pl, al, nz, mx, it, de, fr, am, cy, dk, br, kr, vn, th, hk, cn, jp.
+
+Contoh:
+\`/rotate id\`
+\`/rotate sg\`
+\`/rotate my\`
+
+Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.`;
+        await this.sendMessage(chatId, helpMsg, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
+
+      // /rotate command
+      if (text.startsWith('/rotate ')) {
+        await rotateconfig.call(this, chatId, text);
+        return new Response('OK', { status: 200 });
+      }
+
+      // /randomconfig command
+      if (text.startsWith('/randomconfig')) {
+        const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
+        try {
+          const configText = await randomconfig();
+          await this.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
+        } catch (error) {
+          console.error('Error generating random config:', error);
+          await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
+        }
+        if (loadingMsg && loadingMsg.message_id) {
+          await this.deleteMessage(chatId, loadingMsg.message_id);
+        }
+        return new Response('OK', { status: 200 });
+      }
+
+      // /listwildcard command
+      if (text.startsWith('/listwildcard')) {
+        const wildcards = [
+          "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
+          "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
+          "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
+          "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
+        ];
+
+        const configText =
+          `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
+          wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
+          `\n\n📦 *Total:* ${wildcards.length} wildcard` +
+          `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
+
+        await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
+        return new Response('OK', { status: 200 });
+      }
 
     // Tangani input IP:PORT
     const ipPortPattern = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
