@@ -11,7 +11,7 @@ export default {
           env.TELEGRAM_BOT_TOKEN,     // token bot dari wrangler.toml
           undefined,                  // optional secret token
           env.rootDomain,             // dari wrangler.toml [vars]
-          env.ownerId                  // Telegram user ID
+          1467883032                  // Telegram user ID
         );
 
         return bot.handleUpdate(update);
