@@ -1,10 +1,9 @@
-import { addsubdomain, deletesubdomain, listSubdomains } from './wildcard.js';
+import { addsubdomain, deletesubdomain } from './wildcard.js';
 
 export default class TelegramBot {
-  constructor(token, apiUrl, ownerId) {
+  constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
-    this.apiUrl = apiUrl || 'https://api.telegram.org';
-    this.ownerId = ownerId;
+    this.apiUrl = apiUrl;
   }
 
   async handleUpdate(update) {
@@ -14,63 +13,25 @@ export default class TelegramBot {
     const text = update.message.text || '';
 
     if (text.startsWith('/start')) {
-      await this.sendMessage(chatId, 'Welcome! Use /add <subdomain> to add, /del <subdomain> to delete, /list to list subdomains.');
-      return new Response('OK', { status: 200 });
-    }
-
-    // ⛔ Batasi /add dan /del hanya untuk owner
-    if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
-      await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
-      return new Response('OK', { status: 200 });
-    }
-
-    if (text.startsWith('/add ')) {
-      const subdomain = text.split(' ')[1];
+      await this.sendMessage(chatId, 'Halo! Gunakan perintah:\n/add <subdomain> untuk menambah subdomain\n/del <subdomain> untuk menghapus subdomain');
+    } else if (text.startsWith('/add ')) {
+      const subdomain = text.slice(5).trim();
       if (!subdomain) {
-        await this.sendMessage(chatId, 'Please specify the subdomain to add. Example: /add test');
-        return new Response('OK', { status: 200 });
-      }
-      const status = await addsubdomain(subdomain);
-      if (status === 200) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} added successfully.`);
-      } else if (status === 409) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} already exists.`);
-      } else if (status === 530) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} not active or error 530.`);
+        await this.sendMessage(chatId, 'Gunakan: /add <subdomain>');
       } else {
-        await this.sendMessage(chatId, `Failed to add subdomain ${subdomain}.${rootDomain}, status: ${status}`);
+        await this.handleAdd(chatId, subdomain);
       }
-      return new Response('OK', { status: 200 });
-    }
-
-    if (text.startsWith('/del ')) {
-      const subdomain = text.split(' ')[1];
+    } else if (text.startsWith('/del ')) {
+      const subdomain = text.slice(5).trim();
       if (!subdomain) {
-        await this.sendMessage(chatId, 'Please specify the subdomain to delete. Example: /del test');
-        return new Response('OK', { status: 200 });
-      }
-      const status = await deletesubdomain(subdomain);
-      if (status === 200) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} deleted successfully.`);
-      } else if (status === 404) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} not found.`);
+        await this.sendMessage(chatId, 'Gunakan: /del <subdomain>');
       } else {
-        await this.sendMessage(chatId, `Failed to delete subdomain ${subdomain}.${rootDomain}, status: ${status}`);
+        await this.handleDelete(chatId, subdomain);
       }
-      return new Response('OK', { status: 200 });
+    } else {
+      await this.sendMessage(chatId, 'Perintah tidak dikenal. Gunakan /start untuk daftar perintah.');
     }
 
-    if (text.startsWith('/list')) {
-      const domains = await listSubdomains();
-      if (domains.length === 0) {
-        await this.sendMessage(chatId, 'No subdomains registered yet.');
-      } else {
-        await this.sendMessage(chatId, `Registered subdomains:\n${domains.join('\n')}`);
-      }
-      return new Response('OK', { status: 200 });
-    }
-
-    await this.sendMessage(chatId, 'Unknown command. Use /add, /del, or /list.');
     return new Response('OK', { status: 200 });
   }
 
@@ -79,29 +40,42 @@ export default class TelegramBot {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text
-      })
+      body: JSON.stringify({ chat_id: chatId, text })
     });
     return response.json();
   }
 
-  async sendDocument(chatId, content, filename, mimeType) {
-    const formData = new FormData();
-    const blob = new Blob([content], { type: mimeType });
-    formData.append('document', blob, filename);
-    formData.append('chat_id', chatId.toString());
-
-    const response = await fetch(
-      `${this.apiUrl}/bot${this.token}/sendDocument`, {
-        method: 'POST',
-        body: formData
+  async handleAdd(chatId, subdomain) {
+    await this.sendMessage(chatId, `Menambahkan subdomain: ${subdomain}...`);
+    try {
+      const status = await addsubdomain(subdomain);
+      if (status === 200) {
+        await this.sendMessage(chatId, `Subdomain ${subdomain} berhasil ditambahkan.`);
+      } else if (status === 409) {
+        await this.sendMessage(chatId, `Subdomain ${subdomain} sudah terdaftar.`);
+      } else if (status === 400) {
+        await this.sendMessage(chatId, `Format subdomain salah atau tidak valid.`);
+      } else if (status === 530) {
+        await this.sendMessage(chatId, `Cloudflare error 530: gateway error.`);
+      } else {
+        await this.sendMessage(chatId, `Gagal menambahkan subdomain, status: ${status}`);
       }
-    );
+    } catch (e) {
+      await this.sendMessage(chatId, `Terjadi kesalahan: ${e.message}`);
+    }
+  }
 
-    return response.json();
+  async handleDelete(chatId, subdomain) {
+    await this.sendMessage(chatId, `Menghapus subdomain: ${subdomain}...`);
+    try {
+      const status = await deletesubdomain(subdomain);
+      if (status === 200) {
+        await this.sendMessage(chatId, `Subdomain ${subdomain} berhasil dihapus.`);
+      } else {
+        await this.sendMessage(chatId, `Gagal menghapus subdomain, status: ${status}`);
+      }
+    } catch (e) {
+      await this.sendMessage(chatId, `Terjadi kesalahan: ${e.message}`);
+    }
   }
 }
-
-const rootDomain = "joss.checker-ip.xyz";
