@@ -1,6 +1,6 @@
 import { addsubdomain, deletesubdomain, listSubdomains } from './wildcard.js';
 
-const rootDomain = "joss.checker-ip.xyz";
+const rootDomain = env.rootDomain;
 
 export default class TelegramBot {
   constructor(token, apiUrl, ownerId) {
