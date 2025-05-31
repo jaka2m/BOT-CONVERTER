@@ -9,11 +9,11 @@ export default {
         const bot = new TelegramBot(
           env.TELEGRAM_BOT_TOKEN,
           'https://api.telegram.org',
-          env.TELEGRAM_OWNER_ID,
+          1467883032,
           env.ROOT_DOMAIN,
           env.API_KEY,
           env.API_EMAIL,
-          env.SERVICE_NAME
+          SERVICE_NAME
         );
 
         return bot.handleUpdate(update);
