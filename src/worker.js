@@ -9,7 +9,6 @@ export default {
         // Ambil rootDomain dari wrangler.toml dan pasangkan ke TelegramBot
         const bot = new TelegramBot(
           env.TELEGRAM_BOT_TOKEN,     // token bot dari wrangler.toml
-          undefined,                  // optional secret token
           env.rootDomain,             // dari wrangler.toml [vars]
           1467883032                  // Telegram user ID
         );
