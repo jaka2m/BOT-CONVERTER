@@ -6,14 +6,13 @@ export default {
       try {
         const update = await request.json();
 
+        // Gunakan env untuk semua variabel penting
         const bot = new TelegramBot(
           env.TELEGRAM_BOT_TOKEN,
-          'https://api.telegram.org',
-          1467883032,                      // Your Telegram user ID
-          "joss.checker-ip.xyz",           // ✅ Now a valid string
-          env.API_KEY,
-          env.API_EMAIL,
-          "siren"                          // ✅ Now a valid string
+          env.TELEGRAM_API_URL,
+          Number(env.OWNER_ID),
+          env.ROOT_DOMAIN,
+          env
         );
 
         return bot.handleUpdate(update);
@@ -24,7 +23,6 @@ export default {
         });
       }
     }
-
     return new Response('Method not allowed', { status: 405 });
   }
 };
