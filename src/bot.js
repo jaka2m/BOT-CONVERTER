@@ -1,4 +1,4 @@
-import { addsubdomain, deletesubdomain, listSubdomains } from './wildcard.js';
+import { addsubdomain, deletesubdomain, listSubdomains, env } from './wildcard.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl, ownerId) {
@@ -12,6 +12,7 @@ export default class TelegramBot {
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
+    const rootDomain = env.ROOT_DOMAIN;
 
     if (text.startsWith('/start')) {
       await this.sendMessage(chatId, 'Welcome! Use /add <subdomain> to add, /del <subdomain> to delete, /list to list subdomains.');
@@ -26,7 +27,7 @@ export default class TelegramBot {
         await this.sendMessage(chatId, 'Please specify the subdomain to add. Example: /add test');
         return new Response('OK', { status: 200 });
       }
-      const status = await addsubdomain(subdomain);
+      const status = await addsubdomain(subdomain, env);
       if (status === 200) {
         await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} added successfully.`);
       } else if (status === 409) {
@@ -45,7 +46,7 @@ export default class TelegramBot {
         await this.sendMessage(chatId, 'Please specify the subdomain to delete. Example: /del test');
         return new Response('OK', { status: 200 });
       }
-      const status = await deletesubdomain(subdomain);
+      const status = await deletesubdomain(subdomain, env);
       if (status === 200) {
         await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} deleted successfully.`);
       } else if (status === 404) {
@@ -57,7 +58,7 @@ export default class TelegramBot {
     }
 
     if (text.startsWith('/list')) {
-      const domains = await listSubdomains();
+      const domains = await listSubdomains(env);
       if (domains.length === 0) {
         await this.sendMessage(chatId, 'No subdomains registered yet.');
       } else {
@@ -99,5 +100,3 @@ export default class TelegramBot {
     return response.json();
   }
 }
-
-const rootDomain = "joss.checker-ip.xyz";
