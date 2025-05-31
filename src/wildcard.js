@@ -1,9 +1,10 @@
-const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
-const accountID = "e9930d5ca683b0461f73477050fee0c7";
-const zoneID = "80423e7547d2fa85e13796a1f41deced";
-const apiEmail = "ambebalong@gmail.com";
-const serviceName = "siren";
-const rootDomain = "joss.checker-ip.xyz";
+export function createWildcardAPI(env) {
+  const apiKey = env.CF_API_KEY;
+  const accountID = env.CF_ACCOUNT_ID;
+  const zoneID = env.CF_ZONE_ID;
+  const apiEmail = env.CF_API_EMAIL;
+  const serviceName = env.SERVICE_NAME;
+  const rootDomain = env.rootDomain;
 
 const headers = {
   'Authorization': `Bearer ${apiKey}`,
