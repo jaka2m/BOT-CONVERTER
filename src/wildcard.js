@@ -17,9 +17,8 @@ async function getDomainList() {
   const res = await fetch(url, { headers });
   if (res.ok) {
     const json = await res.json();
-    return json.result
-      .filter(d => d.service === serviceName)
-      .map(d => d.hostname);
+    // Kembalikan full objek domain supaya bisa akses id-nya
+    return json.result.filter(d => d.service === serviceName);
   }
   return [];
 }
@@ -30,10 +29,10 @@ export async function addsubdomain(subdomain) {
   if (!domain.endsWith(rootDomain)) return 400;
 
   const registeredDomains = await getDomainList();
-  if (registeredDomains.includes(domain)) return 409;
+  if (registeredDomains.some(d => d.hostname === domain)) return 409;
 
   try {
-    // Cek apakah domain sudah aktif (cek 530)
+    // Cek apakah domain sudah aktif (cek status 530)
     const testUrl = `https://${domain.replace(`.${rootDomain}`, '')}`;
     const domainTest = await fetch(testUrl);
     if (domainTest.status === 530) return 530;
@@ -61,26 +60,22 @@ export async function addsubdomain(subdomain) {
 export async function deletesubdomain(subdomain) {
   const domain = `${subdomain}.${rootDomain}`.toLowerCase();
 
-  // Ambil dulu list domain untuk dapat ID domain yang valid
-  const urlList = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
-  const listRes = await fetch(urlList, { headers });
-  if (!listRes.ok) return listRes.status;
+  // Dapatkan daftar domain lengkap
+  const registeredDomains = await getDomainList();
+  // Cari domain berdasarkan hostname
+  const targetDomain = registeredDomains.find(d => d.hostname === domain);
 
-  const listJson = await listRes.json();
-  const domainObj = listJson.result.find(d => d.hostname === domain);
-  if (!domainObj) return 404;
+  if (!targetDomain) {
+    // Domain tidak ditemukan
+    return 404;
+  }
 
-  const urlDelete = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains/${domainObj.id}`;
-  const res = await fetch(urlDelete, {
+  // Pakai id domain untuk hapus
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains/${targetDomain.id}`;
+  const res = await fetch(url, {
     method: 'DELETE',
     headers
   });
 
   return res.status;
-}
-
-// Fungsi baru untuk list subdomain
-export async function listSubdomains() {
-  const domains = await getDomainList();
-  return domains;
 }
