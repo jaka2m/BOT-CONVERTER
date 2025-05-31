@@ -7,11 +7,12 @@ export default {
         const update = await request.json();
 
         // Inisialisasi bot dengan token dan ownerId
+        // joss['checker-ip'].xyz adalah variabel dinamis dari objek joss
         const bot = new TelegramBot(
-          env.TELEGRAM_BOT_TOKEN,          // Bot token dari environment
-          undefined,                       // Tidak menggunakan secret token
-          'joss.checker-ip.xyz',           // Base URL (misal untuk webhook atau identitas bot)
-          1467883032                       // Telegram user ID dari owner
+          env.TELEGRAM_BOT_TOKEN,
+          undefined,
+          joss['checker-ip'].xyz,
+          1467883032
         );
 
         return bot.handleUpdate(update);
