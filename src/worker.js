@@ -10,7 +10,7 @@ export default {
         const bot = new TelegramBot(
           env.TELEGRAM_BOT_TOKEN,
           env.TELEGRAM_API_URL,
-          Number(env.OWNER_ID),
+          1467883032,
           env.ROOT_DOMAIN,
           env
         );
