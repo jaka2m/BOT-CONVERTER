@@ -17,9 +17,8 @@ async function getDomainList() {
   const res = await fetch(url, { headers });
   if (res.ok) {
     const json = await res.json();
-    return json.result
-      .filter(d => d.service === serviceName)
-      .map(d => d.hostname);
+    // Kembalikan full objek domain supaya bisa akses id-nya
+    return json.result.filter(d => d.service === serviceName);
   }
   return [];
 }
@@ -30,10 +29,10 @@ export async function addsubdomain(subdomain) {
   if (!domain.endsWith(rootDomain)) return 400;
 
   const registeredDomains = await getDomainList();
-  if (registeredDomains.includes(domain)) return 409;
+  if (registeredDomains.some(d => d.hostname === domain)) return 409;
 
   try {
-    // Cek apakah domain sudah aktif (cek 530)
+    // Cek apakah domain sudah aktif (cek status 530)
     const testUrl = `https://${domain.replace(`.${rootDomain}`, '')}`;
     const domainTest = await fetch(testUrl);
     if (domainTest.status === 530) return 530;
@@ -61,11 +60,22 @@ export async function addsubdomain(subdomain) {
 export async function deletesubdomain(subdomain) {
   const domain = `${subdomain}.${rootDomain}`.toLowerCase();
 
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains/${domain}`;
+  // Dapatkan daftar domain lengkap
+  const registeredDomains = await getDomainList();
+  // Cari domain berdasarkan hostname
+  const targetDomain = registeredDomains.find(d => d.hostname === domain);
+
+  if (!targetDomain) {
+    // Domain tidak ditemukan
+    return 404;
+  }
+
+  // Pakai id domain untuk hapus
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains/${targetDomain.id}`;
   const res = await fetch(url, {
     method: 'DELETE',
     headers
   });
 
-  return res.status === 200 ? 200 : res.status;
+  return res.status;
 }
