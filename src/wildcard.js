@@ -1,4 +1,4 @@
-const getHeaders = (env) => ({
+const headers = (env) => ({
   'Authorization': `Bearer ${env.API_KEY}`,
   'X-Auth-Email': env.API_EMAIL,
   'X-Auth-Key': env.API_KEY,
