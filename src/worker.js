@@ -6,25 +6,17 @@ export default {
       try {
         const update = await request.json();
 
-        // Ambil rootDomain dari wrangler.toml dan pasangkan ke TelegramBot
-        const bot = new TelegramBot(
-          env.TELEGRAM_BOT_TOKEN,     // token bot dari wrangler.toml
-          env.rootDomain,             // dari wrangler.toml [vars]
-          1467883032                  // Telegram user ID
-        );
+        // GANTI INI: tambahkan ownerId saat membuat instance
+        const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
 
         return bot.handleUpdate(update);
       } catch (error) {
-        return new Response(
-          JSON.stringify({ error: error.message }),
-          {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
+        return new Response(JSON.stringify({ error: error.message }), { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     }
-
     return new Response('Method not allowed', { status: 405 });
   }
 };
