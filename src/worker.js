@@ -6,13 +6,12 @@ export default {
       try {
         const update = await request.json();
 
-        // Inisialisasi bot dengan token dan ownerId
-        // joss['checker-ip'].xyz adalah variabel dinamis dari objek joss
+        // Ambil rootDomain dari wrangler.toml dan pasangkan ke TelegramBot
         const bot = new TelegramBot(
-          env.TELEGRAM_BOT_TOKEN,
-          undefined,
-          joss['checker-ip'].xyz,
-          1467883032
+          env.TELEGRAM_BOT_TOKEN,     // token bot dari wrangler.toml
+          undefined,                  // optional secret token
+          env.rootDomain,             // dari wrangler.toml [vars]
+          1467883032                  // Telegram user ID
         );
 
         return bot.handleUpdate(update);
