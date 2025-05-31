@@ -241,7 +241,7 @@ Terima kasih atas dukungannya! 🙏
     }
 
     if (text === '/start') {
-      const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg"; // Ganti dengan URL QRIS yang valid
+      const imageUrl = "https://github.com/jaka8m/BOT-CONVERTER/raw/main/start.png";
       try {
         await fetch(`${this.apiUrl}/bot${this.token}/sendPhoto`, {
           method: "POST",
