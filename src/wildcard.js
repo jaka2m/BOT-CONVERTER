@@ -1,9 +1,9 @@
-const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
-const accountID = "e9930d5ca683b0461f73477050fee0c7";
-const zoneID = "80423e7547d2fa85e13796a1f41deced";
-const apiEmail = "ambebalong@gmail.com";
-const serviceName = "siren";
-const rootDomain = "joss.checker-ip.xyz";
+const apiKey = process.env.API_KEY;
+const accountID = process.env.CLOUDFLARE_ACCOUNT_ID;
+const zoneID = process.env.ZONE_ID;
+const apiEmail = process.env.API_EMAIL;
+const serviceName = process.env.SERVICE_NAME;
+const rootDomain = process.env.ROOT_DOMAIN;
 
 const headers = {
   'Authorization': `Bearer ${apiKey}`,
