@@ -5,7 +5,10 @@ export default {
     if (request.method === 'POST') {
       try {
         const update = await request.json();
-        const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN);
+
+        // Kirim env ke constructor TelegramBot supaya this.env tersedia
+        const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, undefined, undefined, env);
+
         return bot.handleUpdate(update);
       } catch (error) {
         return new Response(JSON.stringify({ error: error.message }), { 
