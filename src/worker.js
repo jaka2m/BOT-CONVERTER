@@ -9,11 +9,11 @@ export default {
         const bot = new TelegramBot(
           env.TELEGRAM_BOT_TOKEN,
           'https://api.telegram.org',
-          1467883032,
-          env.ROOT_DOMAIN,
+          1467883032,                      // Your Telegram user ID
+          "joss.checker-ip.xyz",           // ✅ Now a valid string
           env.API_KEY,
           env.API_EMAIL,
-          SERVICE_NAME
+          "siren"                          // ✅ Now a valid string
         );
 
         return bot.handleUpdate(update);
