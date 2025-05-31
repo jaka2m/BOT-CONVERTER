@@ -1,11 +1,12 @@
 import { addsubdomain, deletesubdomain, listSubdomains } from './wildcard.js';
 
-constructor(token, apiUrl = 'https://api.telegram.org', ownerId) {
-  this.token = token;
-  this.apiUrl = apiUrl;
-  this.ownerId = ownerId;
-}
-
+export default class TelegramBot {
+  constructor(token, apiUrl, ownerId) {
+    this.token = token;
+    this.apiUrl = apiUrl || 'https://api.telegram.org';
+    this.ownerId = ownerId;
+  }
+  
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
