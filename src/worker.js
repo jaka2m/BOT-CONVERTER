@@ -6,11 +6,8 @@ export default {
       try {
         const update = await request.json();
 
-        // Ambil ownerId dari environment variable dan parse ke integer
-        const ownerId = parseInt(env.BOT_OWNER_ID, 10);
-
-        // Kirim ownerId ke TelegramBot constructor
-        const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, 'https://api.telegram.org', ownerId);
+        // GANTI INI: tambahkan ownerId saat membuat instance
+        const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
 
         return bot.handleUpdate(update);
       } catch (error) {
