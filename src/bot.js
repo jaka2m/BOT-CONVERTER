@@ -103,5 +103,3 @@ export default class TelegramBot {
     return response.json();
   }
 }
-
-const rootDomain = "joss.checker-ip.xyz";
