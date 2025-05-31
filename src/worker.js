@@ -6,14 +6,8 @@ export default {
       try {
         const update = await request.json();
 
-        // Gunakan env untuk semua variabel penting
-        const bot = new TelegramBot(
-          env.TELEGRAM_BOT_TOKEN,
-          env.TELEGRAM_API_URL,
-          1467883032,
-          env.ROOT_DOMAIN,
-          env
-        );
+        // GANTI INI: tambahkan ownerId saat membuat instance
+        const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
 
         return bot.handleUpdate(update);
       } catch (error) {
