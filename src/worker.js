@@ -6,8 +6,15 @@ export default {
       try {
         const update = await request.json();
 
-        // Kirim env ke constructor TelegramBot supaya this.env tersedia
-        const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, undefined, undefined, env);
+        const bot = new TelegramBot(
+          env.TELEGRAM_BOT_TOKEN,
+          'https://api.telegram.org',
+          env.TELEGRAM_OWNER_ID,
+          env.ROOT_DOMAIN,
+          env.API_KEY,
+          env.API_EMAIL,
+          env.SERVICE_NAME
+        );
 
         return bot.handleUpdate(update);
       } catch (error) {
@@ -17,6 +24,7 @@ export default {
         });
       }
     }
+
     return new Response('Method not allowed', { status: 405 });
   }
 };
