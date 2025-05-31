@@ -1,4 +1,4 @@
-name: Deploy VPN CF
+name: Deploy to Cloudflare Workers
 
 on:
   push:
@@ -23,45 +23,9 @@ jobs:
       - name: Install dependencies
         run: npm install
           
-      - name: Setup Wrangler secret and deploy worker
+      - name: Deploy to Cloudflare
+        run: npm run deploy
         env:
-          BOT_OWNER_ID: ${{ secrets.BOT_OWNER_ID }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          API_KEY: ${{ secrets.API_KEY }}
-          API_EMAIL: ${{ secrets.API_EMAIL }}
-          ZONE_ID: ${{ secrets.ZONE_ID }}
-          SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
-          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
-          WORKER_NAME: v2ray-config-bot
-        run: |
-          set -e
-          SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
-
-          echo "Checking if TELEGRAM_BOT_TOKEN secret exists..."
-          EXISTS=$(curl -s -X GET "$SECRETS_API" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H "Content-Type: application/json" | jq -r '.result[]?.name' | grep "^TELEGRAM_BOT_TOKEN$" || true)
-
-          if [ "$EXISTS" = "TELEGRAM_BOT_TOKEN" ]; then
-            echo "Secret TELEGRAM_BOT_TOKEN already exists, skipping creation."
-          else
-            echo "Secret TELEGRAM_BOT_TOKEN not found, creating..."
-            set +e
-            echo "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN --name $WORKER_NAME
-            if [ $? -ne 0 ]; then
-              echo "Warning: Failed to create TELEGRAM_BOT_TOKEN secret, maybe already exists. Continuing deploy..."
-            fi
-            set -e
-          fi
-
-          echo "Syncing additional secrets to Cloudflare Worker..."
-          echo "$API_KEY" | npx wrangler secret put API_KEY --name $WORKER_NAME
-          echo "$API_EMAIL" | npx wrangler secret put API_EMAIL --name $WORKER_NAME
-          echo "$ZONE_ID" | npx wrangler secret put ZONE_ID --name $WORKER_NAME
-          echo "$SERVICE_NAME" | npx wrangler secret put SERVICE_NAME --name $WORKER_NAME
-          echo "$ROOT_DOMAIN" | npx wrangler secret put ROOT_DOMAIN --name $WORKER_NAME
-
-          echo "Deploying worker..."
-          npx wrangler deploy
