@@ -11,6 +11,18 @@ export default class TelegramBot {
     this.serviceName = SERVICE_NAME;
   }
 
+  // Return env object expected by wildcard.js functions
+  getEnv() {
+    return {
+      API_KEY: this.apiKey,
+      API_EMAIL: this.apiEmail,
+      ACCOUNT_ID: this.accountId, // You must pass this in constructor or add setter!
+      ZONE_ID: this.zoneId,       // Same for zoneId
+      ROOT_DOMAIN: this.rootDomain,
+      SERVICE_NAME: this.serviceName
+    };
+  }
+
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
@@ -22,7 +34,7 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-    // ⛔ Batasi /add dan /del hanya untuk owner
+    // Limit /add and /del only to owner
     if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
@@ -34,15 +46,15 @@ export default class TelegramBot {
         await this.sendMessage(chatId, 'Please specify the subdomain to add. Example: /add test');
         return new Response('OK', { status: 200 });
       }
-      const status = await addsubdomain(subdomain);
+      const status = await addsubdomain(this.getEnv(), subdomain);
       if (status === 200) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} added successfully.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${this.rootDomain} added successfully.`);
       } else if (status === 409) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} already exists.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${this.rootDomain} already exists.`);
       } else if (status === 530) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} not active or error 530.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${this.rootDomain} not active or error 530.`);
       } else {
-        await this.sendMessage(chatId, `Failed to add subdomain ${subdomain}.${rootDomain}, status: ${status}`);
+        await this.sendMessage(chatId, `Failed to add subdomain ${subdomain}.${this.rootDomain}, status: ${status}`);
       }
       return new Response('OK', { status: 200 });
     }
@@ -53,20 +65,20 @@ export default class TelegramBot {
         await this.sendMessage(chatId, 'Please specify the subdomain to delete. Example: /del test');
         return new Response('OK', { status: 200 });
       }
-      const status = await deletesubdomain(subdomain);
+      const status = await deletesubdomain(this.getEnv(), subdomain);
       if (status === 200) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} deleted successfully.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${this.rootDomain} deleted successfully.`);
       } else if (status === 404) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} not found.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${this.rootDomain} not found.`);
       } else {
-        await this.sendMessage(chatId, `Failed to delete subdomain ${subdomain}.${rootDomain}, status: ${status}`);
+        await this.sendMessage(chatId, `Failed to delete subdomain ${subdomain}.${this.rootDomain}, status: ${status}`);
       }
       return new Response('OK', { status: 200 });
     }
 
     if (text.startsWith('/list')) {
-      const domains = await listSubdomains();
-      if (domains.length === 0) {
+      const domains = await listSubdomains(this.getEnv());
+      if (!domains || domains.length === 0) {
         await this.sendMessage(chatId, 'No subdomains registered yet.');
       } else {
         await this.sendMessage(chatId, `Registered subdomains:\n${domains.join('\n')}`);
@@ -107,5 +119,3 @@ export default class TelegramBot {
     return response.json();
   }
 }
-
-const rootDomain = "joss.checker-ip.xyz";
