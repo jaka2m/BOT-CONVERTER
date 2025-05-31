@@ -1,9 +1,10 @@
 import { addsubdomain, deletesubdomain, listSubdomains } from './wildcard.js';
 
 export default class TelegramBot {
-  constructor(token, apiUrl = 'https://api.telegram.org') {
+  constructor(token, apiUrl, ownerId) {
     this.token = token;
-    this.apiUrl = apiUrl;
+    this.apiUrl = apiUrl || 'https://api.telegram.org';
+    this.ownerId = ownerId;
   }
 
   async handleUpdate(update) {
@@ -14,6 +15,12 @@ export default class TelegramBot {
 
     if (text.startsWith('/start')) {
       await this.sendMessage(chatId, 'Welcome! Use /add <subdomain> to add, /del <subdomain> to delete, /list to list subdomains.');
+      return new Response('OK', { status: 200 });
+    }
+
+    // ⛔ Batasi /add dan /del hanya untuk owner
+    if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
+      await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
     }
 
@@ -97,4 +104,4 @@ export default class TelegramBot {
   }
 }
 
-const rootDomain = "joss.checker-ip.xyz"; // jangan lupa import atau definisikan juga di sini
+const rootDomain = "joss.checker-ip.xyz";
