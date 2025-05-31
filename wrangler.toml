@@ -5,5 +5,5 @@ main = "src/worker.js"
 
 [vars]
 SERVICE_NAME = "siren"
-ROOT_DOMAIN = "joss.checker-ip.xyz"
+rootDomain = "joss.checker-ip.xyz"
 
