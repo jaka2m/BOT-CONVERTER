@@ -91,8 +91,7 @@ async function listSubdomains() {
   return await getDomainList();
 }
 
-// Debug: tampilkan link bot
-async function WildcardBot(link) {
+export async function WildcardBot(link) {
   console.log("Bot link:", link);
 }
 
