@@ -36,12 +36,11 @@ jobs:
         run: |
           set -e
 
-          # Fungsi untuk replace secret langsung via wrangler
           replace_secret() {
             NAME=$1
             VALUE=$2
             echo "Setting secret: $NAME"
-            echo "$VALUE" | npx wrangler secret put "$NAME" --name "$WORKER_NAME" --yes
+            echo "$VALUE" | npx wrangler secret put "$NAME" --name "$WORKER_NAME"
           }
 
           replace_secret TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
