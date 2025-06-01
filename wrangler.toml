@@ -1,4 +1,4 @@
-name = "v2ray-config-bot"
+name = "free-vpn"
 compatibility_date = "2023-08-01"
 workers_dev = true
 main = "src/worker.js"
