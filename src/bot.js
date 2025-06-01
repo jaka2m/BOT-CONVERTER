@@ -32,13 +32,13 @@ export default class TelegramBot {
       }
       const status = await addsubdomain(subdomain);
       if (status === 200) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} added successfully.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} added successfully.`);
       } else if (status === 409) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} already exists.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} already exists.`);
       } else if (status === 530) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} not active or error 530.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} not active or error 530.`);
       } else {
-        await this.sendMessage(chatId, `Failed to add subdomain ${subdomain}.${rootDomain}, status: ${status}`);
+        await this.sendMessage(chatId, `Failed to add subdomain ${subdomain}.${ROOT_DOMAIN}, status: ${status}`);
       }
       return new Response('OK', { status: 200 });
     }
@@ -51,11 +51,11 @@ export default class TelegramBot {
       }
       const status = await deletesubdomain(subdomain);
       if (status === 200) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} deleted successfully.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} deleted successfully.`);
       } else if (status === 404) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${rootDomain} not found.`);
+        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} not found.`);
       } else {
-        await this.sendMessage(chatId, `Failed to delete subdomain ${subdomain}.${rootDomain}, status: ${status}`);
+        await this.sendMessage(chatId, `Failed to delete subdomain ${subdomain}.${ROOT_DOMAIN}, status: ${status}`);
       }
       return new Response('OK', { status: 200 });
     }
@@ -104,4 +104,4 @@ export default class TelegramBot {
   }
 }
 
-const rootDomain = "joss.checker-ip.xyz";
+const ROOT_DOMAIN = "joss.checker-ip.xyz";
