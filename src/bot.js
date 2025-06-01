@@ -60,38 +60,19 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-    function escapeMarkdownV2(text) {
-  return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
-}
+    if (text.startsWith('/list')) {
+      const domains = await listSubdomains();
+      if (domains.length === 0) {
+        await this.sendMessage(chatId, 'No subdomains registered yet.');
+      } else {
+        await this.sendMessage(chatId, `\`\`\`List-Wildcard\n${domains.join('\n')}\`\`\``);
+      }
+      return new Response('OK', { status: 200 });
+    }
 
-if (text.startsWith('/list')) {
-  const domains = await listSubdomains();
-  if (domains.length === 0) {
-    await this.sendMessage(chatId, '*No subdomains registered yet.*', {
-      parse_mode: 'MarkdownV2'
-    });
-  } else {
-    const formattedList = domains
-      .map((d, i) => `${i + 1}\\. ${escapeMarkdownV2(d)}`)
-      .join('\n');
-
-    await this.sendMessage(
-      chatId,
-      ````List-Wildcard\n${formattedList}````,
-      { parse_mode: 'MarkdownV2' }
-    );
+    await this.sendMessage(chatId, 'Unknown command. Use /add, /del, or /list.');
+    return new Response('OK', { status: 200 });
   }
-  return new Response('OK', { status: 200 });
-}
-
-await this.sendMessage(
-  chatId,
-  '*Unknown command\\. Use* \\`/add\\`\\, \\`/del\\`\\, *or* \\`/list\\`\\.',
-  { parse_mode: 'MarkdownV2' }
-);
-
-return new Response('OK', { status: 200 });
- }
 
   async sendMessage(chatId, text) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
