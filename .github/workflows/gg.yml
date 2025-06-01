@@ -26,8 +26,8 @@ jobs:
       - name: Publish to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.API_KEY }}       # Pastikan API Token ini valid dan punya permission
-          accountId: ${{ secrets.ACCOUNT_ID }}   # Pastikan Account ID benar
+          apiToken: ${{ secrets.API_TOKEN }}       # Harus ini API Token, bukan API_KEY
+          accountId: ${{ secrets.ACCOUNT_ID }}     # Pastikan sesuai Account ID Cloudflare
           environment: production
           workingDirectory: ./
         env:
