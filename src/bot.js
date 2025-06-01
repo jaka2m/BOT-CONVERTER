@@ -12,7 +12,7 @@ export class TelegramBot {
   constructor(token, apiUrl, ownerId) {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
-    this.OWNER_ID = ownerId;
+    this.ownerId = ownerId;
   }
   
   async handleUpdate(update) {
