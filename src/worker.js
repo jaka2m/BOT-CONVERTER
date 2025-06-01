@@ -1,3 +1,4 @@
+const ownerId = env.OWNER_ID;
 import { TelegramBot as Bot1 } from './bot.js';
 import { TelegramBotku as Bot2 } from './randomip/bot2.js';
 import { TelegramProxyCekBot as Bot3 } from './proxyip/botCek.js';
@@ -14,11 +15,11 @@ export default {
       const update = await request.json();
       const ownerId = env.OWNER_ID; // <- Ambil dari ENV
 
-      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, OWNER_ID);
-      const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, OWNER_ID);
-      const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN, undefined, OWNER_ID);
-      const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN, undefined, OWNER_ID);
-      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN, undefined, OWNER_ID);
+      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
+      const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
+      const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
+      const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
+      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
       
       await bot1.handleUpdate(update);
       await bot2.handleUpdate(update);
