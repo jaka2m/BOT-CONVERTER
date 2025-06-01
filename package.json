@@ -1,5 +1,5 @@
 {
-  "name": "v2ray-config-bot",
+  "name": "free-vpn",
   "version": "1.0.0",
   "description": "Telegram bot on Cloudflare Workers",
   "main": "src/worker.js",
