@@ -1,3 +1,5 @@
+const ownerId = 1467883032; 
+
 import { TelegramBot as Bot1 } from './bot.js';
 import { TelegramBotku as Bot2 } from './randomip/bot2.js';
 import { TelegramProxyCekBot as Bot3 } from './proxyip/botCek.js';
@@ -13,7 +15,7 @@ export default {
     try {
       const update = await request.json();
 
-      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN);
       const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN);
       const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN);
       const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN);
