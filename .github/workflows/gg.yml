@@ -1,9 +1,8 @@
-name: Deploy Cloudflare Worker
+name: Deploy Telegram Bot Worker
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   deploy:
@@ -22,5 +21,23 @@ jobs:
 
       - name: Publish to Cloudflare Workers
         env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-        run: wrangler publish --env production
+          ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          TELEGRAM_API_TOKEN: ${{ secrets.TELEGRAM_API_TOKEN }}
+          OWNER_ID: ${{ secrets.OWNER_ID }}
+          API_KEY: ${{ secrets.API_KEY }}
+          ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
+          ZONE_ID: ${{ secrets.ZONE_ID }}
+          API_EMAIL: ${{ secrets.API_EMAIL }}
+          SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
+        run: |
+          wrangler secret put TELEGRAM_API_TOKEN <<< "${{ secrets.TELEGRAM_API_TOKEN }}"
+          wrangler secret put OWNER_ID <<< "${{ secrets.OWNER_ID }}"
+          wrangler secret put API_KEY <<< "${{ secrets.API_KEY }}"
+          wrangler secret put ACCOUNT_ID <<< "${{ secrets.ACCOUNT_ID }}"
+          wrangler secret put ZONE_ID <<< "${{ secrets.ZONE_ID }}"
+          wrangler secret put API_EMAIL <<< "${{ secrets.API_EMAIL }}"
+          wrangler secret put SERVICE_NAME <<< "${{ secrets.SERVICE_NAME }}"
+          wrangler secret put ROOT_DOMAIN <<< "${{ secrets.ROOT_DOMAIN }}"
+          wrangler publish --env production
