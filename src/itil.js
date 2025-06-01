@@ -1,4 +1,4 @@
-export const TELEGRAM_BOT_TOKEN = "7791564952:7664381872:AAHfoMYhaUYlzRgMlydfA3zvwkMyVLMhoTU";
+export const TELEGRAM_BOT_TOKEN = "7664381872:AAHfoMYhaUYlzRgMlydfA3zvwkMyVLMhoTU";
 export const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
 export const accountID = "e9930d5ca683b0461f73477050fee0c7";
 export const zoneID = "80423e7547d2fa85e13796a1f41deced";
