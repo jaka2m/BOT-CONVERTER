@@ -78,9 +78,6 @@ if (text.startsWith('/add ')) {
   }
 
   return new Response('OK', { status: 200 });
-} else {
-  // Abaikan semua pesan lain
-  return new Response('OK', { status: 200 });
 }
 
     // 🗑️ Command: /del <subdomain>
