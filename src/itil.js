@@ -1,5 +1,3 @@
-import fs from 'fs/promises';
-
 // === KONFIG TELEGRAM & CLOUDFLARE ===
 export const TELEGRAM_BOT_TOKEN = "7791564952:AAHXcZF0NFk512tuUNs7iEzJ12DZpLyOpo4";
 export const CLOUDFLARE_CONFIG = {
