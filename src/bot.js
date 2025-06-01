@@ -132,16 +132,6 @@ if (text.startsWith('/add ')) {
       return new Response('OK', { status: 200 });
     }
 
-    // 🚫 Unknown command
-    await this.sendMessage(
-      chatId,
-      '*Unknown command\\. Use* \\`/add\\`\\, \\`/del\\`\\, *or* \\`/list\\`\\.',
-      { parse_mode: 'MarkdownV2' }
-    );
-
-    return new Response('OK', { status: 200 });
-  }
-
   async sendMessage(chatId, text, options = {}) {
     const payload = {
       chat_id: chatId,
