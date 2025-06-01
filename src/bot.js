@@ -77,7 +77,7 @@ if (text.startsWith('/list')) {
 
     await this.sendMessage(
       chatId,
-      `\`\`\`\nList-Wildcard\n${formattedList}\n\`\`\``,
+      ````List-Wildcard\n${formattedList}````,
       { parse_mode: 'MarkdownV2' }
     );
   }
