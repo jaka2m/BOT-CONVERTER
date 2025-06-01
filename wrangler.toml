@@ -1,13 +1,12 @@
-name = "free-vpn"
-compatibility_date = "2023-08-01"
+name = "telegram-bot-worker"
+type = "javascript"
+account_id = "${ACCOUNT_ID}"
 workers_dev = true
-main = "src/worker.js"
+compatibility_date = "2025-06-01"
 
-[vars]
-API_KEY = "5fae9fcb9c193ce65de4b57689a94938b708e"
-ACCOUNT_ID = "e9930d5ca683b0461f73477050fee0c7"
-ZONE_ID = "80423e7547d2fa85e13796a1f41deced"
-API_EMAIL = "ambebalong@gmail.com"
-SERVICE_NAME = "siren"
-ROOT_DOMAIN = "joss.checker-ip.xyz"
-OWNER_ID = "1467883032"
+[env.production]
+route = "" # kosong jika deploy workers.dev
+zone_id = "${ZONE_ID}"
+
+[build]
+command = "npm install"
