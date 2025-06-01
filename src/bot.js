@@ -1,182 +1,214 @@
-import { addsubdomain, deletesubdomain, listSubdomains } from './wil.js';
+import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './converter/configGenerators.js';
+import { randomconfig } from './randomconfig.js';
+import { rotateconfig } from './config.js';
+import { botku, TelegramBotku } from './randomip/bot2.js';
+import { ProxyCekBot, TelegramProxyCekBot } from './proxyip/botCek.js';
+import { proxyBot, TelegramProxyBot } from './proxyip/bot3.js';
+import { WildcardBot, TelegramWildcardBot } from './wildcard/botwild.js';
 
-const rootDomain = "joss.checker-ip.xyz";
+const HOSTKU = 'joss.checker-ip.xyz';
 
-function escapeMarkdownV2(text) {
-  return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
-}
-
-export default class TelegramBot {
-  constructor(token, apiUrl, ownerId) {
+export class TelegramBot {
+  constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
-    this.apiUrl = apiUrl || 'https://api.telegram.org';
-    this.ownerId = ownerId;
+    this.apiUrl = apiUrl;
   }
 
   async handleUpdate(update) {
-    if (!update.message) return new Response('OK', { status: 200 });
-
-    const chatId = update.message.chat.id;
-    const text = update.message.text || '';
-
-  // ⛔ Batasi /add dan /del hanya untuk owner
-if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
-  await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
-  return new Response('OK', { status: 200 });
-}
-
-// 📌 Command: /add <subdomain>
-if (text.startsWith('/add ')) {
-  const subdomain = text.split(' ')[1]?.trim();
-  if (!subdomain) {
-    return new Response('OK', { status: 200 });
-  }
-
-  let loadingMsgId;
-  try {
-    const loadingMsg = await this.sendMessage(chatId, '⏳ Adding subdomain, please wait...');
-    loadingMsgId = loadingMsg.result?.message_id;
-  } catch (err) {
-    console.error('❌ Failed to send loading message:', err);
-  }
-
-  let status;
-  try {
-    status = await addsubdomain(subdomain);
-  } catch (err) {
-    console.error('❌ addsubdomain() error:', err);
-    status = 500;
-  }
-
-  const fullDomain = `${subdomain}.${rootDomain}`;
-
-  if (loadingMsgId) {
-    try {
-      await this.deleteMessage(chatId, loadingMsgId);
-    } catch (err) {
-      console.error('❌ Failed to delete loading message:', err);
-    }
-  }
-
-  if (status === 200) {
-    await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(fullDomain)} added successfully\`\`\``, {
-      parse_mode: 'MarkdownV2'
-    });
-  } else if (status === 409) {
-    await this.sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(fullDomain)}* already exists.`, {
-      parse_mode: 'MarkdownV2'
-    });
-  } else if (status === 530) {
-    await this.sendMessage(chatId, `❌ Subdomain *${escapeMarkdownV2(fullDomain)}* not active (error 530).`, {
-      parse_mode: 'MarkdownV2'
-    });
-  } else {
-    await this.sendMessage(chatId, `❌ Failed to add *${escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, {
-      parse_mode: 'MarkdownV2'
-    });
-  }
-
-  return new Response('OK', { status: 200 });
-}
-
-    // 🗑️ Command: /del <subdomain>
-    if (text.startsWith('/del ')) {
-      const subdomain = text.split(' ')[1];
-      if (!subdomain) {
-        return new Response('OK', { status: 200 });
-      }
-
-      const status = await deletesubdomain(subdomain);
-      const fullDomain = `${subdomain}.${rootDomain}`;
-      if (status === 200) {
-        await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(fullDomain)} deleted successfully.\`\`\``, {
-          parse_mode: 'MarkdownV2'
-        });
-      } else if (status === 404) {
-        await this.sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(fullDomain)}* not found.`, {
-          parse_mode: 'MarkdownV2'
-        });
-      } else {
-        await this.sendMessage(chatId, `❌ Failed to delete *${escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, {
-          parse_mode: 'MarkdownV2'
-        });
-      }
-
+    if (!update.message && !update.callback_query) {
       return new Response('OK', { status: 200 });
     }
 
-    // 📄 Command: /list
-if (text.startsWith('/list')) {
-  const domains = await listSubdomains();
+    if (update.callback_query) {
+      const callback = update.callback_query;
+      const chatId = callback.message.chat.id;
+      const messageId = callback.message.message_id;
+      const data = callback.data;
+      // TODO: Tambahkan logika handle callback jika diperlukan
+      return new Response('OK', { status: 200 });
+    }
 
-  if (domains.length === 0) {
-    await this.sendMessage(chatId, '*No subdomains registered yet.*', {
-      parse_mode: 'MarkdownV2'
-    });
-  } else {
-    const formattedList = domains
-      .map((d, i) => `${i + 1}\\. ${escapeMarkdownV2(d)}`)
-      .join('\n');
+    if (update.message) {
+      const chatId = update.message.chat.id;
+      const text = update.message.text?.trim() || '';
+      
+      // /config command
+      if (text.startsWith('/config')) {
+        const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
 
-    // Tambahkan total di bawah list
-    const totalLine = `\n\nTotal: *${domains.length}* subdomain${domains.length > 1 ? 's' : ''}`;
+Ketik perintah berikut untuk mendapatkan config rotate berdasarkan negara:
 
-    const textPreview = `\`\`\`List-Wildcard\n${formattedList}\`\`\`` + totalLine;
+\`/rotate + kode_negara\`
 
-    await this.sendMessage(chatId, textPreview, {
-      parse_mode: 'MarkdownV2'
-    });
+Negara tersedia:
+id, sg, my, us, ca, in, gb, ir, ae, fi, tr, md, tw, ch, se, nl, es, ru, ro, pl, al, nz, mx, it, de, fr, am, cy, dk, br, kr, vn, th, hk, cn, jp.
 
-    // Kirim juga sebagai dokumen .txt
-    const fileContent = domains.map((d, i) => `${i + 1}. ${d}`).join('\n');
-    await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
+Contoh:
+\`/rotate id\`
+\`/rotate sg\`
+\`/rotate my\`
+
+Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.`;
+        await this.sendMessage(chatId, helpMsg, { parse_mode: 'Markdown' });
+        return new Response('OK', { status: 200 });
+      }
+
+      // /rotate command
+      if (text.startsWith('/rotate ')) {
+        await rotateconfig.call(this, chatId, text);
+        return new Response('OK', { status: 200 });
+      }
+
+      // /randomconfig command
+      if (text.startsWith('/randomconfig')) {
+        const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
+        try {
+          const configText = await randomconfig();
+          await this.sendMessage(chatId, configText, { parse_mode: 'Markdown' });
+        } catch (error) {
+          console.error('Error generating random config:', error);
+          await this.sendMessage(chatId, `⚠️ Terjadi kesalahan:\n${error.message}`);
+        }
+        if (loadingMsg && loadingMsg.message_id) {
+          await this.deleteMessage(chatId, loadingMsg.message_id);
+        }
+        return new Response('OK', { status: 200 });
+      }
+
+      // /listwildcard command
+      if (text.startsWith('/listwildcard')) {
+        const wildcards = [
+          "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
+          "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
+          "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
+          "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
+        ];
+
+        const configText =
+          `*🏷️ LIST WILDCARD 🏷️*\n══════════════════\n\n` +
+          wildcards.map((d, i) => `*${i + 1}.* \`${d}.${HOSTKU}\``).join('\n') +
+          `\n\n📦 *Total:* ${wildcards.length} wildcard` +
+          `\n\n👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)`;
+
+        await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
+        return new Response('OK', { status: 200 });
+      }
+
+      if (text.startsWith('/converter')) {
+        await this.sendMessage(
+          chatId,
+          `🤖 *Geo Project Bot*\n\nKirimkan link konfigurasi V2Ray dan saya *SPIDERMAN* akan mengubahnya ke format *Singbox*, *Nekobox*, dan *Clash*.\n\nContoh:\n\`vless://...\`\n\`vmess://...\`\n\`trojan://...\`\n\`ss://...\`\n\nCatatan:\n- Maksimal 10 link per permintaan.\n- Disarankan menggunakan *Singbox versi 1.10.3* atau *1.11.8*.`,
+        );
+        return new Response('OK', { status: 200 });
+      }
+
+      if (text.includes('://')) {
+        try {
+          const links = text
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.includes('://'))
+            .slice(0, 10);
+
+          if (links.length === 0) {
+            await this.sendMessage(chatId, '❌ Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
+            return new Response('OK', { status: 200 });
+          }
+
+          const clashConfig = generateClashConfig(links, true);
+          const nekoboxConfig = generateNekoboxConfig(links, true);
+          const singboxConfig = generateSingboxConfig(links, true);
+
+          await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
+          await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
+          await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
+        } catch (error) {
+          console.error('Error processing links:', error);
+          await this.sendMessage(chatId, `⚠️ Error: ${error.message}`);
+        }
+        return new Response('OK', { status: 200 });
+      }
+    }
+
+    return new Response('OK', { status: 200 });
   }
 
-  return new Response('OK', { status: 200 });
-}
-
-return new Response('OK', { status: 200 });
-  }
-
-  async sendMessage(chatId, text, options = {}) {
-    const payload = {
+  async sendMessage(chatId, text) {
+    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+    const body = {
       chat_id: chatId,
       text,
-      ...options
+      parse_mode: 'Markdown',
     };
 
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body),
     });
 
     return response.json();
   }
 
-async deleteMessage(chatId, messageId) {
-  const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+  async editMessage(chatId, messageId, text, replyMarkup) {
+    const url = `${this.apiUrl}/bot${this.token}/editMessageText`;
+    const body = {
       chat_id: chatId,
-      message_id: messageId
-    })
-  });
-}
+      message_id: messageId,
+      text,
+      parse_mode: 'Markdown',
+    };
+
+    if (replyMarkup) {
+      body.reply_markup = replyMarkup;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    return response.json();
+  }
 
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
+
     formData.append('document', blob, filename);
     formData.append('chat_id', chatId.toString());
 
     const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
       method: 'POST',
-      body: formData
+      body: formData,
     });
 
     return response.json();
+  }
+
+  async sendMessageWithDelete(chatId, text) {
+    try {
+      const res = await this.sendMessage(chatId, text);
+      return res.result;
+    } catch (e) {
+      console.error('Gagal mengirim pesan:', e);
+      return null;
+    }
+  }
+
+  async deleteMessage(chatId, messageId) {
+    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+      }),
+    });
+
+    return res.json();
   }
 }
