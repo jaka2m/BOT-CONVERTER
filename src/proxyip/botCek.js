@@ -189,34 +189,38 @@ const headers = {
   'Authorization': `Bearer ${apiKey}`,
   'X-Auth-Email': apiEmail,
   'X-Auth-Key': apiKey,
-  'Content-Type': 'application/json',
+  'Content-Type': 'application/json'
 };
 
-// 🔍 Mendapatkan daftar subdomain aktif untuk service tertentu
+// 🔍 Dapatkan daftar subdomain aktif dari Cloudflare Workers Domains
 async function getDomainList() {
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
-  const response = await fetch(url, { headers });
-  if (!response.ok) return [];
+  const res = await fetch(url, { headers });
 
-  const data = await response.json();
-  return data.result
-    .filter(d => d.service === serviceName)
-    .map(d => d.hostname);
+  if (res.ok) {
+    const json = await res.json();
+    return json.result
+      .filter(d => d.service === serviceName)
+      .map(d => d.hostname);
+  }
+  
+  return [];
 }
 
-// ➕ Menambahkan subdomain baru
-export async function addSubdomain(subdomain) {
-  const domain = `${subdomain.toLowerCase()}.${rootDomain}`;
+// ➕ Tambahkan subdomain baru ke Cloudflare Workers Domains
+export async function addsubdomain(subdomain) {
+  const domain = `${subdomain}.${rootDomain}`.toLowerCase();
+
   if (!domain.endsWith(rootDomain)) return 400;
 
   const registeredDomains = await getDomainList();
   if (registeredDomains.includes(domain)) return 409;
 
-  // Cek status domain dengan request ke domain itu sendiri
   try {
-    const testUrl = `https://${subdomain.toLowerCase()}.${rootDomain}`;
-    const testResponse = await fetch(testUrl);
-    if (testResponse.status === 530) return 530;
+    // Cek domain apakah sudah terdaftar dengan request dummy
+    const testUrl = `https://${domain.replace(`.${rootDomain}`, '')}`;
+    const domainTest = await fetch(testUrl);
+    if (domainTest.status === 530) return 530;
   } catch {
     return 400;
   }
@@ -226,44 +230,44 @@ export async function addSubdomain(subdomain) {
     environment: "production",
     hostname: domain,
     service: serviceName,
-    zone_id: zoneID,
+    zone_id: zoneID
   };
 
   const res = await fetch(url, {
     method: 'PUT',
     headers,
-    body: JSON.stringify(body),
+    body: JSON.stringify(body)
   });
 
   return res.status;
 }
 
-// ❌ Menghapus subdomain
-export async function deleteSubdomain(subdomain) {
-  const domain = `${subdomain.toLowerCase()}.${rootDomain}`;
+// ❌ Hapus subdomain dari Cloudflare Workers Domains
+export async function deletesubdomain(subdomain) {
+  const domain = `${subdomain}.${rootDomain}`.toLowerCase();
 
-  // Ambil list domain untuk mendapatkan id domain yang akan dihapus
-  const listUrl = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
-  const listResponse = await fetch(listUrl, { headers });
-  if (!listResponse.ok) return listResponse.status;
+  const urlList = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+  const listRes = await fetch(urlList, { headers });
+  if (!listRes.ok) return listRes.status;
 
-  const listData = await listResponse.json();
-  const domainObj = listData.result.find(d => d.hostname === domain);
+  const listJson = await listRes.json();
+  const domainObj = listJson.result.find(d => d.hostname === domain);
   if (!domainObj) return 404;
 
-  const deleteUrl = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains/${domainObj.id}`;
-  const deleteResponse = await fetch(deleteUrl, {
+  const urlDelete = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains/${domainObj.id}`;
+  const res = await fetch(urlDelete, {
     method: 'DELETE',
-    headers,
+    headers
   });
 
-  return deleteResponse.status;
+  return res.status;
 }
 
-// Handler callback query dari Telegram
+// Handler callback_query Telegram untuk penghapusan subdomain
 if (update.callback_query) {
   const query = update.callback_query;
   const chatId = query.message.chat.id;
+  const messageId = query.message.message_id;
   const data = query.data;
 
   // Step 1: Pilih subdomain untuk dihapus
@@ -272,33 +276,36 @@ if (update.callback_query) {
     await this.sendMessage(chatId, `Yakin ingin menghapus *${escapeMarkdownV2(subdomain)}*?`, {
       parse_mode: 'MarkdownV2',
       reply_markup: {
-        inline_keyboard: [[
-          { text: '✅ Ya', callback_data: `del_confirm:${subdomain}` },
-          { text: '❌ Batal', callback_data: 'del_cancel' }
-        ]]
+        inline_keyboard: [
+          [
+            { text: '✅ Ya', callback_data: `del_confirm:${subdomain}` },
+            { text: '❌ Batal', callback_data: 'del_cancel' }
+          ]
+        ]
       }
     });
     return new Response('OK', { status: 200 });
   }
 
-  // Step 2: Konfirmasi hapus
+  // Step 2: Konfirmasi hapus subdomain
   if (data.startsWith('del_confirm:')) {
     const subdomain = data.split(':')[1];
-    const status = await deleteSubdomain(subdomain);
+    const status = await deletesubdomain(subdomain);
 
     if (status === 200) {
       await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(subdomain)} deleted successfully.\`\`\``, {
-        parse_mode: 'MarkdownV2',
+        parse_mode: 'MarkdownV2'
       });
     } else if (status === 404) {
-      await this.sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(subdomain)}* tidak ditemukan.`, {
-        parse_mode: 'MarkdownV2',
+      await this.sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(subdomain)}* not found.`, {
+        parse_mode: 'MarkdownV2'
       });
     } else {
-      await this.sendMessage(chatId, `❌ Gagal menghapus *${escapeMarkdownV2(subdomain)}*, status: \`${status}\``, {
-        parse_mode: 'MarkdownV2',
+      await this.sendMessage(chatId, `❌ Failed to delete *${escapeMarkdownV2(subdomain)}*, status: \`${status}\``, {
+        parse_mode: 'MarkdownV2'
       });
     }
+
     return new Response('OK', { status: 200 });
   }
 
@@ -309,7 +316,7 @@ if (update.callback_query) {
   }
 }
 
-// 📋 Mendapatkan semua subdomain aktif (export)
+// 📋 Dapatkan list semua subdomain aktif (export fungsi)
 export async function listSubdomains() {
-  return getDomainList();
+  return await getDomainList();
 }
