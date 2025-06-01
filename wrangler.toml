@@ -1,12 +1,25 @@
-name = "telegram-bot-worker"
+name = "telegram-wildcard-bot"
 type = "javascript"
-account_id = "${ACCOUNT_ID}"
+
+account_id = "${CF_ACCOUNT_ID}"  # Akan diisi lewat secret di GitHub Actions
 workers_dev = true
 compatibility_date = "2025-06-01"
 
 [env.production]
-route = "" # kosong jika deploy workers.dev
-zone_id = "${ZONE_ID}"
+route = "https://${ROOT_DOMAIN}/*"
+zone_id = "${CF_ZONE_ID}"
+
+[vars]
+API_KEY = "${API_KEY}"
+ACCOUNT_ID = "${CF_ACCOUNT_ID}"
+ZONE_ID = "${CF_ZONE_ID}"
+API_EMAIL = "${API_EMAIL}"
+SERVICE_NAME = "${SERVICE_NAME}"
+ROOT_DOMAIN = "${ROOT_DOMAIN}"
+
+[triggers]
+crons = []
 
 [build]
 command = "npm install"
+
