@@ -45,7 +45,7 @@ export default class TelegramBot {
       const status = await addsubdomain(subdomain);
       const fullDomain = `${subdomain}.${rootDomain}`;
       if (status === 200) {
-        await this.sendMessage(chatId, `\`\`\`Wildcard${escapeMarkdownV2(fullDomain)} added successfully\`\`\``, {
+        await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(fullDomain)} added successfully\`\`\``, {
           parse_mode: 'MarkdownV2'
         });
       } else if (status === 409) {
