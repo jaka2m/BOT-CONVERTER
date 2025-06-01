@@ -9,10 +9,10 @@ import { WildcardBot, TelegramWildcardBot } from './wildcard/botwild.js';
 const HOSTKU = 'joss.checker-ip.xyz';
 
 export class TelegramBot {
-  constructor(token, apiUrl, ownerId) {
+  constructor(token, apiUrl, OWNER_ID) {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
-    this.ownerId = ownerId;
+    this.OWNER_ID = OWNER_ID;
   }
   
   async handleUpdate(update) {
