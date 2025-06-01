@@ -4,14 +4,14 @@ export default class TelegramBot {
   constructor(token, apiUrl, ownerId, rootDomain) {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
-    this.ownerId = ownerId;
+    this.ownerId = String(ownerId); // 👈 konversi ke string langsung
     this.rootDomain = rootDomain;
   }
 
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
-    const chatId = update.message.chat.id;
+    const chatId = String(update.message.chat.id); // 👈 pastikan ini string juga
     const text = update.message.text || '';
 
     if (text.startsWith('/start')) {
@@ -19,6 +19,7 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
+    // 👇 hanya blokir user lain, bukan owner
     if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
