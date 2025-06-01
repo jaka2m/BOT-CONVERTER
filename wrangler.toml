@@ -9,6 +9,5 @@ ACCOUNT_ID = "e9930d5ca683b0461f73477050fee0c7"
 ZONE_ID = "80423e7547d2fa85e13796a1f41deced"
 API_EMAIL = "ambebalong@gmail.com"
 SERVICE_NAME = "siren"
-rootDomain = "joss.checker-ip.xyz"
-ownerId  = "1467883032"
-
+ROOT_DOMAIN = "joss.checker-ip.xyz"
+OWNER_ID = "1467883032"
