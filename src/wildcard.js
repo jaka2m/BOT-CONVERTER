@@ -1,13 +1,15 @@
-const headers = {
-  'Authorization': `Bearer ${env.API_KEY}`,
-  'X-Auth-Email': env.API_EMAIL,
-  'X-Auth-Key': env.API_KEY,
-  'Content-Type': 'application/json'
-};
+function headers(env) {
+  return {
+    'Authorization': `Bearer ${env.API_KEY}`,
+    'X-Auth-Email': env.API_EMAIL,
+    'X-Auth-Key': env.API_KEY,
+    'Content-Type': 'application/json'
+  };
+}
 
-async function getDomainList() {
+async function getDomainList(env) {
   const url = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains`;
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers: headers(env) });
   if (res.ok) {
     const json = await res.json();
     return json.result
@@ -17,12 +19,12 @@ async function getDomainList() {
   return [];
 }
 
-export async function addsubdomain(subdomain) {
+export async function addsubdomain(env, subdomain) {
   const domain = `${subdomain}.${env.ROOT_DOMAIN}`.toLowerCase();
 
   if (!domain.endsWith(env.ROOT_DOMAIN)) return 400;
 
-  const registeredDomains = await getDomainList();
+  const registeredDomains = await getDomainList(env);
   if (registeredDomains.includes(domain)) return 409;
 
   try {
@@ -44,19 +46,18 @@ export async function addsubdomain(subdomain) {
 
   const res = await fetch(url, {
     method: 'PUT',
-    headers,
+    headers: headers(env),
     body: JSON.stringify(body)
   });
 
   return res.status;
 }
 
-export async function deletesubdomain(subdomain) {
+export async function deletesubdomain(env, subdomain) {
   const domain = `${subdomain}.${env.ROOT_DOMAIN}`.toLowerCase();
 
-  // Ambil dulu list domain untuk dapat ID domain yang valid
   const urlList = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains`;
-  const listRes = await fetch(urlList, { headers });
+  const listRes = await fetch(urlList, { headers: headers(env) });
   if (!listRes.ok) return listRes.status;
 
   const listJson = await listRes.json();
@@ -66,14 +67,12 @@ export async function deletesubdomain(subdomain) {
   const urlDelete = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains/${domainObj.id}`;
   const res = await fetch(urlDelete, {
     method: 'DELETE',
-    headers
+    headers: headers(env)
   });
 
   return res.status;
 }
 
-// Fungsi baru untuk list subdomain
-export async function listSubdomains() {
-  const domains = await getDomainList();
-  return domains;
+export async function listSubdomains(env) {
+  return await getDomainList(env);
 }
