@@ -9,8 +9,12 @@ export default {
     try {
       const update = await request.json();
 
-      // Gunakan OWNER_ID dari env agar konsisten dan mudah konfigurasi
-      const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, undefined, Number(env.OWNER_ID));
+      const bot = new TelegramBot(
+        env.TELEGRAM_BOT_TOKEN,
+        undefined,
+        Number(env.OWNER_ID),
+        env.ROOT_DOMAIN
+      );
 
       return bot.handleUpdate(update);
     } catch (error) {
