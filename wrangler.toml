@@ -1,20 +1,21 @@
 name = "telegram-wildcard-bot"
-type = "javascript"
-
-# Kosongkan kalau deploy ke environment production via GitHub Actions
-account_id = ""
-workers_dev = true
 main = "src/worker.js"
 compatibility_date = "2025-06-01"
+workers_dev = true
 
 [env.production]
-account_id = ""       # kosongkan, akan diisi dari workflow
-zone_id = ""          # kosongkan, akan diisi dari workflow
 route = "https://${ROOT_DOMAIN}/*"
-vars = {}             # kosongkan, variabel diset lewat workflow
+zone_id = "${ZONE_ID}"
 
-[triggers]
-crons = []
+[vars]
+API_KEY = "${API_KEY}"
+ACCOUNT_ID = "${ACCOUNT_ID}"
+ZONE_ID = "${ZONE_ID}"
+API_EMAIL = "${API_EMAIL}"
+SERVICE_NAME = "${SERVICE_NAME}"
+ROOT_DOMAIN = "${ROOT_DOMAIN}"
+TELEGRAM_TOKEN = "${TELEGRAM_TOKEN}"
+OWNER_ID = "${OWNER_ID}"
 
 [build]
 command = "npm install"
