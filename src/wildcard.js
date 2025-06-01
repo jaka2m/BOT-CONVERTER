@@ -1,85 +1,64 @@
-const headers = {
-  'Authorization': `Bearer ${env.API_KEY}`,
-  'X-Auth-Email': env.API_EMAIL,
-  'X-Auth-Key': env.API_KEY,
-  'Content-Type': 'application/json'
-};
+name: Deploy VPN CF
 
-// Ambil daftar subdomain dari Cloudflare
-async function getDomainList() {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains`;
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
-  const res = await fetch(url, { headers });
-  if (!res.ok) return [];
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
 
-  const json = await res.json();
-  return json.result
-    .filter(d => d.service === env.SERVICE_NAME)
-    .map(d => d.hostname);
-}
+    steps:
+      - uses: actions/checkout@v4
 
-// Tambahkan subdomain baru
-export async function addsubdomain(subdomain) {
-  const domain = `${subdomain}.${env.ROOT_DOMAIN}`.toLowerCase();
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-  // Validasi domain
-  if (!domain.endsWith(env.ROOT_DOMAIN)) return 400;
+      - name: Install dependencies
+        run: npm install
 
-  // Cek apakah sudah terdaftar
-  const registeredDomains = await getDomainList();
-  if (registeredDomains.includes(domain)) return 409;
+      - name: Setup Wrangler secrets and deploy worker
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          API_KEY: ${{ secrets.API_KEY }}
+          API_EMAIL: ${{ secrets.API_EMAIL }}
+          ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
+          ZONE_ID: ${{ secrets.ZONE_ID }}
+          WORKER_NAME: v2ray-config-bot
+        run: |
+          set -e
 
-  try {
-    // Cek apakah domain belum aktif (status 530)
-    const testUrl = `https://${domain.replace(`.${env.ROOT_DOMAIN}`, '')}`;
-    const domainTest = await fetch(testUrl);
-    if (domainTest.status === 530) return 530;
-  } catch {
-    return 400;
-  }
+          SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
+          HEADERS=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json")
 
-  // Tambahkan subdomain ke Cloudflare Workers
-  const url = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains`;
-  const body = {
-    environment: "production",
-    hostname: domain,
-    service: env.SERVICE_NAME,
-    zone_id: env.ZONE_ID
-  };
+          replace_secret() {
+            NAME=$1
+            VALUE=$2
+            echo "Replacing secret: $NAME"
 
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(body)
-  });
+            # Cek apakah sudah ada
+            EXISTS=$(curl -s -X GET "$SECRETS_API" "${HEADERS[@]}" | jq -r '.result[]?.name' | grep "^$NAME$" || true)
+            if [ "$EXISTS" = "$NAME" ]; then
+              echo "Deleting existing secret $NAME..."
+              curl -s -X DELETE "$SECRETS_API/$NAME" "${HEADERS[@]}" > /dev/null
+            fi
 
-  return res.status;
-}
+            echo "$VALUE" | npx wrangler secret put "$NAME" --name "$WORKER_NAME"
+          }
 
-// Hapus subdomain yang ada
-export async function deletesubdomain(subdomain) {
-  const domain = `${subdomain}.${env.ROOT_DOMAIN}`.toLowerCase();
+          replace_secret TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
+          replace_secret API_KEY "$API_KEY"
+          replace_secret API_EMAIL "$API_EMAIL"
+          replace_secret ACCOUNT_ID "$ACCOUNT_ID"
+          replace_secret ZONE_ID "$ZONE_ID"
 
-  // Ambil list untuk mencari ID domain yang sesuai
-  const urlList = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains`;
-  const listRes = await fetch(urlList, { headers });
-  if (!listRes.ok) return listRes.status;
-
-  const listJson = await listRes.json();
-  const domainObj = listJson.result.find(d => d.hostname === domain);
-  if (!domainObj) return 404;
-
-  // Hapus subdomain dari Cloudflare Workers
-  const urlDelete = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains/${domainObj.id}`;
-  const res = await fetch(urlDelete, {
-    method: 'DELETE',
-    headers
-  });
-
-  return res.status;
-}
-
-// Ambil daftar subdomain yang aktif
-export async function listSubdomains() {
-  return await getDomainList();
-}
+          echo "Deploying worker..."
+          npx wrangler deploy --name "$WORKER_NAME"
