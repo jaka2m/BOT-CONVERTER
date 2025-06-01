@@ -1,8 +1,9 @@
-name: Deploy Telegram Bot Worker
+name: Deploy Telegram Wildcard Bot
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   deploy:
@@ -16,28 +17,23 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Wrangler CLI
-        run: npm install -g wrangler
+      - name: Install dependencies
+        run: npm install
 
       - name: Publish to Cloudflare Workers
+        uses: cloudflare/wrangler-action@2.0.0
+        with:
+          apiToken: ${{ secrets.API_TOKEN }}
+          accountId: ${{ secrets.ACCOUNT_ID }}
+          environment: production
+          workingDirectory: ./
         env:
-          ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
-          API_TOKEN: ${{ secrets.API_TOKEN }}
-          TELEGRAM_API_TOKEN: ${{ secrets.TELEGRAM_API_TOKEN }}
-          OWNER_ID: ${{ secrets.OWNER_ID }}
           API_KEY: ${{ secrets.API_KEY }}
           ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
           ZONE_ID: ${{ secrets.ZONE_ID }}
           API_EMAIL: ${{ secrets.API_EMAIL }}
           SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
           ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
-        run: |
-          wrangler secret put TELEGRAM_API_TOKEN <<< "${{ secrets.TELEGRAM_API_TOKEN }}"
-          wrangler secret put OWNER_ID <<< "${{ secrets.OWNER_ID }}"
-          wrangler secret put API_KEY <<< "${{ secrets.API_KEY }}"
-          wrangler secret put ACCOUNT_ID <<< "${{ secrets.ACCOUNT_ID }}"
-          wrangler secret put ZONE_ID <<< "${{ secrets.ZONE_ID }}"
-          wrangler secret put API_EMAIL <<< "${{ secrets.API_EMAIL }}"
-          wrangler secret put SERVICE_NAME <<< "${{ secrets.SERVICE_NAME }}"
-          wrangler secret put ROOT_DOMAIN <<< "${{ secrets.ROOT_DOMAIN }}"
-          wrangler publish --env production
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          OWNER_ID: ${{ secrets.OWNER_ID }}
+
