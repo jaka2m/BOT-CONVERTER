@@ -1,10 +1,9 @@
-export const wildcarRootDomain = "joss.checker-ip.xyz";
-
-const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
-const accountID = "e9930d5ca683b0461f73477050fee0c7";
-const zoneID = "80423e7547d2fa85e13796a1f41deced";
-const apiEmail = "ambebalong@gmail.com";
-const serviceName = "siren";
+const apiKey = Deno.env.get('API_KEY');          // Cloudflare API key
+const accountID = Deno.env.get('ACCOUNT_ID');   // Cloudflare Account ID
+const zoneID = Deno.env.get('ZONE_ID');         // Zone ID
+const apiEmail = Deno.env.get('API_EMAIL');     // API email (kadang optional tergantung token)
+const serviceName = Deno.env.get('SERVICE_NAME');
+const rootDomainGlobal = Deno.env.get('ROOT_DOMAIN');
 
 const headers = {
   'Authorization': `Bearer ${apiKey}`,
@@ -13,29 +12,29 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-async function getDomainList() {
+async function getDomainList(rootDomain = rootDomainGlobal) {
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
   const res = await fetch(url, { headers });
   if (res.ok) {
     const json = await res.json();
     return json.result
-      .filter(d => d.service === serviceName)
+      .filter(d => d.service === serviceName && d.hostname.endsWith(rootDomain))
       .map(d => d.hostname);
   }
   return [];
 }
 
-export async function addsubdomain(subdomain) {
-  const domain = `${subdomain}.${wildcarRootDomain}`.toLowerCase();
+export async function addsubdomain(subdomain, rootDomain = rootDomainGlobal) {
+  const domain = `${subdomain}.${rootDomain}`.toLowerCase();
 
-  if (!domain.endsWith(wildcarRootDomain)) return 400;
+  if (!domain.endsWith(rootDomain)) return 400;
 
-  const registeredDomains = await getDomainList();
+  const registeredDomains = await getDomainList(rootDomain);
   if (registeredDomains.includes(domain)) return 409;
 
   try {
-    // Cek apakah domain sudah aktif (cek 530)
-    const testUrl = `https://${domain.replace(`.${wildcarRootDomain}`, '')}`;
+    // Cek apakah domain sudah aktif (cek status 530)
+    const testUrl = `https://${subdomain}`;
     const domainTest = await fetch(testUrl);
     if (domainTest.status === 530) return 530;
   } catch {
@@ -59,10 +58,9 @@ export async function addsubdomain(subdomain) {
   return res.status;
 }
 
-export async function deletesubdomain(subdomain) {
-  const domain = `${subdomain}.${wildcarRootDomain}`.toLowerCase();
+export async function deletesubdomain(subdomain, rootDomain = rootDomainGlobal) {
+  const domain = `${subdomain}.${rootDomain}`.toLowerCase();
 
-  // Ambil dulu list domain untuk dapat ID domain yang valid
   const urlList = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
   const listRes = await fetch(urlList, { headers });
   if (!listRes.ok) return listRes.status;
@@ -80,6 +78,7 @@ export async function deletesubdomain(subdomain) {
   return res.status;
 }
 
-export async function listSubdomains() {
-  return await getDomainList();
+export async function listSubdomains(rootDomain = rootDomainGlobal) {
+  const domains = await getDomainList(rootDomain);
+  return domains;
 }
