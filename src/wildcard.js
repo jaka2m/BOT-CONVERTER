@@ -1,30 +1,31 @@
-const apiKey = Deno.env.get('API_KEY');          // Cloudflare API key
-const accountID = Deno.env.get('ACCOUNT_ID');   // Cloudflare Account ID
-const zoneID = Deno.env.get('ZONE_ID');         // Zone ID
-const apiEmail = Deno.env.get('API_EMAIL');     // API email (kadang optional tergantung token)
-const serviceName = Deno.env.get('SERVICE_NAME');
-const rootDomainGlobal = Deno.env.get('ROOT_DOMAIN');
+const {
+  API_KEY,
+  ACCOUNT_ID,
+  ZONE_ID,
+  API_EMAIL,
+  SERVICE_NAME,
+} = ENV; // Akan di-inject lewat wrangler environment variables
 
 const headers = {
-  'Authorization': `Bearer ${apiKey}`,
-  'X-Auth-Email': apiEmail,
-  'X-Auth-Key': apiKey,
+  'Authorization': `Bearer ${API_KEY}`,
+  'X-Auth-Email': API_EMAIL,
+  'X-Auth-Key': API_KEY,
   'Content-Type': 'application/json'
 };
 
-async function getDomainList(rootDomain = rootDomainGlobal) {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+export async function getDomainList(rootDomain) {
+  const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/domains`;
   const res = await fetch(url, { headers });
   if (res.ok) {
     const json = await res.json();
     return json.result
-      .filter(d => d.service === serviceName && d.hostname.endsWith(rootDomain))
+      .filter(d => d.service === SERVICE_NAME && d.hostname.endsWith(rootDomain))
       .map(d => d.hostname);
   }
   return [];
 }
 
-export async function addsubdomain(subdomain, rootDomain = rootDomainGlobal) {
+export async function addsubdomain(subdomain, rootDomain) {
   const domain = `${subdomain}.${rootDomain}`.toLowerCase();
 
   if (!domain.endsWith(rootDomain)) return 400;
@@ -33,20 +34,19 @@ export async function addsubdomain(subdomain, rootDomain = rootDomainGlobal) {
   if (registeredDomains.includes(domain)) return 409;
 
   try {
-    // Cek apakah domain sudah aktif (cek status 530)
-    const testUrl = `https://${subdomain}`;
+    const testUrl = `https://${domain.replace(`.${rootDomain}`, '')}`;
     const domainTest = await fetch(testUrl);
     if (domainTest.status === 530) return 530;
   } catch {
     return 400;
   }
 
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+  const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/domains`;
   const body = {
     environment: "production",
     hostname: domain,
-    service: serviceName,
-    zone_id: zoneID
+    service: SERVICE_NAME,
+    zone_id: ZONE_ID
   };
 
   const res = await fetch(url, {
@@ -58,10 +58,10 @@ export async function addsubdomain(subdomain, rootDomain = rootDomainGlobal) {
   return res.status;
 }
 
-export async function deletesubdomain(subdomain, rootDomain = rootDomainGlobal) {
+export async function deletesubdomain(subdomain, rootDomain) {
   const domain = `${subdomain}.${rootDomain}`.toLowerCase();
 
-  const urlList = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+  const urlList = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/domains`;
   const listRes = await fetch(urlList, { headers });
   if (!listRes.ok) return listRes.status;
 
@@ -69,7 +69,7 @@ export async function deletesubdomain(subdomain, rootDomain = rootDomainGlobal) 
   const domainObj = listJson.result.find(d => d.hostname === domain);
   if (!domainObj) return 404;
 
-  const urlDelete = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains/${domainObj.id}`;
+  const urlDelete = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/workers/domains/${domainObj.id}`;
   const res = await fetch(urlDelete, {
     method: 'DELETE',
     headers
@@ -78,7 +78,6 @@ export async function deletesubdomain(subdomain, rootDomain = rootDomainGlobal) 
   return res.status;
 }
 
-export async function listSubdomains(rootDomain = rootDomainGlobal) {
-  const domains = await getDomainList(rootDomain);
-  return domains;
+export async function listSubdomains(rootDomain) {
+  return await getDomainList(rootDomain);
 }
