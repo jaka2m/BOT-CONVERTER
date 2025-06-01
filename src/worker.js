@@ -1,17 +1,22 @@
 import TelegramBot from './bot.js';
-import { TELEGRAM_BOT_TOKEN } from './itil.js';
-
-const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
 
 export default {
-  async fetch(request) {
-    if (request.method !== 'POST') {
-      return new Response('Method Not Allowed', { status: 405 });
+  async fetch(request, env) {
+    if (request.method === 'POST') {
+      try {
+        const update = await request.json();
+
+        // GANTI INI: tambahkan ownerId saat membuat instance
+        const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+
+        return bot.handleUpdate(update);
+      } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
-
-    const update = await request.json();
-    await bot.handleUpdate(update);
-
-    return new Response('OK', { status: 200 });
+    return new Response('Method not allowed', { status: 405 });
   }
 };
