@@ -14,7 +14,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -35,13 +35,14 @@ jobs:
           WORKER_NAME: v2ray-config-bot
         run: |
           set -e
+
           SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
           HEADERS=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json")
 
           put_secret() {
             NAME=$1
             VALUE=$2
-            echo "$VALUE" | npx wrangler secret put "$NAME" --name "$WORKER_NAME" --env production --yes
+            echo "$VALUE" | npx wrangler secret put "$NAME" --name "$WORKER_NAME"
           }
 
           set_secret_if_not_exists() {
@@ -57,7 +58,6 @@ jobs:
             fi
           }
 
-          # Tambahkan secrets hanya jika belum ada
           set_secret_if_not_exists TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
           set_secret_if_not_exists API_KEY "$API_KEY"
           set_secret_if_not_exists API_EMAIL "$API_EMAIL"
