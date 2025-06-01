@@ -12,22 +12,20 @@ export default {
 
     try {
       const update = await request.json();
+      const ownerId = env.OWNER_ID; // <- Ambil dari ENV
 
-      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN);
-      const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN);
-      const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN);
-      const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN);
-      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN);
+      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
       
-      // Jalankan handleUpdate di kedua bot secara berurutan
-      // Biasanya cuma butuh return salah satu response (misalnya dari bot1)
       await bot1.handleUpdate(update);
       await bot2.handleUpdate(update);
       await bot3.handleUpdate(update);
       await bot4.handleUpdate(update);
       await bot5.handleUpdate(update);
-      
-      // Kembalikan response 200 OK
+
       return new Response('OK', { status: 200 });
     } catch (error) {
       return new Response(JSON.stringify({ error: error.message }), {
