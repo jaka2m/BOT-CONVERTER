@@ -1,6 +1,17 @@
 // ========================================
-// Wildcard Bot Telegram Class
+// Main Telegram Wildcard Bot class
 // ========================================
+
+export async function WildcardBot(link) {
+  console.log("Bot link:", link);
+}
+
+export class TelegramWildcardBot {
+  constructor(token, apiUrl, ownerId) {
+    this.token = token;
+    this.apiUrl = apiUrl || 'https://api.telegram.org';
+    this.ownerId = ownerId;
+  }
 
 const rootDomain = "joss.checker-ip.xyz";
 const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
@@ -90,20 +101,6 @@ async function deletesubdomain(subdomain) {
 async function listSubdomains() {
   return await getDomainList();
 }
-
-export async function WildcardBot(link) {
-  console.log("Bot link:", link);
-}
-
-// ========================================
-// Main Telegram Wildcard Bot class
-// ========================================
-export class TelegramWildcardBot {
-  constructor(token, apiUrl, ownerId) {
-    this.token = token;
-    this.apiUrl = apiUrl || 'https://api.telegram.org';
-    this.ownerId = ownerId;
-  }
 
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
