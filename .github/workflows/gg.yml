@@ -1,28 +1,3 @@
-name: Deploy VPN CF
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm install
-
       - name: Publish to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
@@ -39,3 +14,12 @@ jobs:
           ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           OWNER_ID: ${{ secrets.OWNER_ID }}
+
+      - name: Debug Wrangler Version
+        run: npx wrangler --version
+
+      - name: Debug Node Version
+        run: node --version
+
+      - name: List files
+        run: ls -la src
