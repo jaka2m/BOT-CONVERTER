@@ -34,36 +34,53 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-    // 📌 Command: /add <subdomain>
-    if (text.startsWith('/add ')) {
-      const subdomain = text.split(' ')[1];
-      if (!subdomain) {
-        await this.sendMessage(chatId, 'Please specify the subdomain to add. Example: /add test');
-        return new Response('OK', { status: 200 });
-      }
+    // ⛔ Batasi /add dan /del hanya untuk owner
+if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
+  await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
+  return new Response('OK', { status: 200 });
+}
 
-      const status = await addsubdomain(subdomain);
-      const fullDomain = `${subdomain}.${rootDomain}`;
-      if (status === 200) {
-        await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(fullDomain)} added successfully\`\`\``, {
-          parse_mode: 'MarkdownV2'
-        });
-      } else if (status === 409) {
-        await this.sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(fullDomain)}* already exists.`, {
-          parse_mode: 'MarkdownV2'
-        });
-      } else if (status === 530) {
-        await this.sendMessage(chatId, `❌ Subdomain *${escapeMarkdownV2(fullDomain)}* not active (error 530).`, {
-          parse_mode: 'MarkdownV2'
-        });
-      } else {
-        await this.sendMessage(chatId, `❌ Failed to add *${escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, {
-          parse_mode: 'MarkdownV2'
-        });
-      }
+// 📌 Command: /add <subdomain>
+if (text.startsWith('/add ')) {
+  const subdomain = text.split(' ')[1];
+  if (!subdomain) {
+    await this.sendMessage(chatId, 'Please specify the subdomain to add. Example: /add test');
+    return new Response('OK', { status: 200 });
+  }
 
-      return new Response('OK', { status: 200 });
-    }
+  // ⏳ Kirim pesan loading
+  const loadingMsg = await this.sendMessage(chatId, '⏳ Adding subdomain, please wait...');
+  const messageId = loadingMsg.result?.message_id;
+
+  const status = await addsubdomain(subdomain);
+  const fullDomain = `${subdomain}.${rootDomain}`;
+
+  // 🧹 Hapus pesan loading jika berhasil dikirim
+  if (messageId) {
+    await this.deleteMessage(chatId, messageId);
+  }
+
+  // ✅ Tanggapan berdasarkan status
+  if (status === 200) {
+    await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(fullDomain)} added successfully\`\`\``, {
+      parse_mode: 'MarkdownV2'
+    });
+  } else if (status === 409) {
+    await this.sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(fullDomain)}* already exists.`, {
+      parse_mode: 'MarkdownV2'
+    });
+  } else if (status === 530) {
+    await this.sendMessage(chatId, `❌ Subdomain *${escapeMarkdownV2(fullDomain)}* not active (error 530).`, {
+      parse_mode: 'MarkdownV2'
+    });
+  } else {
+    await this.sendMessage(chatId, `❌ Failed to add *${escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, {
+      parse_mode: 'MarkdownV2'
+    });
+  }
+
+  return new Response('OK', { status: 200 });
+}
 
     // 🗑️ Command: /del <subdomain>
     if (text.startsWith('/del ')) {
@@ -113,7 +130,7 @@ export default class TelegramBot {
 
         // Kirim juga sebagai dokumen .txt
         const fileContent = domains.map((d, i) => `${i + 1}. ${d}`).join('\n');
-        await this.sendDocument(chatId, fileContent, 'subdomain-list.txt', 'text/plain');
+        await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
       }
 
       return new Response('OK', { status: 200 });
