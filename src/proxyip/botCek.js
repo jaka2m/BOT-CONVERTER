@@ -180,7 +180,6 @@ const accountID = "e9930d5ca683b0461f73477050fee0c7";
 const zoneID = "80423e7547d2fa85e13796a1f41deced";
 const apiEmail = "ambebalong@gmail.com";
 const serviceName = "siren";
-const rootDomain = "example.com"; // GANTI dengan root domain kamu
 
 const headers = {
   'Authorization': `Bearer ${apiKey}`,
