@@ -25,10 +25,18 @@ jobs:
           
       - name: Setup Wrangler secret and deploy worker
         env:
+        
+        
+        API_KEY: ${{ secrets.API_KEY }}
+        ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
+        ZONE_ID: ${{ secrets.ZONE_ID }}
+        API_EMAIL: ${{ secrets.API_EMAIL }}
+        ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
+        OWNER_ID: ${{ secrets.OWNER_ID }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          WORKER_NAME: v2ray-config-bot
+          WORKER_NAME: siren
         run: |
           set -e
           SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
