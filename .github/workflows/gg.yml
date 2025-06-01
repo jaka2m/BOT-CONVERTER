@@ -1,61 +1,26 @@
-name: Deploy VPN CF
+name: Deploy Cloudflare Worker
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '18'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install Wrangler CLI
+        run: npm install -g wrangler
 
-      - name: Setup Wrangler secret and deploy worker
+      - name: Publish to Cloudflare Workers
         env:
-          API_KEY: ${{ secrets.API_KEY }}
-          ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
-          ZONE_ID: ${{ secrets.ZONE_ID }}
-          API_EMAIL: ${{ secrets.API_EMAIL }}
-          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
-          OWNER_ID: ${{ secrets.OWNER_ID }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          WORKER_NAME: free-vpn
-        run: |
-          set -e
-          SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
-
-          echo "Checking if TELEGRAM_BOT_TOKEN secret exists..."
-          EXISTS=$(curl -s -X GET "$SECRETS_API" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
-            -H "Content-Type: application/json" | jq -r '.result[]?.name' | grep "^TELEGRAM_BOT_TOKEN$" || true)
-
-          if [ "$EXISTS" = "TELEGRAM_BOT_TOKEN" ]; then
-            echo "Secret TELEGRAM_BOT_TOKEN already exists, skipping creation."
-          else
-            echo "Secret TELEGRAM_BOT_TOKEN not found, creating..."
-            set +e
-            echo "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN
-            if [ $? -ne 0 ]; then
-              echo "Warning: Failed to create secret, maybe already exists. Continuing deploy..."
-            fi
-            set -e
-          fi
-
-          echo "Deploying worker..."
-          npx wrangler deploy
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: wrangler publish --env production
