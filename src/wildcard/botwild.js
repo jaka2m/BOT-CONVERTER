@@ -25,6 +25,7 @@ export class TelegramWildcardBot {
 
   // ⛔ Batasi /add dan /del hanya untuk owner
 if ((text.startsWith('/add ') || text.startsWith('/del ')) && String(chatId) !== String(this.ownerId)) {
+  console.log(`Unauthorized access attempt by chatId: ${chatId}, ownerId: ${this.ownerId}`);
   await this.sendMessage(chatId, '⛔ You are not authorized to use this command.', { parse_mode: 'MarkdownV2' });
   return new Response('OK', { status: 200 });
 }
@@ -38,7 +39,7 @@ if (text.startsWith('/add ')) {
 
   let loadingMsgId;
   try {
-    const loadingMsg = await this.sendMessage(chatId, '⏳ Adding subdomain, please wait...', { parse_mode: 'MarkdownV2' });
+    const loadingMsg = await this.sendMessage(chatId, '⏳ Adding subdomain, please wait...');
     loadingMsgId = loadingMsg.result?.message_id;
   } catch (err) {
     console.error('❌ Failed to send loading message:', err);
