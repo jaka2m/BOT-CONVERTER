@@ -1,61 +1,86 @@
-name: Deploy VPN CF
+const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
+const accountID = "e9930d5ca683b0461f73477050fee0c7";
+const zoneID = "80423e7547d2fa85e13796a1f41deced";
+const apiEmail = "ambebalong@gmail.com";
+const serviceName = "siren";
+const rootDomain = "joss.checker-ip.xyz";
 
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+const headers = {
+  'Authorization': `Bearer ${apiKey}`,
+  'X-Auth-Email': apiEmail,
+  'X-Auth-Key': apiKey,
+  'Content-Type': 'application/json'
+};
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
+async function getDomainList() {
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+  const res = await fetch(url, { headers });
+  if (res.ok) {
+    const json = await res.json();
+    return json.result
+      .filter(d => d.service === serviceName)
+      .map(d => d.hostname);
+  }
+  return [];
+}
 
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          
-      - name: Install dependencies
-        run: npm install
+export async function addsubdomain(subdomain) {
+  const domain = `${subdomain}.${rootDomain}`.toLowerCase();
 
-      - name: Setup Wrangler secrets and deploy worker
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          API_KEY: ${{ secrets.API_KEY }}
-          API_EMAIL: ${{ secrets.API_EMAIL }}
-          ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
-          ZONE_ID: ${{ secrets.ZONE_ID }}
-          WORKER_NAME: v2ray-config-bot
-        run: |
-          set -e
-          SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
-          HEADERS=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json")
+  if (!domain.endsWith(rootDomain)) return 400;
 
-          check_and_put_secret() {
-            local NAME=$1
-            local VALUE=$2
-            echo "Checking if secret $NAME exists..."
-            EXISTS=$(curl -s -X GET "$SECRETS_API" "${HEADERS[@]}" | jq -r '.result[]?.name' | grep "^$NAME$" || true)
-            if [ "$EXISTS" = "$NAME" ]; then
-              echo "Secret $NAME already exists, skipping."
-            else
-              echo "Setting secret: $NAME"
-              echo "$VALUE" | npx wrangler secret put "$NAME" --name "$WORKER_NAME"
-            fi
-          }
+  const registeredDomains = await getDomainList();
+  if (registeredDomains.includes(domain)) return 409;
 
-          check_and_put_secret TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
-          check_and_put_secret API_KEY "$API_KEY"
-          check_and_put_secret API_EMAIL "$API_EMAIL"
-          check_and_put_secret ACCOUNT_ID "$ACCOUNT_ID"
-          check_and_put_secret ZONE_ID "$ZONE_ID"
+  try {
+    // Cek apakah domain sudah aktif (cek 530)
+    const testUrl = `https://${domain.replace(`.${rootDomain}`, '')}`;
+    const domainTest = await fetch(testUrl);
+    if (domainTest.status === 530) return 530;
+  } catch {
+    return 400;
+  }
 
-          echo "Deploying worker..."
-          npx wrangler deploy --name "$WORKER_NAME"
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+  const body = {
+    environment: "production",
+    hostname: domain,
+    service: serviceName,
+    zone_id: zoneID
+  };
+
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body)
+  });
+
+  return res.status;
+}
+
+export async function deletesubdomain(subdomain) {
+  const domain = `${subdomain}.${rootDomain}`.toLowerCase();
+
+  // Ambil dulu list domain untuk dapat ID domain yang valid
+  const urlList = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+  const listRes = await fetch(urlList, { headers });
+  if (!listRes.ok) return listRes.status;
+
+  const listJson = await listRes.json();
+  const domainObj = listJson.result.find(d => d.hostname === domain);
+  if (!domainObj) return 404;
+
+  const urlDelete = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains/${domainObj.id}`;
+  const res = await fetch(urlDelete, {
+    method: 'DELETE',
+    headers
+  });
+
+  return res.status;
+}
+
+// Fungsi baru untuk list subdomain
+export async function listSubdomains() {
+  const domains = await getDomainList();
+  return domains;
+}
