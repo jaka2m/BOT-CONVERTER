@@ -63,7 +63,7 @@ export default class TelegramBot {
     if (text.startsWith('/list')) {
   const domains = await listSubdomains();
   if (domains.length === 0) {
-    await this.sendMessage(chatId, 'No subdomains registered yet.', {
+    await this.sendMessage(chatId, '*No subdomains registered yet.*', {
       parse_mode: 'Markdown'
     });
   } else {
@@ -73,6 +73,12 @@ export default class TelegramBot {
     });
   }
   return new Response('OK', { status: 200 });
+}
+
+await this.sendMessage(chatId, '*Unknown command.* Use `/add`, `/del`, or `/list`.', {
+  parse_mode: 'Markdown'
+});
+return new Response('OK', { status: 200 });
 }
 
   async sendMessage(chatId, text) {
