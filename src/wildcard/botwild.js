@@ -6,13 +6,7 @@ export async function WildcardBot(link) {
   console.log("Bot link:", link);
 }
 
-export class TelegramWildcardBot {
-  constructor(token, apiUrl, ownerId) {
-    this.token = token;
-    this.apiUrl = apiUrl || 'https://api.telegram.org';
-    this.ownerId = ownerId;
-  }
-
+// Konstanta global
 const rootDomain = "joss.checker-ip.xyz";
 const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
 const accountID = "e9930d5ca683b0461f73477050fee0c7";
@@ -27,12 +21,12 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-// Escape MarkdownV2 for Telegram messages
+// Escape MarkdownV2 untuk Telegram
 function escapeMarkdownV2(text) {
   return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
 }
 
-// Cloudflare Workers API - Get domain list
+// Ambil list domain dari Cloudflare Workers
 async function getDomainList() {
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
   const res = await fetch(url, { headers });
@@ -43,10 +37,9 @@ async function getDomainList() {
   return [];
 }
 
-// Add subdomain to Cloudflare Workers
+// Tambah subdomain ke Cloudflare Workers
 async function addsubdomain(subdomain) {
   const domain = `${subdomain}.${rootDomain}`.toLowerCase();
-
   if (!domain.endsWith(rootDomain)) return 400;
 
   const registeredDomains = await getDomainList();
@@ -77,10 +70,11 @@ async function addsubdomain(subdomain) {
   return res.status;
 }
 
-// Delete subdomain from Cloudflare Workers
+// Hapus subdomain dari Cloudflare Workers
 async function deletesubdomain(subdomain) {
   const domain = `${subdomain}.${rootDomain}`.toLowerCase();
   const urlList = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+
   const listRes = await fetch(urlList, { headers });
   if (!listRes.ok) return listRes.status;
 
@@ -97,11 +91,26 @@ async function deletesubdomain(subdomain) {
   return res.status;
 }
 
-// List all subdomains registered
+// Ambil semua subdomain terdaftar
 async function listSubdomains() {
   return await getDomainList();
 }
 
+// ========================================
+// Telegram Bot Handler Class
+// ========================================
+
+export class TelegramWildcardBot {
+  constructor(token, apiUrl, ownerId) {
+    this.token = token;
+    this.apiUrl = apiUrl || 'https://api.telegram.org';
+    this.ownerId = ownerId;
+    this.handleUpdate = this.handleUpdate.bind(this); // bind untuk digunakan sebagai handler
+  }
+
+  // ============================
+  // Tangani update dari webhook
+  // ============================
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
@@ -114,7 +123,7 @@ async function listSubdomains() {
       return new Response('OK', { status: 200 });
     }
 
-    // /add <subdomain>
+    // Handle /add
     if (text.startsWith('/add ')) {
       const subdomain = text.split(' ')[1]?.trim();
       if (!subdomain) return new Response('OK', { status: 200 });
@@ -158,13 +167,14 @@ async function listSubdomains() {
       return new Response('OK', { status: 200 });
     }
 
-    // /del <subdomain>
+    // Handle /del
     if (text.startsWith('/del ')) {
       const subdomain = text.split(' ')[1];
       if (!subdomain) return new Response('OK', { status: 200 });
 
       const status = await deletesubdomain(subdomain);
       const fullDomain = `${subdomain}.${rootDomain}`;
+
       if (status === 200) {
         await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(fullDomain)} deleted successfully.\`\`\``, { parse_mode: 'MarkdownV2' });
       } else if (status === 404) {
@@ -176,7 +186,7 @@ async function listSubdomains() {
       return new Response('OK', { status: 200 });
     }
 
-    // /list
+    // Handle /list
     if (text.startsWith('/list')) {
       const domains = await listSubdomains();
 
@@ -199,7 +209,7 @@ async function listSubdomains() {
     return new Response('OK', { status: 200 });
   }
 
-  // Kirim pesan Telegram
+  // Kirim pesan ke Telegram
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, ...options };
     const response = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
@@ -219,7 +229,7 @@ async function listSubdomains() {
     });
   }
 
-  // Kirim file Telegram
+  // Kirim file ke Telegram
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
