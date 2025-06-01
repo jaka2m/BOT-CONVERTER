@@ -1,4 +1,4 @@
-import { isAdmin, readWildcards, writeWildcards } from './utils.js';
+import { isAdmin, readWildcards, writeWildcards } from './itil.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
