@@ -1,10 +1,11 @@
 import { addsubdomain, deletesubdomain, listSubdomains } from './wildcard.js';
 
 export default class TelegramBot {
-  constructor(token, apiUrl, ownerId) {
+  constructor(token, apiUrl, ownerId, rootDomain) {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
+    this.rootDomain = rootDomain;
   }
 
   async handleUpdate(update) {
@@ -18,7 +19,6 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-    // ⛔ Batasi /add dan /del hanya untuk owner
     if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
@@ -32,13 +32,13 @@ export default class TelegramBot {
       }
       const status = await addsubdomain(subdomain);
       if (status === 200) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} added successfully.`);
+        await this.sendMessage(chatId, `✅ Subdomain ${subdomain}.${this.rootDomain} added successfully.`);
       } else if (status === 409) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} already exists.`);
+        await this.sendMessage(chatId, `⚠️ Subdomain ${subdomain}.${this.rootDomain} already exists.`);
       } else if (status === 530) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} not active or error 530.`);
+        await this.sendMessage(chatId, `❌ Subdomain ${subdomain}.${this.rootDomain} not active or error 530.`);
       } else {
-        await this.sendMessage(chatId, `Failed to add subdomain ${subdomain}.${ROOT_DOMAIN}, status: ${status}`);
+        await this.sendMessage(chatId, `❌ Failed to add subdomain ${subdomain}.${this.rootDomain}, status: ${status}`);
       }
       return new Response('OK', { status: 200 });
     }
@@ -51,21 +51,21 @@ export default class TelegramBot {
       }
       const status = await deletesubdomain(subdomain);
       if (status === 200) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} deleted successfully.`);
+        await this.sendMessage(chatId, `✅ Subdomain ${subdomain}.${this.rootDomain} deleted successfully.`);
       } else if (status === 404) {
-        await this.sendMessage(chatId, `Subdomain ${subdomain}.${ROOT_DOMAIN} not found.`);
+        await this.sendMessage(chatId, `⚠️ Subdomain ${subdomain}.${this.rootDomain} not found.`);
       } else {
-        await this.sendMessage(chatId, `Failed to delete subdomain ${subdomain}.${ROOT_DOMAIN}, status: ${status}`);
+        await this.sendMessage(chatId, `❌ Failed to delete subdomain ${subdomain}.${this.rootDomain}, status: ${status}`);
       }
       return new Response('OK', { status: 200 });
     }
 
     if (text.startsWith('/list')) {
       const domains = await listSubdomains();
-      if (domains.length === 0) {
-        await this.sendMessage(chatId, 'No subdomains registered yet.');
+      if (!domains || domains.length === 0) {
+        await this.sendMessage(chatId, '📭 No subdomains registered yet.');
       } else {
-        await this.sendMessage(chatId, `Registered subdomains:\n${domains.join('\n')}`);
+        await this.sendMessage(chatId, `📋 Registered subdomains:\n${domains.join('\n')}`);
       }
       return new Response('OK', { status: 200 });
     }
@@ -76,15 +76,12 @@ export default class TelegramBot {
 
   async sendMessage(chatId, text) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const response = await fetch(url, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text
-      })
+      body: JSON.stringify({ chat_id: chatId, text })
     });
-    return response.json();
+    return res.json();
   }
 
   async sendDocument(chatId, content, filename, mimeType) {
@@ -93,15 +90,11 @@ export default class TelegramBot {
     formData.append('document', blob, filename);
     formData.append('chat_id', chatId.toString());
 
-    const response = await fetch(
-      `${this.apiUrl}/bot${this.token}/sendDocument`, {
-        method: 'POST',
-        body: formData
-      }
-    );
+    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+      method: 'POST',
+      body: formData
+    });
 
-    return response.json();
+    return res.json();
   }
 }
-
-const ROOT_DOMAIN = "joss.checker-ip.xyz";
