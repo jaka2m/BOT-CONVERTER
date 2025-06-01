@@ -14,18 +14,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Install dependencies
         run: npm install
-          
+
       - name: Setup Wrangler secret and deploy worker
         env:
-        OWNER_ID: ${{ secrets.ownerId }}
+          OWNER_ID: ${{ secrets.ownerId }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -53,3 +53,5 @@ jobs:
 
           echo "Deploying worker..."
           npx wrangler deploy
+
+          echo "Deployment completed successfully ✅"
