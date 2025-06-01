@@ -61,18 +61,19 @@ export default class TelegramBot {
     }
 
     if (text.startsWith('/list')) {
-      const domains = await listSubdomains();
-      if (domains.length === 0) {
-        await this.sendMessage(chatId, 'No subdomains registered yet.');
-      } else {
-        await this.sendMessage(chatId, `Registered subdomains:\n${domains.join('\n')}`);
-      }
-      return new Response('OK', { status: 200 });
-    }
-
-    await this.sendMessage(chatId, 'Unknown command. Use /add, /del, or /list.');
-    return new Response('OK', { status: 200 });
+  const domains = await listSubdomains();
+  if (domains.length === 0) {
+    await this.sendMessage(chatId, 'No subdomains registered yet.', {
+      parse_mode: 'Markdown'
+    });
+  } else {
+    const formattedList = domains.map((d, i) => `*${i + 1}.* \`${d}\``).join('\n');
+    await this.sendMessage(chatId, `*Registered Subdomains:*\n\n${formattedList}`, {
+      parse_mode: 'Markdown'
+    });
   }
+  return new Response('OK', { status: 200 });
+}
 
   async sendMessage(chatId, text) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
