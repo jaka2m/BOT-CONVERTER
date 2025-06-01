@@ -132,6 +132,9 @@ if (text.startsWith('/add ')) {
       return new Response('OK', { status: 200 });
     }
 
+    return new Response('OK', { status: 200 });
+  }
+
   async sendMessage(chatId, text, options = {}) {
     const payload = {
       chat_id: chatId,
