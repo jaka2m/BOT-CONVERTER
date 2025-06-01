@@ -273,7 +273,7 @@ Terima kasih atas dukungannya! 🙏
 
 🌐 [WEB VPN TUNNEL](https://joss.checker-ip.xyz)
 📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
-👥 [Phreaker GROUP](https://t.me/NAMA_GROUP_MU)
+👥 [Phreaker GROUP](https://t.me/+Q1ARd8ZsAuM2xB6-)
 ━━━━━━━━━━━━━━━━━━━
             `.trim(),
             parse_mode: "Markdown",
