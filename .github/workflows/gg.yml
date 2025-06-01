@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Install dependencies
         run: npm install
 
@@ -38,23 +38,31 @@ jobs:
           SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
           HEADERS=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json")
 
-          check_and_put_secret() {
+          put_secret() {
             NAME=$1
             VALUE=$2
-            echo "Checking if $NAME secret exists..."
-            EXISTS=$(curl -s -X GET "$SECRETS_API" "${HEADERS[@]}" | jq -r '.result[]?.name' | grep "^$NAME$" || true)
-            if [ "$EXISTS" = "$NAME" ]; then
-              echo "Secret $NAME already exists, skipping."
+            echo "$VALUE" | npx wrangler secret put "$NAME" --name "$WORKER_NAME" --env production --yes
+          }
+
+          set_secret_if_not_exists() {
+            NAME=$1
+            VALUE=$2
+            echo "Checking secret: $NAME"
+            EXISTING=$(curl -s -X GET "$SECRETS_API" "${HEADERS[@]}" | jq -r '.result[]?.name' | grep "^$NAME$" || true)
+            if [ "$EXISTING" = "$NAME" ]; then
+              echo "Secret $NAME already exists. Skipping."
             else
-              echo "$VALUE" | npx wrangler secret put "$NAME" --name "$WORKER_NAME"
+              echo "Setting secret: $NAME"
+              put_secret "$NAME" "$VALUE"
             fi
           }
 
-          check_and_put_secret TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
-          check_and_put_secret API_KEY "$API_KEY"
-          check_and_put_secret API_EMAIL "$API_EMAIL"
-          check_and_put_secret ACCOUNT_ID "$ACCOUNT_ID"
-          check_and_put_secret ZONE_ID "$ZONE_ID"
+          # Tambahkan secrets hanya jika belum ada
+          set_secret_if_not_exists TELEGRAM_BOT_TOKEN "$TELEGRAM_BOT_TOKEN"
+          set_secret_if_not_exists API_KEY "$API_KEY"
+          set_secret_if_not_exists API_EMAIL "$API_EMAIL"
+          set_secret_if_not_exists ACCOUNT_ID "$ACCOUNT_ID"
+          set_secret_if_not_exists ZONE_ID "$ZONE_ID"
 
           echo "Deploying worker..."
           npx wrangler deploy --name "$WORKER_NAME"
