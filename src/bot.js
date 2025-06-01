@@ -1,4 +1,4 @@
-import { addsubdomain, deletesubdomain, listSubdomains } from './wildcard.js';
+import { addsubdomain, deletesubdomain, listSubdomains } from './wil.js';
 
 export default class TelegramBot {
   constructor(token, apiUrl, ownerId) {
