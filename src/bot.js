@@ -4,7 +4,8 @@ import { rotateconfig } from './config.js';
 import { botku, TelegramBotku } from './randomip/bot2.js';
 import { ProxyCekBot, TelegramProxyCekBot } from './proxyip/botCek.js';
 import { proxyBot, TelegramProxyBot } from './proxyip/bot3.js';
-import { WildcardBot, TelegramWildcardBot } from './wildcard/botwild.js';
+// import { WildcardBot, TelegramWildcardBot } from './wildcard/botwild.js';
+import { TelegramWildcardBot, addsubdomain, deletesubdomain, listSubdomains, WildcardBot } from './proxyip/botCek.js';
 
 const HOSTKU = 'joss.checker-ip.xyz';
 
