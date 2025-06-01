@@ -1,13 +1,17 @@
 import TelegramBot from './bot.js';
 import { TELEGRAM_BOT_TOKEN } from './itil.js';
 
-async function main() {
-  const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
+const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
 
-  const rawBody = await Bun.stdin.text(); // kalau pakai Bun
-  const update = JSON.parse(rawBody);
+export default {
+  async fetch(request) {
+    if (request.method !== 'POST') {
+      return new Response('Method Not Allowed', { status: 405 });
+    }
 
-  await bot.handleUpdate(update);
-}
+    const update = await request.json();
+    await bot.handleUpdate(update);
 
-main().catch(console.error);
+    return new Response('OK', { status: 200 });
+  }
+};
