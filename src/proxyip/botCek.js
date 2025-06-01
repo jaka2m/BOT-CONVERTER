@@ -4,6 +4,10 @@ export async function WildcardBot(link) {
 
 const rootDomain = "joss.checker-ip.xyz";
 
+// Escape untuk MarkdownV2 Telegram
+function escapeMarkdownV2(text) {
+  return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
+}
 
 export class TelegramWildcardBot {
   constructor(token, apiUrl, ownerId) {
@@ -77,28 +81,29 @@ export class TelegramWildcardBot {
     }
 
     // 🗑️ Command: /del <subdomain>
-    if (text === '/del') {
-  const domains = await listSubdomains();
-  if (domains.length === 0) {
-    await this.sendMessage(chatId, '*Tidak ada subdomain yang terdaftar.*', {
-      parse_mode: 'MarkdownV2'
-    });
-    return new Response('OK', { status: 200 });
-  }
+    if (text.startsWith('/del ')) {
+      const subdomain = text.split(' ')[1];
+      if (!subdomain) return new Response('OK', { status: 200 });
 
-  const inline_keyboard = domains.map(domain => [{
-    text: domain,
-    callback_data: `del_select:${domain}`
-  }]);
+      const status = await deletesubdomain(subdomain);
+      const fullDomain = `${subdomain}.${rootDomain}`;
 
-  await this.sendMessage(chatId, 'Pilih subdomain yang ingin dihapus:', {
-    reply_markup: {
-      inline_keyboard
+      if (status === 200) {
+        await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(fullDomain)} deleted successfully.\`\`\``, {
+          parse_mode: 'MarkdownV2'
+        });
+      } else if (status === 404) {
+        await this.sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(fullDomain)}* not found.`, {
+          parse_mode: 'MarkdownV2'
+        });
+      } else {
+        await this.sendMessage(chatId, `❌ Failed to delete *${escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, {
+          parse_mode: 'MarkdownV2'
+        });
+      }
+
+      return new Response('OK', { status: 200 });
     }
-  });
-
-  return new Response('OK', { status: 200 });
-}
 
     // 📄 Command: /list
     if (text.startsWith('/list')) {
@@ -188,7 +193,7 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-// 🔍 Ambil semua subdomain aktif
+// 🔍 Dapatkan list subdomain aktif
 async function getDomainList() {
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
   const res = await fetch(url, { headers });
@@ -201,7 +206,7 @@ async function getDomainList() {
   return [];
 }
 
-// ➕ Tambahkan subdomain baru
+// ➕ Tambahkan subdomain
 export async function addsubdomain(subdomain) {
   const domain = `${subdomain}.${rootDomain}`.toLowerCase();
   if (!domain.endsWith(rootDomain)) return 400;
@@ -255,67 +260,7 @@ export async function deletesubdomain(subdomain) {
   return res.status;
 }
 
-// 📋 Tampilkan list subdomain
+// 📋 List semua subdomain aktif
 export async function listSubdomains() {
   return await getDomainList();
-}
-
-// 📦 Tangani callback dari Telegram
-export async function handleUpdate(update, sendMessage) {
-  if (!update.callback_query) return;
-
-  const query = update.callback_query;
-  const chatId = query.message.chat.id;
-  const messageId = query.message.message_id;
-  const data = query.data;
-
-  // Step 1: Pilih subdomain
-  if (data.startsWith('del_select:')) {
-    const subdomain = data.split(':')[1];
-    await sendMessage(chatId, `Yakin ingin menghapus *${escapeMarkdownV2(subdomain)}*?`, {
-      parse_mode: 'MarkdownV2',
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '✅ Ya', callback_data: `del_confirm:${subdomain}` },
-            { text: '❌ Batal', callback_data: 'del_cancel' }
-          ]
-        ]
-      }
-    });
-    return new Response('OK', { status: 200 });
-  }
-
-  // Step 2: Konfirmasi hapus
-  if (data.startsWith('del_confirm:')) {
-    const subdomain = data.split(':')[1];
-    const status = await deletesubdomain(subdomain);
-
-    if (status === 200) {
-      await sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(subdomain)} deleted successfully.\`\`\``, {
-        parse_mode: 'MarkdownV2'
-      });
-    } else if (status === 404) {
-      await sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(subdomain)}* not found.`, {
-        parse_mode: 'MarkdownV2'
-      });
-    } else {
-      await sendMessage(chatId, `❌ Failed to delete *${escapeMarkdownV2(subdomain)}*, status: \`${status}\``, {
-        parse_mode: 'MarkdownV2'
-      });
-    }
-
-    return new Response('OK', { status: 200 });
-  }
-
-  // Step 3: Batal
-  if (data === 'del_cancel') {
-    await sendMessage(chatId, '❌ Penghapusan dibatalkan.');
-    return new Response('OK', { status: 200 });
-  }
-}
-
-// 🔧 Escape untuk MarkdownV2
-function escapeMarkdownV2(text) {
-  return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
 }
