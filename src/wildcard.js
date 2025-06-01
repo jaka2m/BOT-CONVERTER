@@ -1,52 +1,50 @@
-const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
-const accountID = "e9930d5ca683b0461f73477050fee0c7";
-const zoneID = "80423e7547d2fa85e13796a1f41deced";
-const apiEmail = "ambebalong@gmail.com";
-const serviceName = "siren";
-const rootDomain = "joss.checker-ip.xyz";
-
 const headers = {
-  'Authorization': `Bearer ${apiKey}`,
-  'X-Auth-Email': apiEmail,
-  'X-Auth-Key': apiKey,
+  'Authorization': `Bearer ${env.API_KEY}`,
+  'X-Auth-Email': env.API_EMAIL,
+  'X-Auth-Key': env.API_KEY,
   'Content-Type': 'application/json'
 };
 
+// Ambil daftar subdomain dari Cloudflare
 async function getDomainList() {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+  const url = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains`;
+
   const res = await fetch(url, { headers });
-  if (res.ok) {
-    const json = await res.json();
-    return json.result
-      .filter(d => d.service === serviceName)
-      .map(d => d.hostname);
-  }
-  return [];
+  if (!res.ok) return [];
+
+  const json = await res.json();
+  return json.result
+    .filter(d => d.service === env.SERVICE_NAME)
+    .map(d => d.hostname);
 }
 
+// Tambahkan subdomain baru
 export async function addsubdomain(subdomain) {
-  const domain = `${subdomain}.${rootDomain}`.toLowerCase();
+  const domain = `${subdomain}.${env.ROOT_DOMAIN}`.toLowerCase();
 
-  if (!domain.endsWith(rootDomain)) return 400;
+  // Validasi domain
+  if (!domain.endsWith(env.ROOT_DOMAIN)) return 400;
 
+  // Cek apakah sudah terdaftar
   const registeredDomains = await getDomainList();
   if (registeredDomains.includes(domain)) return 409;
 
   try {
-    // Cek apakah domain sudah aktif (cek 530)
-    const testUrl = `https://${domain.replace(`.${rootDomain}`, '')}`;
+    // Cek apakah domain belum aktif (status 530)
+    const testUrl = `https://${domain.replace(`.${env.ROOT_DOMAIN}`, '')}`;
     const domainTest = await fetch(testUrl);
     if (domainTest.status === 530) return 530;
   } catch {
     return 400;
   }
 
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+  // Tambahkan subdomain ke Cloudflare Workers
+  const url = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains`;
   const body = {
     environment: "production",
     hostname: domain,
-    service: serviceName,
-    zone_id: zoneID
+    service: env.SERVICE_NAME,
+    zone_id: env.ZONE_ID
   };
 
   const res = await fetch(url, {
@@ -58,11 +56,12 @@ export async function addsubdomain(subdomain) {
   return res.status;
 }
 
+// Hapus subdomain yang ada
 export async function deletesubdomain(subdomain) {
-  const domain = `${subdomain}.${rootDomain}`.toLowerCase();
+  const domain = `${subdomain}.${env.ROOT_DOMAIN}`.toLowerCase();
 
-  // Ambil dulu list domain untuk dapat ID domain yang valid
-  const urlList = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
+  // Ambil list untuk mencari ID domain yang sesuai
+  const urlList = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains`;
   const listRes = await fetch(urlList, { headers });
   if (!listRes.ok) return listRes.status;
 
@@ -70,7 +69,8 @@ export async function deletesubdomain(subdomain) {
   const domainObj = listJson.result.find(d => d.hostname === domain);
   if (!domainObj) return 404;
 
-  const urlDelete = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains/${domainObj.id}`;
+  // Hapus subdomain dari Cloudflare Workers
+  const urlDelete = `https://api.cloudflare.com/client/v4/accounts/${env.ACCOUNT_ID}/workers/domains/${domainObj.id}`;
   const res = await fetch(urlDelete, {
     method: 'DELETE',
     headers
@@ -79,8 +79,7 @@ export async function deletesubdomain(subdomain) {
   return res.status;
 }
 
-// Fungsi baru untuk list subdomain
+// Ambil daftar subdomain yang aktif
 export async function listSubdomains() {
-  const domains = await getDomainList();
-  return domains;
+  return await getDomainList();
 }
