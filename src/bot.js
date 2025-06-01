@@ -28,13 +28,7 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-    // ⛔ Batasi /add dan /del hanya untuk owner
-    if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
-      await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
-      return new Response('OK', { status: 200 });
-    }
-
-    // ⛔ Batasi /add dan /del hanya untuk owner
+  // ⛔ Batasi /add dan /del hanya untuk owner
 if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
   await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
   return new Response('OK', { status: 200 });
@@ -42,25 +36,38 @@ if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ow
 
 // 📌 Command: /add <subdomain>
 if (text.startsWith('/add ')) {
-  const subdomain = text.split(' ')[1];
+  const subdomain = text.split(' ')[1]?.trim();
   if (!subdomain) {
-    await this.sendMessage(chatId, 'Please specify the subdomain to add. Example: /add test');
+    await this.sendMessage(chatId, '⚠️ Please specify the subdomain to add.\nExample: /add test');
     return new Response('OK', { status: 200 });
   }
 
-  // ⏳ Kirim pesan loading
-  const loadingMsg = await this.sendMessage(chatId, '⏳ Adding subdomain, please wait...');
-  const messageId = loadingMsg.result?.message_id;
-
-  const status = await addsubdomain(subdomain);
-  const fullDomain = `${subdomain}.${rootDomain}`;
-
-  // 🧹 Hapus pesan loading jika berhasil dikirim
-  if (messageId) {
-    await this.deleteMessage(chatId, messageId);
+  let loadingMsgId;
+  try {
+    const loadingMsg = await this.sendMessage(chatId, '⏳ Adding subdomain, please wait...');
+    loadingMsgId = loadingMsg.result?.message_id;
+  } catch (err) {
+    console.error('❌ Failed to send loading message:', err);
   }
 
-  // ✅ Tanggapan berdasarkan status
+  let status;
+  try {
+    status = await addsubdomain(subdomain);
+  } catch (err) {
+    console.error('❌ addsubdomain() error:', err);
+    status = 500;
+  }
+
+  const fullDomain = `${subdomain}.${rootDomain}`;
+
+  if (loadingMsgId) {
+    try {
+      await this.deleteMessage(chatId, loadingMsgId);
+    } catch (err) {
+      console.error('❌ Failed to delete loading message:', err);
+    }
+  }
+
   if (status === 200) {
     await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(fullDomain)} added successfully\`\`\``, {
       parse_mode: 'MarkdownV2'
@@ -161,6 +168,18 @@ if (text.startsWith('/add ')) {
 
     return response.json();
   }
+
+async deleteMessage(chatId, messageId) {
+  const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId
+    })
+  });
+}
 
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
