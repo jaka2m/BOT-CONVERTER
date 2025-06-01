@@ -47,6 +47,11 @@ Pilih command sesuai kebutuhan !
 /proxy → Generate Proxy IPs! ! 
 /config → Generate config auto-rotate! 
 ══════════════════
+⚙️ Perintah Domain :
+/list→ Lihat daftar wildcard yang terdaftar
+/add→ Tambah domain wildcard
+/del→ Hapus domain wildcard
+══════════════════
 SUPPORT
 /donate → Bantu admin 😘 !
 ══════════════════
