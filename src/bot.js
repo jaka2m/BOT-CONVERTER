@@ -106,35 +106,30 @@ if (text.startsWith('/add ')) {
     }
 
     // 📄 Command: /list
-    if (text.startsWith('/list')) {
-      const domains = await listSubdomains();
+if (text.startsWith('/list')) {
+  const domains = await listSubdomains();
 
-      if (domains.length === 0) {
-        await this.sendMessage(chatId, '*No subdomains registered yet.*', {
-          parse_mode: 'MarkdownV2'
-        });
-      } else {
-        const formattedList = domains
-          .map((d, i) => `${i + 1}\\. ${escapeMarkdownV2(d)}`)
-          .join('\n');
+  if (domains.length === 0) {
+    // baris await this.sendMessage dihapus total
+  } else {
+    const formattedList = domains
+      .map((d, i) => `${i + 1}\\. ${escapeMarkdownV2(d)}`)
+      .join('\n');
 
-        const textPreview = `\`\`\`List-Wildcard\n${formattedList}\`\`\``;
+    const textPreview = `\`\`\`List-Wildcard\n${formattedList}\`\`\``;
 
-        await this.sendMessage(chatId, textPreview, {
-          parse_mode: 'MarkdownV2'
-        });
+    // baris await this.sendMessage dihapus total
 
-        // Kirim juga sebagai dokumen .txt
-        const fileContent = domains.map((d, i) => `${i + 1}. ${d}`).join('\n');
-        await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
-      }
-
-      return new Response('OK', { status: 200 });
-    }
-
-    return new Response('OK', { status: 200 });
+    // Kirim juga sebagai dokumen .txt
+    const fileContent = domains.map((d, i) => `${i + 1}. ${d}`).join('\n');
+    // baris await this.sendDocument dihapus total
   }
 
+  return new Response('OK', { status: 200 });
+}
+
+return new Response('OK', { status: 200 });
+}
   async sendMessage(chatId, text, options = {}) {
     const payload = {
       chat_id: chatId,
