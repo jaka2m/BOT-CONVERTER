@@ -27,6 +27,9 @@ jobs:
           accountId: ${{ secrets.ACCOUNT_ID }}
           environment: production
           workingDirectory: ./
+
+      - name: Set environment variables for later steps (optional)
+        run: echo "Environment variables set"
         env:
           API_KEY: ${{ secrets.API_KEY }}
           ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
@@ -36,4 +39,3 @@ jobs:
           ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           OWNER_ID: ${{ secrets.OWNER_ID }}
-
