@@ -4,4 +4,4 @@ compatibility_date = "2025-06-01"
 workers_dev = true
 
 [vars]
-OWNER = "${OWNER_ID}"
+OWNER_ID = "${OWNER_ID}"
