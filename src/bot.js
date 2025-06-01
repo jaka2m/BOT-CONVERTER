@@ -19,15 +19,6 @@ export default class TelegramBot {
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    if (text.startsWith('/start')) {
-      await this.sendMessage(
-        chatId,
-        '*Welcome!*\nUse `/add <subdomain>` to add,\n`/del <subdomain>` to delete,\n`/list` to list subdomains.',
-        { parse_mode: 'MarkdownV2' }
-      );
-      return new Response('OK', { status: 200 });
-    }
-
   // ⛔ Batasi /add dan /del hanya untuk owner
 if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
   await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
