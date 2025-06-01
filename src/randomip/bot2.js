@@ -40,7 +40,6 @@ Pilih command sesuai kebutuhan !
 /start → mulai bot !
 /proxyip → Config random sesuai tombol Flag CC
 /traffic → Daftar pemakain akun Cloudflare ! 
-/listwildcard → Daftar bug wildcard ! 
 /findproxy → Cara Cari Proxy ! 
 /converter → Converter Akun V2ray ! 
 /randomconfig → Config random mix protocol! 
@@ -49,8 +48,8 @@ Pilih command sesuai kebutuhan !
 ══════════════════
 ⚙️ Perintah Domain :
 /list→ Lihat daftar wildcard yang terdaftar
-/add→ Tambah domain wildcard
-/del→ Hapus domain wildcard
+/add + bug→ Tambah domain wildcard (admin only)
+/del + bug→ Hapus domain wildcard (admin only)
 ══════════════════
 SUPPORT
 /donate → Bantu admin 😘 !
