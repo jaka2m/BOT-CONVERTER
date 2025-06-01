@@ -9,11 +9,12 @@ import { WildcardBot, TelegramWildcardBot } from './wildcard/botwild.js';
 const HOSTKU = 'joss.checker-ip.xyz';
 
 export class TelegramBot {
-  constructor(token, apiUrl = 'https://api.telegram.org') {
+  constructor(token, apiUrl, ownerId) {
     this.token = token;
-    this.apiUrl = apiUrl;
+    this.apiUrl = apiUrl || 'https://api.telegram.org';
+    this.ownerId = ownerId;
   }
-
+  
   async handleUpdate(update) {
     if (!update.message && !update.callback_query) {
       return new Response('OK', { status: 200 });
