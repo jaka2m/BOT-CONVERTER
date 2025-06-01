@@ -4,7 +4,7 @@ export default class TelegramBot {
   constructor(token, apiUrl, ownerId, rootDomain) {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
-    this.ownerId = String(ownerId); // pastikan string
+    this.ownerId = String(ownerId); // masih bisa disimpan, tapi gak dipakai lagi
     this.rootDomain = rootDomain;
   }
 
@@ -12,7 +12,6 @@ export default class TelegramBot {
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = String(update.message.chat.id);
-    const fromId = String(update.message.from.id);  // <-- ambil user pengirim
     const text = update.message.text || '';
 
     if (text.startsWith('/start')) {
@@ -20,11 +19,7 @@ export default class TelegramBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Validasi owner pakai fromId (pengirim), bukan chatId (chat)
-    if ((text.startsWith('/add ') || text.startsWith('/del ')) && fromId !== this.ownerId) {
-      await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
-      return new Response('OK', { status: 200 });
-    }
+    // Bagian validasi owner dihapus, semua bisa akses /add dan /del
 
     if (text.startsWith('/add ')) {
       const subdomain = text.split(' ')[1];
