@@ -29,7 +29,6 @@ if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ow
 if (text.startsWith('/add ')) {
   const subdomain = text.split(' ')[1]?.trim();
   if (!subdomain) {
-    await this.sendMessage(chatId, '⚠️ Please specify the subdomain to add.\nExample: /add test');
     return new Response('OK', { status: 200 });
   }
 
@@ -84,7 +83,6 @@ if (text.startsWith('/add ')) {
     if (text.startsWith('/del ')) {
       const subdomain = text.split(' ')[1];
       if (!subdomain) {
-        await this.sendMessage(chatId, 'Please specify the subdomain to delete. Example: /del test');
         return new Response('OK', { status: 200 });
       }
 
