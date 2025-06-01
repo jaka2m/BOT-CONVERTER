@@ -65,7 +65,7 @@ export default class TelegramBot {
       if (domains.length === 0) {
         await this.sendMessage(chatId, 'No subdomains registered yet.');
       } else {
-        await this.sendMessage(chatId, `\`\`\`List-Wildcard\n${domains.join('\n')}\`\`\``);
+        await this.sendMessage(chatId, `\`\`\`\`\`\`List-Wildcard\n${domains.join('\n')}\`\`\`\`\`\``);
       }
       return new Response('OK', { status: 200 });
     }
