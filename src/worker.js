@@ -1,5 +1,5 @@
 import TelegramBot from './bot.js';
-import { TELEGRAM_BOT_TOKEN } from './utils.js';
+import { TELEGRAM_BOT_TOKEN } from './bot.js';
 
 const bot = new TelegramBot(TELEGRAM_BOT_TOKEN);
 
