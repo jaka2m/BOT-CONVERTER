@@ -14,11 +14,11 @@ export default {
       const update = await request.json();
       const ownerId = env.OWNER_ID; // <-- di sini ambil dari env, benar
 
-      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
-      const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
-      const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
-      const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
-      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
+      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
       
       await bot1.handleUpdate(update);
       await bot2.handleUpdate(update);
