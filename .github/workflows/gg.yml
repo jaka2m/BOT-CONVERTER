@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Upload Wrangler secrets and deploy worker
+      - name: Setup Wrangler secrets and deploy worker
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -36,9 +36,18 @@ jobs:
         run: |
           set -e
 
+          # Fungsi untuk hapus dan buat ulang secret
           replace_secret() {
-            NAME=$1
-            VALUE=$2
+            local NAME=$1
+            local VALUE=$2
+
+            echo "Checking if secret $NAME exists..."
+            EXISTS=$(npx wrangler secret list --name "$WORKER_NAME" | grep "^$NAME$" || true)
+            if [ "$EXISTS" = "$NAME" ]; then
+              echo "Deleting existing secret $NAME..."
+              npx wrangler secret delete "$NAME" --name "$WORKER_NAME"
+            fi
+
             echo "Setting secret: $NAME"
             echo "$VALUE" | npx wrangler secret put "$NAME" --name "$WORKER_NAME"
           }
