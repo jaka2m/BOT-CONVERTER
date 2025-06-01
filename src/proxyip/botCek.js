@@ -4,10 +4,6 @@ export async function WildcardBot(link) {
 
 const rootDomain = "joss.checker-ip.xyz";
 
-// Escape untuk MarkdownV2 Telegram
-function escapeMarkdownV2(text) {
-  return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
-}
 
 export class TelegramWildcardBot {
   constructor(token, apiUrl, ownerId) {
@@ -184,6 +180,7 @@ const accountID = "e9930d5ca683b0461f73477050fee0c7";
 const zoneID = "80423e7547d2fa85e13796a1f41deced";
 const apiEmail = "ambebalong@gmail.com";
 const serviceName = "siren";
+const rootDomain = "example.com"; // GANTI dengan root domain kamu
 
 const headers = {
   'Authorization': `Bearer ${apiKey}`,
@@ -192,32 +189,28 @@ const headers = {
   'Content-Type': 'application/json'
 };
 
-// 🔍 Dapatkan daftar subdomain aktif dari Cloudflare Workers Domains
+// 🔍 Ambil semua subdomain aktif
 async function getDomainList() {
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
   const res = await fetch(url, { headers });
-
   if (res.ok) {
     const json = await res.json();
     return json.result
       .filter(d => d.service === serviceName)
       .map(d => d.hostname);
   }
-  
   return [];
 }
 
-// ➕ Tambahkan subdomain baru ke Cloudflare Workers Domains
+// ➕ Tambahkan subdomain baru
 export async function addsubdomain(subdomain) {
   const domain = `${subdomain}.${rootDomain}`.toLowerCase();
-
   if (!domain.endsWith(rootDomain)) return 400;
 
   const registeredDomains = await getDomainList();
   if (registeredDomains.includes(domain)) return 409;
 
   try {
-    // Cek domain apakah sudah terdaftar dengan request dummy
     const testUrl = `https://${domain.replace(`.${rootDomain}`, '')}`;
     const domainTest = await fetch(testUrl);
     if (domainTest.status === 530) return 530;
@@ -242,7 +235,7 @@ export async function addsubdomain(subdomain) {
   return res.status;
 }
 
-// ❌ Hapus subdomain dari Cloudflare Workers Domains
+// ❌ Hapus subdomain
 export async function deletesubdomain(subdomain) {
   const domain = `${subdomain}.${rootDomain}`.toLowerCase();
 
@@ -263,17 +256,24 @@ export async function deletesubdomain(subdomain) {
   return res.status;
 }
 
-// Handler callback_query Telegram untuk penghapusan subdomain
-if (update.callback_query) {
+// 📋 Tampilkan list subdomain
+export async function listSubdomains() {
+  return await getDomainList();
+}
+
+// 📦 Tangani callback dari Telegram
+export async function handleUpdate(update, sendMessage) {
+  if (!update.callback_query) return;
+
   const query = update.callback_query;
   const chatId = query.message.chat.id;
   const messageId = query.message.message_id;
   const data = query.data;
 
-  // Step 1: Pilih subdomain untuk dihapus
+  // Step 1: Pilih subdomain
   if (data.startsWith('del_select:')) {
     const subdomain = data.split(':')[1];
-    await this.sendMessage(chatId, `Yakin ingin menghapus *${escapeMarkdownV2(subdomain)}*?`, {
+    await sendMessage(chatId, `Yakin ingin menghapus *${escapeMarkdownV2(subdomain)}*?`, {
       parse_mode: 'MarkdownV2',
       reply_markup: {
         inline_keyboard: [
@@ -287,21 +287,21 @@ if (update.callback_query) {
     return new Response('OK', { status: 200 });
   }
 
-  // Step 2: Konfirmasi hapus subdomain
+  // Step 2: Konfirmasi hapus
   if (data.startsWith('del_confirm:')) {
     const subdomain = data.split(':')[1];
     const status = await deletesubdomain(subdomain);
 
     if (status === 200) {
-      await this.sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(subdomain)} deleted successfully.\`\`\``, {
+      await sendMessage(chatId, `\`\`\`Wildcard\n${escapeMarkdownV2(subdomain)} deleted successfully.\`\`\``, {
         parse_mode: 'MarkdownV2'
       });
     } else if (status === 404) {
-      await this.sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(subdomain)}* not found.`, {
+      await sendMessage(chatId, `⚠️ Subdomain *${escapeMarkdownV2(subdomain)}* not found.`, {
         parse_mode: 'MarkdownV2'
       });
     } else {
-      await this.sendMessage(chatId, `❌ Failed to delete *${escapeMarkdownV2(subdomain)}*, status: \`${status}\``, {
+      await sendMessage(chatId, `❌ Failed to delete *${escapeMarkdownV2(subdomain)}*, status: \`${status}\``, {
         parse_mode: 'MarkdownV2'
       });
     }
@@ -309,14 +309,14 @@ if (update.callback_query) {
     return new Response('OK', { status: 200 });
   }
 
-  // Step 3: Batal hapus
+  // Step 3: Batal
   if (data === 'del_cancel') {
-    await this.sendMessage(chatId, '❌ Penghapusan dibatalkan.');
+    await sendMessage(chatId, '❌ Penghapusan dibatalkan.');
     return new Response('OK', { status: 200 });
   }
 }
 
-// 📋 Dapatkan list semua subdomain aktif (export fungsi)
-export async function listSubdomains() {
-  return await getDomainList();
+// 🔧 Escape untuk MarkdownV2
+function escapeMarkdownV2(text) {
+  return text.replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&');
 }
