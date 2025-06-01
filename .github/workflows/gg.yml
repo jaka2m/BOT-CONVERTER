@@ -48,7 +48,7 @@ jobs:
               echo "Secret $SECRET_NAME already exists, skipping creation."
             else
               echo "Creating secret $SECRET_NAME..."
-              echo "$SECRET_VALUE" | npx wrangler secret put "$SECRET_NAME" --yes
+              echo "$SECRET_VALUE" | npx wrangler secret put "$SECRET_NAME"
             fi
           }
 
