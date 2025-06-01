@@ -23,9 +23,9 @@ export class TelegramWildcardBot {
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-  // ⛔ Batasi /add dan /del hanya untuk owner
-if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
-  await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
+  if ((text.startsWith('/add ') || text.startsWith('/del ')) && String(chatId) !== String(this.ownerId)) {
+  console.log(`Unauthorized access: chatId=${chatId}, ownerId=${this.ownerId}`);
+  await this.sendMessage(chatId, '⛔ You are not authorized to use this command.', { parse_mode: 'MarkdownV2' });
   return new Response('OK', { status: 200 });
 }
 
