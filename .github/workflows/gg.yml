@@ -13,8 +13,7 @@ jobs:
       deployments: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,11 +26,12 @@ jobs:
       - name: Publish to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.API_KEY }}          # API token buat wrangler
-          accountId: ${{ secrets.ACCOUNT_ID }}      # Account ID CF
+          apiToken: ${{ secrets.API_KEY }}       # Pastikan API Token ini valid dan punya permission
+          accountId: ${{ secrets.ACCOUNT_ID }}   # Pastikan Account ID benar
           environment: production
           workingDirectory: ./
         env:
+          API_KEY: ${{ secrets.API_KEY }}
           ZONE_ID: ${{ secrets.ZONE_ID }}
           API_EMAIL: ${{ secrets.API_EMAIL }}
           SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
