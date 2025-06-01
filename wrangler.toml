@@ -4,7 +4,6 @@ workers_dev = true
 main = "src/worker.js"
 
 [vars]
-API_KEY = "5fae9fcb9c193ce65de4b57689a94938b708e"
 ACCOUNT_ID = "e9930d5ca683b0461f73477050fee0c7"
 ZONE_ID = "80423e7547d2fa85e13796a1f41deced"
 API_EMAIL = "ambebalong@gmail.com"
