@@ -105,7 +105,10 @@ export class TelegramWildcardBot {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
-    this.users = new Set(); // Menyimpan unique chatId user yang pernah akses
+
+    // Simpan chatId user yang pernah akses bot (unik)
+    this.userSet = new Set();
+
     this.handleUpdate = this.handleUpdate.bind(this);
   }
 
@@ -116,11 +119,11 @@ export class TelegramWildcardBot {
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    // Simpan chatId user jika baru
-    if (!this.users.has(chatId)) this.users.add(chatId);
+    // Simpan user yang akses bot
+    this.userSet.add(chatId);
 
-    // Owner only commands: /add, /del, /user
-    if ((text.startsWith('/add ') || text.startsWith('/del ') || text.startsWith('/user')) && chatId !== this.ownerId) {
+    // Batasi command /add dan /del hanya owner
+    if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
     }
@@ -208,56 +211,68 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /user (baru) - list semua user chatId yg pernah akses bot
-    if (text.startsWith('/user')) {
-      const usersArray = Array.from(this.users);
-      if (usersArray.length === 0) {
-        await this.sendMessage(chatId, '*No users have accessed this bot yet.*', { parse_mode: 'MarkdownV2' });
+    // Handle /user - tampilkan semua user yang pernah akses bot
+    if (text === '/user') {
+      if (chatId === this.ownerId) {
+        // Owner dapat lihat semua user + total
+        const usersArray = Array.from(this.userSet);
+        const userListText = usersArray.map((id, i) => `${i + 1}. \`${id}\``).join('\n');
+        const reply = `👥 Users who accessed the bot:\n${userListText}\n\nTotal users: *${usersArray.length}*`;
+        await this.sendMessage(chatId, reply, { parse_mode: 'MarkdownV2' });
       } else {
-        const formattedUsers = usersArray.map((id, i) => `${i + 1}\\. \`${id}\``).join('\n');
-        const totalLine = `\n\nTotal: *${usersArray.length}* user${usersArray.length > 1 ? 's' : ''}`;
-        const textPreview = `\`\`\`Users Access List\n${formattedUsers}\`\`\`` + totalLine;
-
-        await this.sendMessage(chatId, textPreview, { parse_mode: 'MarkdownV2' });
+        // User biasa hanya lihat chatId mereka sendiri
+        await this.sendMessage(chatId, `Your chat ID: \`${chatId}\``, { parse_mode: 'MarkdownV2' });
       }
       return new Response('OK', { status: 200 });
     }
 
+    // Jika command tidak dikenali
+    await this.sendMessage(chatId, '❓ Unknown command or message. Please use /add, /del, /list, or /user.');
     return new Response('OK', { status: 200 });
   }
 
-  // Kirim pesan ke Telegram
+  // Kirim pesan ke chatId
   async sendMessage(chatId, text, options = {}) {
-    const payload = { chat_id: chatId, text, ...options };
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
+    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+    const body = { chat_id: chatId, text, ...options };
+
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body),
     });
-    return response.json();
+
+    return await res.json();
   }
 
-  // Hapus pesan Telegram
+  // Hapus pesan di chatId
   async deleteMessage(chatId, messageId) {
-    await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
+    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+    const body = { chat_id: chatId, message_id: messageId };
+
+    await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, message_id: messageId })
+      body: JSON.stringify(body),
     });
   }
 
-  // Kirim file ke Telegram
-  async sendDocument(chatId, content, filename, mimeType) {
+  // Kirim file dokumen ke chatId (isi berupa string)
+  async sendDocument(chatId, content, filename, mimeType = 'text/plain') {
+    const url = `${this.apiUrl}/bot${this.token}/sendDocument`;
+
+    // Buat file Blob (hanya di browser, untuk server bisa beda)
+    // Kalau di Cloudflare Workers gunakan FormData polyfill atau pakai Buffer
+    // Di sini contoh sederhana menggunakan FormData dari undici (Node.js) atau fetch API
+
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
+    formData.append('chat_id', chatId);
     formData.append('document', blob, filename);
-    formData.append('chat_id', chatId.toString());
 
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+    await fetch(url, {
       method: 'POST',
-      body: formData
+      body: formData,
     });
-
-    return response.json();
   }
 }
