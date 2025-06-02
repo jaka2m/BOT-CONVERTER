@@ -1,0 +1,15 @@
+{
+  "name": "v2ray-config-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot to convert V2Ray configurations",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "wrangler": "^3.21.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240401.0"
+  }
+}
