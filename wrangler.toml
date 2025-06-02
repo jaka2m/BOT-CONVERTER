@@ -1,14 +1,10 @@
 name = "telegram-wildcard-bot"
-main = "src/worker.js"
-compatibility_date = "2025-06-01"
+
 account_id = "e9930d5ca683b0461f73477050fee0c7"
 workers_dev = true
 
+compatibility_date = "2025-06-02"
+main = "src/worker.js"  # Sesuaikan dengan nama file Worker utama kamu, misal worker.js
+
 [vars]
 ROOT_DOMAIN = "joss.checker-ip.xyz"
-API_KEY = "5fae9fcb9c193ce65de4b57689a94938b708e"
-ACCOUNT_ID = "e9930d5ca683b0461f73477050fee0c7"
-ZONE_ID = "80423e7547d2fa85e13796a1f41deced"
-API_EMAIL = "ambebalong@gmail.com"
-SERVICE_NAME = "siren"
-TELEGRAM_BOT_TOKEN = "7664381872:AAHfoMYhaUYlzRgMlydfA3zvwkMyVLMhoTU"
