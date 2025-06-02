@@ -1,4 +1,4 @@
-name = "telegram-wildcard-bot"
+name = "botku"
 
 account_id = "e9930d5ca683b0461f73477050fee0c7"
 workers_dev = true
