@@ -12,15 +12,22 @@ export default {
 
     try {
       const update = await request.json();
-      
-      // Buat instance bot dengan token dari env juga
+
       const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
       const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
       const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
       const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
-      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
 
-      // Jalankan handleUpdate dari tiap bot
+      // Panggil AsuBabibot dengan 6 parameter sesuai constructor
+      const bot5 = new Bot5(
+        env.ROOT_DOMAIN,
+        env.API_KEY,
+        env.ACCOUNT_ID,
+        env.ZONE_ID,
+        env.API_EMAIL,
+        env.SERVICE_NAME
+      );
+
       await Promise.all([
         bot1.handleUpdate(update),
         bot2.handleUpdate(update),
