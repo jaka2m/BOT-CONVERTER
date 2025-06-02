@@ -27,11 +27,11 @@ jobs:
         env:
           OWNER_ID: ${{ secrets.OWNER_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CLOUDFLARE_API_KEY: ${{ secrets.CLOUDFLARE_API_KEY }}
-          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          API_KEY: ${{ secrets.API_KEY }}
+          ZONE_ID: ${{ secrets.ZONE_ID }}
+          ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          WORKER_NAME: telegram-wildcard-bot
+          WORKER_NAME: telegram
         run: |
           set -e
 
@@ -56,8 +56,8 @@ jobs:
 
           check_and_put_secret "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
           check_and_put_secret "OWNER_ID" "$OWNER_ID"
-          check_and_put_secret "CLOUDFLARE_API_KEY" "$CLOUDFLARE_API_KEY"
-          check_and_put_secret "CLOUDFLARE_ZONE_ID" "$CLOUDFLARE_ZONE_ID"
+          check_and_put_secret "API_KEY" "$API_KEY"
+          check_and_put_secret "ZONE_ID" "$ZONE_ID"
 
           echo "Deploying worker..."
           npx wrangler deploy
