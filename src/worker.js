@@ -2,7 +2,7 @@ import { TelegramBot as Bot1 } from './bot.js';
 import { TelegramBotku as Bot2 } from './randomip/bot2.js';
 import { TelegramProxyCekBot as Bot3 } from './proxyip/botCek.js';
 import { TelegramProxyBot as Bot4 } from './proxyip/bot3.js';
-import { TelegramWildcardBot as Bot5 } from './wildcard/botwild.js';
+import { CloudflareBot, TelegramWildcardBot as Bot5 } from './wildcard/botwild.js';
 
 export default {
   async fetch(request, env) {
