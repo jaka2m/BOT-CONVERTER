@@ -105,20 +105,22 @@ export class TelegramWildcardBot {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
-    this.handleUpdate = this.handleUpdate.bind(this); // bind untuk digunakan sebagai handler
+    this.users = new Set(); // Menyimpan unique chatId user yang pernah akses
+    this.handleUpdate = this.handleUpdate.bind(this);
   }
 
-  // ============================
   // Tangani update dari webhook
-  // ============================
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    // Hanya owner yang bisa /add & /del
-    if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
+    // Simpan chatId user jika baru
+    if (!this.users.has(chatId)) this.users.add(chatId);
+
+    // Owner only commands: /add, /del, /user
+    if ((text.startsWith('/add ') || text.startsWith('/del ') || text.startsWith('/user')) && chatId !== this.ownerId) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
     }
@@ -203,6 +205,21 @@ export class TelegramWildcardBot {
         await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
       }
 
+      return new Response('OK', { status: 200 });
+    }
+
+    // Handle /user (baru) - list semua user chatId yg pernah akses bot
+    if (text.startsWith('/user')) {
+      const usersArray = Array.from(this.users);
+      if (usersArray.length === 0) {
+        await this.sendMessage(chatId, '*No users have accessed this bot yet.*', { parse_mode: 'MarkdownV2' });
+      } else {
+        const formattedUsers = usersArray.map((id, i) => `${i + 1}\\. \`${id}\``).join('\n');
+        const totalLine = `\n\nTotal: *${usersArray.length}* user${usersArray.length > 1 ? 's' : ''}`;
+        const textPreview = `\`\`\`Users Access List\n${formattedUsers}\`\`\`` + totalLine;
+
+        await this.sendMessage(chatId, textPreview, { parse_mode: 'MarkdownV2' });
+      }
       return new Response('OK', { status: 200 });
     }
 
