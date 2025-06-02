@@ -2,3 +2,15 @@ name = "telegram-wildcard-bot"
 main = "src/worker.js"
 compatibility_date = "2025-06-01"
 workers_dev = true
+
+[vars]
+OWNER_ID = "1467883032"
+ROOT_DOMAIN = "joss.checker-ip.xyz"
+SERVICE_NAME = "siren"
+
+[secrets]
+TELEGRAM_BOT_TOKEN = "token-telegram-bot-anda"
+CLOUDFLARE_API_KEY = "5fae9fcb9c193ce65de4b57689a94938b708e"
+CLOUDFLARE_ACCOUNT_ID = "e9930d5ca683b0461f73477050fee0c7"
+CLOUDFLARE_ZONE_ID = "80423e7547d2fa85e13796a1f41deced"
+API_EMAIL = "ambebalong@gmail.com"
