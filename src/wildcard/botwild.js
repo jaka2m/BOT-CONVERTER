@@ -211,20 +211,23 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /user
     if (text === '/user') {
-      if (chatId === this.ownerId) {
-        // Owner: tampilkan semua user dan total
-        const usersArray = Array.from(this.userSet);
-        const userListText = usersArray.map((id, i) => `${i + 1}. \`${id}\``).join('\n');
-        const reply = `👥 Users who accessed the bot:\n${userListText}\n\nTotal users: *${usersArray.length}*`;
-        await this.sendMessage(chatId, reply, { parse_mode: 'MarkdownV2' });
-      } else {
-        // User biasa: tampilkan chatId mereka saja
-        await this.sendMessage(chatId, `Your chat ID: \`${chatId}\``, { parse_mode: 'MarkdownV2' });
-      }
-      return new Response('OK', { status: 200 });
+  try {
+    if (chatId === this.ownerId) {
+      const usersArray = Array.from(this.userSet);
+      const userListText = usersArray.length > 0
+        ? usersArray.map((id, i) => `${i + 1}. \`${id}\``).join('\n')
+        : 'No users yet.';
+      const reply = `👥 Users who accessed the bot:\n${userListText}\n\nTotal users: *${usersArray.length}*`;
+      await this.sendMessage(chatId, reply, { parse_mode: 'MarkdownV2' });
+    } else {
+      await this.sendMessage(chatId, `Your chat ID: \`${chatId}\``, { parse_mode: 'MarkdownV2' });
     }
+  } catch (e) {
+    console.error('Error /user handler:', e);
+  }
+  return new Response('OK', { status: 200 });
+}
 
     // Handle /start and other commands here as needed
     if (text === '/start') {
