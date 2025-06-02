@@ -7,6 +7,7 @@ export async function WildcardBot(link) {
 }
 
 // Konstanta global
+const rootDomain = "joss.checker-ip.xyz";
 const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
 const accountID = "e9930d5ca683b0461f73477050fee0c7";
 const zoneID = "80423e7547d2fa85e13796a1f41deced";
