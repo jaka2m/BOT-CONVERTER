@@ -2,7 +2,7 @@ import { TelegramBot as Bot1 } from './bot.js';
 import { TelegramBotku as Bot2 } from './randomip/bot2.js';
 import { TelegramProxyCekBot as Bot3 } from './proxyip/botCek.js';
 import { TelegramProxyBot as Bot4 } from './proxyip/bot3.js';
-import { TelegramWildcardBot as Bot5 } from './wildcard/botwild.js';
+import { TelegramWildcardBot, AsuBabibot as Bot5 } from './wildcard/botwild.js';
 
 export default {
   async fetch(request, env) {
@@ -14,14 +14,11 @@ export default {
       const update = await request.json();
       
       // Buat instance bot dengan token dari env juga
-      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
-      const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
-      const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
-      const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
-      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
-
-      // Contoh pakai apiKey atau rootDomain di salah satu bot jika perlu:
-      // bot1.setConfig({ apiKey, rootDomain, accountID, zoneID, apiEmail, serviceName });
+      const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
 
       // Jalankan handleUpdate dari tiap bot
       await Promise.all([
