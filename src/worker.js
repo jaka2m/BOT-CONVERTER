@@ -16,10 +16,10 @@ export default {
       const ownerId = Number(env.OWNER_ID);
       const apiKey = Number(env.API_KEY);
 
-      const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
-      const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId);
-      const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId);
-      const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId);
+      const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId, apiKey);
+      const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId, apiKey);
+      const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId, apiKey);
+      const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId, apiKey);
       const bot5 = new Bot5(token, 'https://api.telegram.org', ownerId, apiKey);
 
       await Promise.all([
