@@ -4,7 +4,4 @@ account_id = "e9930d5ca683b0461f73477050fee0c7"
 workers_dev = true
 
 compatibility_date = "2025-06-02"
-main = "src/worker.js"  # Sesuaikan dengan nama file Worker utama kamu, misal worker.js
-
-[vars]
-ROOT_DOMAIN = "joss.checker-ip.xyz"
+main = "src/worker.js"  #
