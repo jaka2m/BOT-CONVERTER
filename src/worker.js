@@ -6,29 +6,22 @@ import { TelegramWildcardBot as Bot5 } from './wildcard/botwild.js';
 
 export default {
   async fetch(request, env) {
-    // Hanya izinkan permintaan POST
     if (request.method !== 'POST') {
       return new Response('Method Not Allowed', { status: 405 });
     }
 
     try {
       const update = await request.json();
-
-      // Ambil token dan ID pemilik dari environment
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
+      const apiKey = Number(env.API_KEY);
 
-      // Inisialisasi semua bot
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId);
       const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId);
       const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId);
-      const bot5 = new Bot5(token, ownerId, {
-        apiUrl: 'https://api.telegram.org',
-        apiKey: env.API_KEY,
-      });
+      const bot5 = new Bot5(token, 'https://api.telegram.org', ownerId, apiKey);
 
-      // Jalankan semua handler bot secara paralel
       await Promise.all([
         bot1.handleUpdate(update),
         bot2.handleUpdate(update),
@@ -39,13 +32,10 @@ export default {
 
       return new Response('OK', { status: 200 });
     } catch (error) {
-      return new Response(
-        JSON.stringify({ error: error.message }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
   },
 };
