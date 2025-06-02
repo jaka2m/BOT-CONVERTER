@@ -122,10 +122,10 @@ export class TelegramWildcardBot {
     return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
   }
 
-  // ============================
+  /// ============================
   // Tangani update dari webhook
   // ============================
-  async handleUpdate(update, asuBabibotInstance) {
+  async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
