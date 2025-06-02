@@ -212,22 +212,26 @@ export class TelegramWildcardBot {
     }
 
     if (text === '/user') {
-  try {
-    if (chatId === this.ownerId) {
-      const usersArray = Array.from(this.userSet);
-      const userListText = usersArray.length > 0
-        ? usersArray.map((id, i) => `${i + 1}. \`${id}\``).join('\n')
-        : 'No users yet.';
-      const reply = `👥 Users who accessed the bot:\n${userListText}\n\nTotal users: *${usersArray.length}*`;
-      await this.sendMessage(chatId, reply, { parse_mode: 'MarkdownV2' });
-    } else {
-      await this.sendMessage(chatId, `Your chat ID: \`${chatId}\``, { parse_mode: 'MarkdownV2' });
+      try {
+        if (chatId === this.ownerId) {
+          const usersArray = Array.from(this.userSet);
+          const userListText = usersArray.length > 0
+            ? usersArray.map((id, i) => `${i + 1}. \`${id}\``).join('\n')
+            : 'No users yet.';
+          const reply = `👥 Users who accessed the bot:\n${userListText}\n\nTotal users: *${usersArray.length}*`;
+          await this.sendMessage(chatId, reply, { parse_mode: 'MarkdownV2' });
+        } else {
+          await this.sendMessage(chatId, `Your chat ID: \`${chatId}\``, { parse_mode: 'MarkdownV2' });
+        }
+      } catch (e) {
+        console.error('Error /user handler:', e);
+      }
+      return new Response('OK', { status: 200 });
     }
-  } catch (e) {
-    console.error('Error /user handler:', e);
+
+    // Default fallback
+    return new Response('OK', { status: 200 });
   }
-  return new Response('OK', { status: 200 });
-}
 
     // Handle /start and other commands here as needed
     if (text === '/start') {
