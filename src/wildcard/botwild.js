@@ -2,73 +2,95 @@
 // Main Telegram Wildcard Bot class
 // ========================================
 
-export async function WildcardBot(link) {
-  console.log("Bot link:", link);
-}
+export class WildcardBot {
+  constructor(config) {
+    this.rootDomain = config.rootDomain || '';
+    this.apiKey = config.apiKey || '';
+    this.accountID = config.accountID || '';
+    this.zoneID = config.zoneID || '';
+    this.apiEmail = config.apiEmail || '';
+    this.serviceName = config.serviceName || '';
 
-// Konstanta global
-const rootDomain = "joss.checker-ip.xyz";
-const apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
-const accountID = "e9930d5ca683b0461f73477050fee0c7";
-const zoneID = "80423e7547d2fa85e13796a1f41deced";
-const apiEmail = "ambebalong@gmail.com";
-const serviceName = "siren";
-
-const headers = {
-  'Authorization': `Bearer ${apiKey}`,
-  'X-Auth-Email': apiEmail,
-  'X-Auth-Key': apiKey,
-  'Content-Type': 'application/json'
-};
-
-// Escape MarkdownV2 untuk Telegram
-function escapeMarkdownV2(text) {
-  return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
-}
-
-// Ambil list domain dari Cloudflare Workers
-async function getDomainList() {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
-  const res = await fetch(url, { headers });
-  if (res.ok) {
-    const json = await res.json();
-    return json.result.filter(d => d.service === serviceName).map(d => d.hostname);
-  }
-  return [];
-}
-
-// Tambah subdomain ke Cloudflare Workers
-async function addsubdomain(subdomain) {
-  const domain = `${subdomain}.${rootDomain}`.toLowerCase();
-  if (!domain.endsWith(rootDomain)) return 400;
-
-  const registeredDomains = await getDomainList();
-  if (registeredDomains.includes(domain)) return 409;
-
-  try {
-    const testUrl = `https://${domain.replace(`.${rootDomain}`, '')}`;
-    const domainTest = await fetch(testUrl);
-    if (domainTest.status === 530) return 530;
-  } catch {
-    return 400;
+    this.headers = {
+      'Authorization': `Bearer ${this.apiKey}`,
+      'X-Auth-Email': this.apiEmail,
+      'X-Auth-Key': this.apiKey,
+      'Content-Type': 'application/json'
+    };
   }
 
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountID}/workers/domains`;
-  const body = {
-    environment: "production",
-    hostname: domain,
-    service: serviceName,
-    zone_id: zoneID
-  };
+  // Escape MarkdownV2 untuk Telegram
+  escapeMarkdownV2(text) {
+    return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
+  }
 
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(body)
-  });
+  // Ambil list domain dari Cloudflare Workers
+  async getDomainList() {
+    const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
+    const res = await fetch(url, { headers: this.headers });
+    if (res.ok) {
+      const json = await res.json();
+      return json.result
+        .filter(d => d.service === this.serviceName)
+        .map(d => d.hostname);
+    }
+    return [];
+  }
 
-  return res.status;
-}
+  // Tambah subdomain ke Cloudflare Workers
+  async addSubdomain(subdomain) {
+    const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
+    if (!domain.endsWith(this.rootDomain)) return 400;
+
+    const registeredDomains = await this.getDomainList();
+    if (registeredDomains.includes(domain)) return 409;
+
+    try {
+      const testUrl = `https://${domain.replace(`.${this.rootDomain}`, '')}`;
+      const domainTest = await fetch(testUrl);
+      if (domainTest.status === 530) return 530;
+    } catch {
+      return 400;
+    }
+
+    const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
+    const body = {
+      environment: "production",
+      hostname: domain,
+      service: this.serviceName,
+      zone_id: this.zoneID
+    };
+
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: this.headers,
+      body: JSON.stringify(body)
+    });
+
+    return res.status;
+  }
+
+  // Hapus subdomain dari Cloudflare Workers
+  async deleteSubdomain(subdomain) {
+    const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
+    const urlList = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
+
+    const listRes = await fetch(urlList, { headers: this.headers });
+    if (!listRes.ok) return listRes.status;
+
+    const listJson = await listRes.json();
+    const domainObj = listJson.result.find(d => d.hostname === domain);
+    if (!domainObj) return 404;
+
+    const urlDelete = `${urlList}/${domainObj.id}`;
+    const res = await fetch(urlDelete, {
+      method: 'DELETE',
+      headers: this.headers
+    });
+
+    return res.status;
+  }
+
 
 // Hapus subdomain dari Cloudflare Workers
 async function deletesubdomain(subdomain) {
