@@ -1,15 +1,14 @@
 {
-  "name": "v2ray-config-bot",
+  "name": "wildcard-bot",
   "version": "1.0.0",
-  "description": "Telegram bot to convert V2Ray configurations",
-  "type": "module",
+  "description": "Telegram bot untuk manajemen wildcard subdomain dengan Cloudflare Workers",
+  "main": "worker.js",
   "scripts": {
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler publish"
   },
-  "dependencies": {
-    "wrangler": "^3.21.0"
-  },
+  "author": "Your Name",
+  "license": "MIT",
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240401.0"
+    "@cloudflare/wrangler": "^2.16.0"
   }
 }
