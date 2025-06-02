@@ -1,6 +1,10 @@
 // ========================================
 // Telegram Wildcard Bot Class
 // ========================================
+export async function WildcardBot(link) {
+  console.log("Bot link:", link);
+}
+
 
 export class TelegramWildcardBot {
   constructor(token, ownerId, options = {}) {
