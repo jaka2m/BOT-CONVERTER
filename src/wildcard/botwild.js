@@ -27,12 +27,11 @@ export class CloudflareBot {
     };
   }
 
-  // Escape MarkdownV2 untuk Telegram
+  // Escape MarkdownV2
   escapeMarkdownV2(text) {
     return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
   }
 
-  // Ambil list domain dari Cloudflare Workers
   async getDomainList() {
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const res = await fetch(url, { headers: this.headers });
@@ -43,7 +42,6 @@ export class CloudflareBot {
     return [];
   }
 
-  // Tambah subdomain ke Cloudflare Workers
   async addSubdomain(subdomain) {
     const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
     if (!domain.endsWith(this.rootDomain)) return 400;
@@ -76,7 +74,6 @@ export class CloudflareBot {
     return res.status;
   }
 
-  // Hapus subdomain dari Cloudflare Workers
   async deleteSubdomain(subdomain) {
     const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
     const urlList = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
@@ -97,7 +94,6 @@ export class CloudflareBot {
     return res.status;
   }
 
-  // Ambil semua subdomain terdaftar
   async listSubdomains() {
     return await this.getDomainList();
   }
@@ -108,121 +104,82 @@ export class CloudflareBot {
 // ========================================
 
 export class TelegramWildcardBot {
-  constructor(token, apiUrl, ownerId, cloudflareBotInstance) {
+  constructor(token, apiUrl, ownerId, cfBot) {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
-    this.cfBot = cloudflareBotInstance; // Instance of CloudflareBot
-
+    this.cfBot = cfBot;
     this.handleUpdate = this.handleUpdate.bind(this);
   }
 
-  // Escape MarkdownV2 helper
-  escapeMarkdownV2(text) {
-    return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
-  }
-
-  // Tangani update dari webhook
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
+    const escape = this.cfBot.escapeMarkdownV2.bind(this.cfBot);
 
-    // Hanya owner yang bisa /add & /del
     if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /add
     if (text.startsWith('/add ')) {
       const subdomain = text.split(' ')[1]?.trim();
       if (!subdomain) return new Response('OK', { status: 200 });
 
-      let loadingMsgId;
-      try {
-        const loadingMsg = await this.sendMessage(chatId, '⏳ Adding subdomain, please wait...');
-        loadingMsgId = loadingMsg.result?.message_id;
-      } catch (err) {
-        console.error('❌ Failed to send loading message:', err);
-      }
+      const loadingMsg = await this.sendMessage(chatId, '⏳ Adding subdomain...');
+      const loadingMsgId = loadingMsg.result?.message_id;
 
       let status;
       try {
         status = await this.cfBot.addSubdomain(subdomain);
-      } catch (err) {
-        console.error('❌ addSubdomain() error:', err);
+      } catch {
         status = 500;
       }
 
       const fullDomain = `${subdomain}.${this.cfBot.rootDomain}`;
-
-      if (loadingMsgId) {
-        try {
-          await this.deleteMessage(chatId, loadingMsgId);
-        } catch (err) {
-          console.error('❌ Failed to delete loading message:', err);
-        }
-      }
+      if (loadingMsgId) await this.deleteMessage(chatId, loadingMsgId);
 
       if (status === 200) {
-        await this.sendMessage(chatId, `\`\`\`Wildcard\n${this.escapeMarkdownV2(fullDomain)} added successfully\`\`\``, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `\`\`\`Wildcard\n${escape(fullDomain)} added successfully\`\`\``, { parse_mode: 'MarkdownV2' });
       } else if (status === 409) {
-        await this.sendMessage(chatId, `⚠️ Subdomain *${this.escapeMarkdownV2(fullDomain)}* already exists.`, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `⚠️ Subdomain *${escape(fullDomain)}* already exists.`, { parse_mode: 'MarkdownV2' });
       } else if (status === 530) {
-        await this.sendMessage(chatId, `❌ Subdomain *${this.escapeMarkdownV2(fullDomain)}* not active (error 530).`, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `❌ Subdomain *${escape(fullDomain)}* not active (error 530).`, { parse_mode: 'MarkdownV2' });
       } else {
-        await this.sendMessage(chatId, `❌ Failed to add *${this.escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `❌ Failed to add *${escape(fullDomain)}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
       }
 
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /del
     if (text.startsWith('/del ')) {
       const subdomain = text.split(' ')[1];
       if (!subdomain) return new Response('OK', { status: 200 });
 
-      let status;
-      try {
-        status = await this.cfBot.deleteSubdomain(subdomain);
-      } catch (err) {
-        console.error('❌ deleteSubdomain() error:', err);
-        status = 500;
-      }
-
+      const status = await this.cfBot.deleteSubdomain(subdomain);
       const fullDomain = `${subdomain}.${this.cfBot.rootDomain}`;
 
       if (status === 200) {
-        await this.sendMessage(chatId, `\`\`\`Wildcard\n${this.escapeMarkdownV2(fullDomain)} deleted successfully.\`\`\``, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `\`\`\`Wildcard\n${escape(fullDomain)} deleted successfully.\`\`\``, { parse_mode: 'MarkdownV2' });
       } else if (status === 404) {
-        await this.sendMessage(chatId, `⚠️ Subdomain *${this.escapeMarkdownV2(fullDomain)}* not found.`, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `⚠️ Subdomain *${escape(fullDomain)}* not found.`, { parse_mode: 'MarkdownV2' });
       } else {
-        await this.sendMessage(chatId, `❌ Failed to delete *${this.escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `❌ Failed to delete *${escape(fullDomain)}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
       }
 
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /list
     if (text.startsWith('/list')) {
-      let domains = [];
-      try {
-        domains = await this.cfBot.listSubdomains();
-      } catch (err) {
-        console.error('❌ listSubdomains() error:', err);
-        domains = [];
-      }
-
+      const domains = await this.cfBot.listSubdomains();
       if (domains.length === 0) {
         await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
       } else {
-        const formattedList = domains.map((d, i) => `${i + 1}\\. ${this.escapeMarkdownV2(d)}`).join('\n');
+        const formattedList = domains.map((d, i) => `${i + 1}\\. ${escape(d)}`).join('\n');
         const totalLine = `\n\nTotal: *${domains.length}* subdomain${domains.length > 1 ? 's' : ''}`;
-        const textPreview = `\`\`\`List-Wildcard\n${formattedList}\`\`\`` + totalLine;
-
-        await this.sendMessage(chatId, textPreview, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `\`\`\`List-Wildcard\n${formattedList}\`\`\`${totalLine}`, { parse_mode: 'MarkdownV2' });
 
         const fileContent = domains.map((d, i) => `${i + 1}. ${d}`).join('\n');
         await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
@@ -234,7 +191,6 @@ export class TelegramWildcardBot {
     return new Response('OK', { status: 200 });
   }
 
-  // Kirim pesan ke Telegram
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, ...options };
     const response = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
@@ -245,7 +201,6 @@ export class TelegramWildcardBot {
     return response.json();
   }
 
-  // Hapus pesan Telegram
   async deleteMessage(chatId, messageId) {
     await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
       method: 'POST',
@@ -254,7 +209,6 @@ export class TelegramWildcardBot {
     });
   }
 
-  // Kirim file ke Telegram
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
