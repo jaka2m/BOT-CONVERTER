@@ -1,0 +1,65 @@
+name: Deploy VPN CF
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Setup Wrangler secrets and deploy Worker
+        env:
+          OWNER_ID: ${{ secrets.OWNER_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          API_EMAIL: ${{ secrets.API_EMAIL }}
+          WORKER_NAME: telegram-wildcard-bot
+        run: |
+          set -e
+
+          SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
+
+          check_and_put_secret() {
+            SECRET_NAME=$1
+            SECRET_VALUE=$2
+
+            echo "Checking if $SECRET_NAME exists..."
+            EXISTS=$(curl -s -X GET "$SECRETS_API" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              -H "Content-Type: application/json" | jq -r '.result[]?.name' | grep "^$SECRET_NAME$" || true)
+
+            if [ "$EXISTS" = "$SECRET_NAME" ]; then
+              echo "Secret $SECRET_NAME already exists, skipping."
+            else
+              echo "$SECRET_VALUE" | npx wrangler secret put "$SECRET_NAME"
+            fi
+          }
+
+          check_and_put_secret "TELEGRAM_BOT_TOKEN" "$TELEGRAM_BOT_TOKEN"
+          check_and_put_secret "OWNER_ID" "$OWNER_ID"
+          check_and_put_secret "CLOUDFLARE_ACCOUNT_ID" "$CLOUDFLARE_ACCOUNT_ID"
+          check_and_put_secret "CLOUDFLARE_ZONE_ID" "$CLOUDFLARE_ZONE_ID"
+          check_and_put_secret "API_EMAIL" "$API_EMAIL"
+
+          echo "Deploying worker..."
+          npx wrangler deploy --name $WORKER_NAME
+
+          echo "✅ Deployment completed successfully"
