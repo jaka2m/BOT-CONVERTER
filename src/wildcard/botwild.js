@@ -1,59 +1,57 @@
 // ========================================
-// Telegram Wildcard Bot Class
+// Main Telegram Wildcard Bot class
 // ========================================
+
+const apiEmail = "ambebalong@gmail.com";
+const serviceName = "siren";
+
 export async function WildcardBot(link) {
   console.log("Bot link:", link);
 }
 
-
 export class TelegramWildcardBot {
-  constructor(token, ownerId, options = {}) {
+  constructor(token, apiUrl, ownerId, rootDomain, apiKey, accountID, zoneID) {
     this.token = token;
-    this.apiUrl = options.apiUrl || 'https://api.telegram.org';
+    this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
 
-    // Cloudflare-related config
-    this.rootDomain = options.rootDomain || '';
-    this.apiKey = options.apiKey || '';
-    this.apiEmail = options.apiEmail || '';
-    this.accountID = options.accountID || '';
-    this.zoneID = options.zoneID || '';
-    this.serviceName = options.serviceName || '';
+    // Cloudflare-related properties
+    this.rootDomain = rootDomain;
+    this.apiKey = apiKey;
+    this.accountID = accountID;
+    this.zoneID = zoneID;
 
-    // Bind the update handler
-    this.handleUpdate = this.handleUpdate.bind(this);
-  }
-
-  // Helper: headers for Cloudflare API
-  get headers() {
-    return {
+    // Headers for Cloudflare API
+    this.headers = {
       'Authorization': `Bearer ${this.apiKey}`,
-      'X-Auth-Email': this.apiEmail,
+      'X-Auth-Email': apiEmail,
       'X-Auth-Key': this.apiKey,
       'Content-Type': 'application/json'
     };
+
+    this.handleUpdate = this.handleUpdate.bind(this); // binding handler
   }
 
-  // Escape MarkdownV2 special chars for Telegram
+  // Escape MarkdownV2 for Telegram messages
   escapeMarkdownV2(text) {
     return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
   }
 
-  // Get list of registered domains from Cloudflare Workers
+  // Fetch domain list from Cloudflare Workers
   async getDomainList() {
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const res = await fetch(url, { headers: this.headers });
     if (res.ok) {
       const json = await res.json();
       return json.result
-        .filter(d => d.service === this.serviceName)
+        .filter(d => d.service === serviceName)
         .map(d => d.hostname);
     }
     return [];
   }
 
   // Add subdomain to Cloudflare Workers
-  async addsubdomain(subdomain) {
+  async addSubdomain(subdomain) {
     const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
     if (!domain.endsWith(this.rootDomain)) return 400;
 
@@ -61,7 +59,6 @@ export class TelegramWildcardBot {
     if (registeredDomains.includes(domain)) return 409;
 
     try {
-      // Test if domain is active
       const testUrl = `https://${domain.replace(`.${this.rootDomain}`, '')}`;
       const domainTest = await fetch(testUrl);
       if (domainTest.status === 530) return 530;
@@ -73,7 +70,7 @@ export class TelegramWildcardBot {
     const body = {
       environment: "production",
       hostname: domain,
-      service: this.serviceName,
+      service: serviceName,
       zone_id: this.zoneID
     };
 
@@ -87,7 +84,7 @@ export class TelegramWildcardBot {
   }
 
   // Delete subdomain from Cloudflare Workers
-  async deletesubdomain(subdomain) {
+  async deleteSubdomain(subdomain) {
     const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
     const urlList = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
 
@@ -107,21 +104,19 @@ export class TelegramWildcardBot {
     return res.status;
   }
 
-  // List all subdomains registered
+  // List all registered subdomains
   async listSubdomains() {
     return await this.getDomainList();
   }
 
-  // ============================
-  // Telegram webhook update handler
-  // ============================
+  // Handle incoming webhook update from Telegram
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    // Only owner allowed for /add and /del commands
+    // Only owner can use /add and /del commands
     if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
@@ -142,9 +137,9 @@ export class TelegramWildcardBot {
 
       let status;
       try {
-        status = await this.addsubdomain(subdomain);
+        status = await this.addSubdomain(subdomain);
       } catch (err) {
-        console.error('❌ addsubdomain() error:', err);
+        console.error('❌ addSubdomain() error:', err);
         status = 500;
       }
 
@@ -176,7 +171,7 @@ export class TelegramWildcardBot {
       const subdomain = text.split(' ')[1];
       if (!subdomain) return new Response('OK', { status: 200 });
 
-      const status = await this.deletesubdomain(subdomain);
+      const status = await this.deleteSubdomain(subdomain);
       const fullDomain = `${subdomain}.${this.rootDomain}`;
 
       if (status === 200) {
@@ -210,11 +205,10 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Default OK response for other updates
     return new Response('OK', { status: 200 });
   }
 
-  // Telegram: send message
+  // Send message to Telegram chat
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, ...options };
     const response = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
@@ -225,7 +219,7 @@ export class TelegramWildcardBot {
     return response.json();
   }
 
-  // Telegram: delete message
+  // Delete a message from Telegram chat
   async deleteMessage(chatId, messageId) {
     await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
       method: 'POST',
@@ -234,7 +228,7 @@ export class TelegramWildcardBot {
     });
   }
 
-  // Telegram: send file/document
+  // Send file/document to Telegram chat
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
