@@ -2,7 +2,8 @@ name: Deploy VPN CF
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -13,7 +14,8 @@ jobs:
       deployments: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -25,6 +27,7 @@ jobs:
 
       - name: Setup Wrangler secrets and deploy Worker
         env:
+          ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
           OWNER_ID: ${{ secrets.OWNER_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           API_KEY: ${{ secrets.API_KEY }}
@@ -35,7 +38,7 @@ jobs:
         run: |
           set -e
 
-          SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
+          SECRETS_API="https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/workers/scripts/$WORKER_NAME/secrets"
 
           check_and_put_secret() {
             SECRET_NAME=$1
