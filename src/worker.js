@@ -12,29 +12,19 @@ export default {
 
     try {
       const update = await request.json();
+      const ownerId = env.OWNER_ID; // <-- di sini ambil dari env, benar
 
       const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
       const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
       const bot3 = new Bot3(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
       const bot4 = new Bot4(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
-
-      // Panggil AsuBabibot dengan 6 parameter sesuai constructor
-      const bot5 = new Bot5(
-        env.ROOT_DOMAIN,
-        env.API_KEY,
-        env.ACCOUNT_ID,
-        env.ZONE_ID,
-        env.API_EMAIL,
-        env.SERVICE_NAME
-      );
-
-      await Promise.all([
-        bot1.handleUpdate(update),
-        bot2.handleUpdate(update),
-        bot3.handleUpdate(update),
-        bot4.handleUpdate(update),
-        bot5.handleUpdate(update)
-      ]);
+      const bot5 = new Bot5(env.TELEGRAM_BOT_TOKEN, undefined, 1467883032);
+      
+      await bot1.handleUpdate(update);
+      await bot2.handleUpdate(update);
+      await bot3.handleUpdate(update);
+      await bot4.handleUpdate(update);
+      await bot5.handleUpdate(update);
 
       return new Response('OK', { status: 200 });
     } catch (error) {
