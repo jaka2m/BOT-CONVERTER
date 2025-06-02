@@ -106,7 +106,7 @@ export class TelegramWildcardBot {
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
 
-    // Simpan chatId user yang pernah akses bot (unik)
+    // Simpan chatId user yang pernah akses bot
     this.userSet = new Set();
 
     this.handleUpdate = this.handleUpdate.bind(this);
@@ -211,68 +211,72 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /user - tampilkan semua user yang pernah akses bot
+    // Handle /user
     if (text === '/user') {
       if (chatId === this.ownerId) {
-        // Owner dapat lihat semua user + total
+        // Owner: tampilkan semua user dan total
         const usersArray = Array.from(this.userSet);
         const userListText = usersArray.map((id, i) => `${i + 1}. \`${id}\``).join('\n');
         const reply = `👥 Users who accessed the bot:\n${userListText}\n\nTotal users: *${usersArray.length}*`;
         await this.sendMessage(chatId, reply, { parse_mode: 'MarkdownV2' });
       } else {
-        // User biasa hanya lihat chatId mereka sendiri
+        // User biasa: tampilkan chatId mereka saja
         await this.sendMessage(chatId, `Your chat ID: \`${chatId}\``, { parse_mode: 'MarkdownV2' });
       }
       return new Response('OK', { status: 200 });
     }
 
+    // Handle /start and other commands here as needed
+    if (text === '/start') {
+      await this.sendMessage(chatId, 'Welcome! Use /add <subdomain> to add a wildcard subdomain.');
+      return new Response('OK', { status: 200 });
+    }
+
     // Jika command tidak dikenali
-    await this.sendMessage(chatId, '❓ Unknown command or message. Please use /add, /del, /list, or /user.');
+    await this.sendMessage(chatId, 'Unknown command. Available commands:\n/add <subdomain>\n/del <subdomain>\n/list\n/user');
     return new Response('OK', { status: 200 });
   }
 
-  // Kirim pesan ke chatId
+  // Kirim pesan text
   async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const body = { chat_id: chatId, text, ...options };
-
-    const res = await fetch(url, {
+    const body = {
+      chat_id: chatId,
+      text,
+      ...options
+    };
+    return await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    return await res.json();
+      body: JSON.stringify(body)
+    }).then(res => res.json());
   }
 
-  // Hapus pesan di chatId
+  // Hapus pesan (optional)
   async deleteMessage(chatId, messageId) {
     const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
     const body = { chat_id: chatId, message_id: messageId };
-
-    await fetch(url, {
+    return await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
   }
 
-  // Kirim file dokumen ke chatId (isi berupa string)
-  async sendDocument(chatId, content, filename, mimeType = 'text/plain') {
+  // Kirim file text sebagai document (buat /list)
+  async sendDocument(chatId, content, filename, mimeType) {
     const url = `${this.apiUrl}/bot${this.token}/sendDocument`;
 
-    // Buat file Blob (hanya di browser, untuk server bisa beda)
-    // Kalau di Cloudflare Workers gunakan FormData polyfill atau pakai Buffer
-    // Di sini contoh sederhana menggunakan FormData dari undici (Node.js) atau fetch API
-
+    // Multipart/form-data untuk kirim dokumen
+    // Karena kita tidak punya akses fs di Cloudflare, gunakan form-data dengan Blob
     const formData = new FormData();
-    const blob = new Blob([content], { type: mimeType });
     formData.append('chat_id', chatId);
+    const blob = new Blob([content], { type: mimeType });
     formData.append('document', blob, filename);
 
-    await fetch(url, {
+    return await fetch(url, {
       method: 'POST',
-      body: formData,
+      body: formData
     });
   }
 }
