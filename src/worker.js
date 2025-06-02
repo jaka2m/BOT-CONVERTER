@@ -12,16 +12,7 @@ export default {
 
     try {
       const update = await request.json();
-      const ownerId = env.OWNER_ID; // Ambil owner ID dari env
       
-      // Ambil semua secret dan config dari env
-      const rootDomain = env.ROOT_DOMAIN;
-      const apiKey = env.CLOUDFLARE_API_KEY;
-      const accountID = env.CLOUDFLARE_ACCOUNT_ID;
-      const zoneID = env.CLOUDFLARE_ZONE_ID;
-      const apiEmail = env.API_EMAIL;
-      const serviceName = env.SERVICE_NAME;
-
       // Buat instance bot dengan token dari env juga
       const bot1 = new Bot1(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
       const bot2 = new Bot2(env.TELEGRAM_BOT_TOKEN, undefined, ownerId);
