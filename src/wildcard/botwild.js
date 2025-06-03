@@ -111,9 +111,6 @@ export class TelegramWildcardBot {
     return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
   }
 
-  async handleUpdate(update) {
-    if (!update.message) return new Response('OK', { status: 200 });
-
     async handleUpdate(update) {
   if (!update.message) return new Response('OK', { status: 200 });
 
@@ -247,7 +244,12 @@ atau /reject ${subdomain} untuk reject.
 
       return new Response('OK', { status: 200 });
     }
-  
+  }
+
+  // Default fallback
+  return new Response('OK', { status: 200 });
+}
+
     // List Subdomains
     if (text.startsWith('/list')) {
       let domains = [];
