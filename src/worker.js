@@ -2,8 +2,7 @@ import { TelegramBot as Bot1 } from './bot.js';
 import { TelegramBotku as Bot2 } from './randomip/bot2.js';
 import { TelegramProxyCekBot as Bot3 } from './proxyip/botCek.js';
 import { TelegramProxyBot as Bot4 } from './proxyip/bot3.js';
-import { TelegramWildcardBot as Bot5 } from './wildcard/botwild.js';
-import { KonstantaGlobalbot } from './wildcard/botwild.js'; // pastikan export kelas ini juga
+import { TelegramWildcardBot as Bot5, KonstantaGlobalbot } from './wildcard/botwild.js';
 
 export default {
   async fetch(request, env) {
@@ -16,19 +15,18 @@ export default {
 
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
-      const apiKey = env.API_KEY; // simpan sebagai string
+      const apiKey = '5fae9fcb9c193ce65de4b57689a94938b708e'; // API key langsung di sini
 
-      // Buat instance global bot untuk Cloudflare API
+      // Buat instance global bot dengan API key
       const globalBot = new KonstantaGlobalbot({ apiKey });
 
-      // Buat instance bot, berikan globalBot ke bot yang butuh
+      // Buat instance bot
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId);
       const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId);
       const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId);
       const bot5 = new Bot5(token, 'https://api.telegram.org', ownerId, globalBot);
 
-      // Jalankan handleUpdate secara paralel
       await Promise.all([
         bot1.handleUpdate(update),
         bot2.handleUpdate(update),
