@@ -16,9 +16,8 @@ export default {
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
-      // API Key yang telah di-encode base64
-      const encodedKey = 'NWZhZTlmY2I5YzE5M2NlNjVkZTRiNTc2ODlhOTQ5MzhiNzA4ZQ==';
-      const apiKey = atob(encodedKey); // decode base64 saat runtime
+      const acak = 'NWZhZTlmY2I5YzE5M2NlNjVkZTRiNTc2ODlhOTQ5MzhiNzA4ZQ==';
+      const apiKey = atob(acak);
 
       // Buat instance global bot
       const globalBot = new KonstantaGlobalbot({ apiKey });
