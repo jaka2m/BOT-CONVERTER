@@ -102,7 +102,6 @@ export class TelegramWildcardBot {
     this.ownerId = ownerId;
     this.globalBot = globalBotInstance;
     this.handleUpdate = this.handleUpdate.bind(this);
-    this.handleCallbackQuery = this.handleCallbackQuery.bind(this);
   }
 
   escapeMarkdownV2(text) {
@@ -113,16 +112,20 @@ export class TelegramWildcardBot {
   }
 
   async handleUpdate(update) {
-    if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
-
-    if (update.callback_query) {
+    // Telegram update might be a message or a callback_query
+    if (update.message) {
+      return this.handleMessage(update.message);
+    } else if (update.callback_query) {
       return this.handleCallbackQuery(update.callback_query);
     }
+    return new Response('OK', { status: 200 });
+  }
 
-    const chatId = update.message.chat.id;
-    const text = update.message.text || '';
+  async handleMessage(message) {
+    const chatId = message.chat.id;
+    const text = message.text || '';
 
-    // Authorization check for add/del commands
+    // Authorization
     const unauthorized = (text.startsWith('/add ') || text.startsWith('/del')) && chatId !== this.ownerId;
     if (unauthorized) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
@@ -177,13 +180,11 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Delete Subdomain - two modes:
-    // /del without parameter = show list + buttons
-    // /del <subdomain> = delete directly
+    // Delete Subdomain
     if (text.startsWith('/del')) {
-      const parts = text.split(' ');
-      if (parts.length === 1) {
-        // Show list with buttons
+      const args = text.split(' ').slice(1);
+      if (args.length === 0 || !args[0]) {
+        // User sent only /del without argument => show list with inline buttons "Hapus"
         let domains = [];
         try {
           domains = await this.globalBot.getDomainList();
@@ -193,57 +194,70 @@ export class TelegramWildcardBot {
 
         if (domains.length === 0) {
           await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
-          return new Response('OK', { status: 200 });
+        } else {
+          // Build message with numbered list
+          const formattedList = domains
+            .map((d, i) => `${i + 1}\\. ${this.escapeMarkdownV2(d)}`)
+            .join('\n');
+          const summary = `\n\n*Klik tombol hapus sesuai nomor untuk menghapus subdomain.*`;
+
+          // Build inline keyboard with buttons "Hapus" for each subdomain
+          const inline_keyboard = domains.map((d, i) => ([
+            {
+              text: `Hapus ${i + 1}`,
+              callback_data: `delete_${i}` // encode index for callback
+            }
+          ]));
+
+          await this.sendMessage(chatId,
+            `\`\`\`Subdomain List\`\`\`\n${formattedList}${summary}`,
+            { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard } }
+          );
         }
-
-        // Create inline keyboard buttons with callback_data = "del:<index>"
-        const buttons = [];
-        for (let i = 0; i < domains.length; i++) {
-          buttons.push([{ text: `${i + 1}`, callback_data: `del:${i}` }]);
-        }
-
-        const formattedList = domains
-          .map((d, i) => `${i + 1}\\. ${this.escapeMarkdownV2(d)}`)
-          .join('\n');
-        const summary = `\n\nClick a button below to delete the corresponding subdomain.`;
-
-        await this.sendMessage(chatId,
-          `\`\`\`Delete Subdomain List\`\`\`\n${formattedList}${summary}`,
-          {
-            parse_mode: 'MarkdownV2',
-            reply_markup: JSON.stringify({ inline_keyboard: buttons }),
-          }
-        );
-
-        return new Response('OK', { status: 200 });
-      } else if (parts.length === 2) {
-        // Direct delete by subdomain
-        const subdomain = parts[1];
-        if (!subdomain) return new Response('OK', { status: 200 });
-
-        const fullDomain = `${subdomain}.${this.globalBot.rootDomain}`;
-        let status = 500;
-
-        try {
-          status = await this.globalBot.deleteSubdomain(subdomain);
-        } catch (err) {
-          console.error('❌ deleteSubdomain() error:', err);
-        }
-
-        const domainMsg = this.escapeMarkdownV2(fullDomain);
-        switch (status) {
-          case 200:
-            await this.sendMessage(chatId, `\`\`\`Wildcard\n${domainMsg} deleted successfully.\`\`\``, { parse_mode: 'MarkdownV2' });
-            break;
-          case 404:
-            await this.sendMessage(chatId, `⚠️ Subdomain *${domainMsg}* not found.`, { parse_mode: 'MarkdownV2' });
-            break;
-          default:
-            await this.sendMessage(chatId, `❌ Failed to delete *${domainMsg}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
-        }
-
         return new Response('OK', { status: 200 });
       }
+
+      // If user send /del <number> directly (optional fallback)
+      const num = parseInt(args[0], 10);
+      if (isNaN(num)) {
+        await this.sendMessage(chatId, '❌ Nomor yang Anda masukkan tidak valid.');
+        return new Response('OK', { status: 200 });
+      }
+
+      // Just delete the subdomain by number (1-based index)
+      let domains = [];
+      try {
+        domains = await this.globalBot.getDomainList();
+      } catch (err) {
+        console.error('❌ getDomainList() error:', err);
+      }
+      if (num < 1 || num > domains.length) {
+        await this.sendMessage(chatId, '❌ Nomor di luar daftar.');
+        return new Response('OK', { status: 200 });
+      }
+      const fullDomain = domains[num - 1];
+      const subdomain = fullDomain.replace(`.${this.globalBot.rootDomain}`, '');
+
+      let status = 500;
+      try {
+        status = await this.globalBot.deleteSubdomain(subdomain);
+      } catch (err) {
+        console.error('❌ deleteSubdomain() error:', err);
+      }
+
+      const domainMsg = this.escapeMarkdownV2(fullDomain);
+      switch (status) {
+        case 200:
+          await this.sendMessage(chatId, `\`\`\`Wildcard\n${domainMsg} deleted successfully.\`\`\``, { parse_mode: 'MarkdownV2' });
+          break;
+        case 404:
+          await this.sendMessage(chatId, `⚠️ Subdomain *${domainMsg}* not found.`, { parse_mode: 'MarkdownV2' });
+          break;
+        default:
+          await this.sendMessage(chatId, `❌ Failed to delete *${domainMsg}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
+      }
+
+      return new Response('OK', { status: 200 });
     }
 
     // List Subdomains
@@ -279,150 +293,144 @@ export class TelegramWildcardBot {
   async handleCallbackQuery(callbackQuery) {
     const chatId = callbackQuery.message.chat.id;
     const messageId = callbackQuery.message.message_id;
+    const fromId = callbackQuery.from.id;
     const data = callbackQuery.data;
 
-    if (!data.startsWith('del:')) {
-      // Not our callback, ignore
+    // Only owner can delete subdomain
+    if (fromId !== this.ownerId) {
+      // Answer callback with alert
+      await this.answerCallbackQuery(callbackQuery.id, { text: '⛔ You are not authorized.', show_alert: true });
       return new Response('OK', { status: 200 });
     }
 
-    // Authorization: only owner can delete
-    if (chatId !== this.ownerId) {
-      await this.answerCallbackQuery(callbackQuery.id, { text: '⛔ You are not authorized.' });
-      return new Response('OK', { status: 200 });
-    }
+    if (data && data.startsWith('delete_')) {
+      // Parse index from callback_data
+      const index = parseInt(data.split('_')[1], 10);
+      if (isNaN(index)) {
+        await this.answerCallbackQuery(callbackQuery.id, { text: '❌ Invalid index.', show_alert: true });
+        return new Response('OK', { status: 200 });
+      }
 
-    // Extract index from callback data "del:<index>"
-    const indexStr = data.split(':')[1];
-    const index = parseInt(indexStr);
-    if (isNaN(index)) {
-      await this.answerCallbackQuery(callbackQuery.id, { text: 'Invalid index.' });
-      return new Response('OK', { status: 200 });
-    }
+      let domains = [];
+      try {
+        domains = await this.globalBot.getDomainList();
+      } catch (err) {
+        console.error('❌ getDomainList() error:', err);
+      }
 
-    // Get current domain list
-    let domains = [];
-    try {
-      domains = await this.globalBot.getDomainList();
-    } catch (err) {
-      console.error('❌ getDomainList() error:', err);
-      await this.answerCallbackQuery(callbackQuery.id, { text: 'Failed to get domain list.' });
-      return new Response('OK', { status: 200 });
-    }
+      if (index < 0 || index >= domains.length) {
+        await this.answerCallbackQuery(callbackQuery.id, { text: '❌ Index out of range.', show_alert: true });
+        return new Response('OK', { status: 200 });
+      }
 
-    if (index < 0 || index >= domains.length) {
-      await this.answerCallbackQuery(callbackQuery.id, { text: 'Index out of range.' });
-      return new Response('OK', { status: 200 });
-    }
+      const fullDomain = domains[index];
+      const subdomain = fullDomain.replace(`.${this.globalBot.rootDomain}`, '');
 
-    const domainToDelete = domains[index];
-    const subdomain = domainToDelete.replace(`.${this.globalBot.rootDomain}`, '');
+      let status = 500;
+      try {
+        status = await this.globalBot.deleteSubdomain(subdomain);
+      } catch (err) {
+        console.error('❌ deleteSubdomain() error:', err);
+      }
 
-    let status = 500;
-    try {
-      status = await this.globalBot.deleteSubdomain(subdomain);
-    } catch (err) {
-      console.error('❌ deleteSubdomain() error:', err);
-    }
+      if (status === 200) {
+        // Update the message text by removing deleted subdomain from the list
+        domains.splice(index, 1);
 
-    const domainMsg = this.escapeMarkdownV2(domainToDelete);
+        if (domains.length === 0) {
+          // No subdomains left
+          await this.editMessageText(chatId, messageId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard: [] } });
+        } else {
+          const formattedList = domains
+            .map((d, i) => `${i + 1}\\. ${this.escapeMarkdownV2(d)}`)
+            .join('\n');
+          const summary = `\n\n*Klik tombol hapus sesuai nomor untuk menghapus subdomain.*`;
 
-    if (status === 200) {
-      await this.answerCallbackQuery(callbackQuery.id, { text: `✅ Deleted ${domainToDelete}` });
-      // Edit message to remove deleted domain from list
-      domains.splice(index, 1);
+          const inline_keyboard = domains.map((d, i) => ([
+            {
+              text: `Hapus ${i + 1}`,
+              callback_data: `delete_${i}`
+            }
+          ]));
 
-      if (domains.length === 0) {
-        // No more domains left, edit message to say empty
-        await this.editMessageText(chatId, messageId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard: [] } });
-      } else {
-        // Rebuild buttons
-        const buttons = [];
-        for (let i = 0; i < domains.length; i++) {
-          buttons.push([{ text: `${i + 1}`, callback_data: `del:${i}` }]);
+          await this.editMessageText(chatId, messageId,
+            `\`\`\`Subdomain List\`\`\`\n${formattedList}${summary}`,
+            { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard } }
+          );
         }
 
-        const formattedList = domains
-          .map((d, i) => `${i + 1}\\. ${this.escapeMarkdownV2(d)}`)
-          .join('\n');
-
-        await this.editMessageText(chatId, messageId,
-          `\`\`\`Delete Subdomain List\`\`\`\n${formattedList}\n\nClick a button below to delete the corresponding subdomain.`,
-          {
-            parse_mode: 'MarkdownV2',
-            reply_markup: JSON.stringify({ inline_keyboard: buttons }),
-          });
+        await this.answerCallbackQuery(callbackQuery.id, { text: `✅ Subdomain ${this.escapeMarkdownV2(fullDomain)} deleted.`, show_alert: false });
+      } else {
+        await this.answerCallbackQuery(callbackQuery.id, { text: `❌ Failed to delete subdomain. Status: ${status}`, show_alert: true });
       }
-    } else if (status === 404) {
-      await this.answerCallbackQuery(callbackQuery.id, { text: `⚠️ ${domainToDelete} not found.` });
-    } else {
-      await this.answerCallbackQuery(callbackQuery.id, { text: `❌ Failed to delete ${domainToDelete}, status: ${status}` });
+
+      return new Response('OK', { status: 200 });
     }
 
+    // Unknown callback
     return new Response('OK', { status: 200 });
   }
 
   async sendMessage(chatId, text, options = {}) {
-    const params = new URLSearchParams({ chat_id: chatId, text, ...options });
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage?${params.toString()}`);
-    return res.json();
+    const params = {
+      chat_id: chatId,
+      text,
+      ...options,
+    };
+    const url = `${this.apiUrl}/bot${this.token}/sendMessage?parse_mode=MarkdownV2`;
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
   }
 
   async deleteMessage(chatId, messageId) {
-    const params = new URLSearchParams({ chat_id: chatId, message_id: messageId });
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage?${params.toString()}`);
-    return res.json();
+    const url = `${this.apiUrl}/bot${this.token}/deleteMessage`;
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
+    });
   }
 
   async editMessageText(chatId, messageId, text, options = {}) {
-    const body = {
+    const params = {
       chat_id: chatId,
       message_id: messageId,
       text,
       ...options,
     };
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/editMessageText`, {
+    const url = `${this.apiUrl}/bot${this.token}/editMessageText?parse_mode=MarkdownV2`;
+    return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(params),
     });
-    return res.json();
   }
 
   async answerCallbackQuery(callbackQueryId, options = {}) {
-    const params = new URLSearchParams({ callback_query_id: callbackQueryId, ...options });
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/answerCallbackQuery?${params.toString()}`);
-    return res.json();
+    const params = {
+      callback_query_id: callbackQueryId,
+      ...options,
+    };
+    const url = `${this.apiUrl}/bot${this.token}/answerCallbackQuery`;
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
   }
 
-  async sendDocument(chatId, content, filename, mimeType) {
-    // Create multipart/form-data body manually
-    const boundary = `----WebKitFormBoundary${Math.random().toString(36).slice(2)}`;
-    const crlf = '\r\n';
+  async sendDocument(chatId, content, filename, mimeType = 'text/plain') {
+    const formData = new FormData();
+    const blob = new Blob([content], { type: mimeType });
+    formData.append('chat_id', chatId);
+    formData.append('document', blob, filename);
 
-    let body = '';
-    body += `--${boundary}${crlf}`;
-    body += `Content-Disposition: form-data; name="chat_id"${crlf}${crlf}`;
-    body += `${chatId}${crlf}`;
-    body += `--${boundary}${crlf}`;
-    body += `Content-Disposition: form-data; name="document"; filename="${filename}"${crlf}`;
-    body += `Content-Type: ${mimeType}${crlf}${crlf}`;
-    const preamble = new TextEncoder().encode(body);
-    const fileContent = new TextEncoder().encode(content);
-    const ending = new TextEncoder().encode(`${crlf}--${boundary}--${crlf}`);
-
-    const uint8Array = new Uint8Array(preamble.length + fileContent.length + ending.length);
-    uint8Array.set(preamble, 0);
-    uint8Array.set(fileContent, preamble.length);
-    uint8Array.set(ending, preamble.length + fileContent.length);
-
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+    await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
       method: 'POST',
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      },
-      body: uint8Array,
+      body: formData,
     });
-    return res.json();
   }
 }
