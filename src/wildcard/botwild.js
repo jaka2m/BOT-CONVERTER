@@ -288,30 +288,34 @@ ${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`
       return new Response('OK', { status: 200 });
     }
 
-    // /requests (daftar semua request)
-    if (text.startsWith('/requests')) {
-      if (!isOwner) {
-        await this.sendMessage(chatId, '⛔ Anda tidak berwenang melihat daftar request.');
-        return new Response('OK', { status: 200 });
-      }
-      const all = this.globalBot.getAllRequests();
-      if (!all.length) {
-        await this.sendMessage(chatId, '📭 Belum ada request subdomain masuk.', { parse_mode: 'Markdown' });
-      } else {
-        let lines = '';
-        all.forEach((r,i) => {
-          lines += `${i+1}. ${this.escapeMarkdownV2(r.domain)} — ${r.status}\n`; 
-          lines += `   requester: @${r.requesterUsername} (ID: ${r.requesterId})\n`;
-          lines += `   waktu: ${r.requestTime}\n\n`;
-        });
-        await this.sendMessage(chatId, `📋 Daftar Semua Request:\n\`\`\`${lines}\`\`\``, { parse_mode: 'Markdown' });
-      }
-      return new Response('OK', { status: 200 });
-    }
-
-    // fallback
+    if (text.startsWith('/req')) {
+  if (!isOwner) {
+    await this.sendMessage(chatId, '⛔ Anda tidak berwenang melihat daftar request.');
     return new Response('OK', { status: 200 });
   }
+  const all = this.globalBot.getAllRequests();
+  if (!all.length) {
+    await this.sendMessage(chatId, '📭 Belum ada request subdomain masuk.', { parse_mode: 'MarkdownV2' });
+  } else {
+    let lines = '';
+    all.forEach((r, i) => {
+      // escape semua bagian yang mungkin bermasalah di MarkdownV2
+      const domain = this.escapeMarkdownV2(r.domain);
+      const status = this.escapeMarkdownV2(r.status);
+      const requesterUsername = this.escapeMarkdownV2(r.requesterUsername || 'Unknown');
+      const requesterId = r.requesterId;
+      const requestTime = this.escapeMarkdownV2(r.requestTime);
+
+      lines += `${i + 1}. ${domain} — ${status}\n`;
+      lines += `   requester: @${requesterUsername} (ID: ${requesterId})\n`;
+      lines += `   waktu: ${requestTime}\n\n`;
+    });
+    // Bungkus dengan triple backticks agar monospace dan rapi
+    const message = `📋 Daftar Semua Request:\n\n\`\`\`\n${lines}\`\`\``;
+    await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
+  }
+  return new Response('OK', { status: 200 });
+}
 
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, ...options };
