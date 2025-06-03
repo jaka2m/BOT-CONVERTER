@@ -290,7 +290,7 @@ ${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`
 
     if (text.startsWith('/req')) {
   if (!isOwner) {
-    await this.sendMessage(chatId, '⛔ Anda tidak berwenang melihat daftar request.');
+    await this.sendMessage(chatId, '⛔ Anda tidak berwenang melihat daftar request.', { parse_mode: 'MarkdownV2' });
     return new Response('OK', { status: 200 });
   }
   const all = this.globalBot.getAllRequests();
@@ -299,23 +299,26 @@ ${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`
   } else {
     let lines = '';
     all.forEach((r, i) => {
-      // escape semua bagian yang mungkin bermasalah di MarkdownV2
       const domain = this.escapeMarkdownV2(r.domain);
       const status = this.escapeMarkdownV2(r.status);
-      const requesterUsername = this.escapeMarkdownV2(r.requesterUsername || 'Unknown');
-      const requesterId = r.requesterId;
-      const requestTime = this.escapeMarkdownV2(r.requestTime);
+      const requester = this.escapeMarkdownV2(r.requesterUsername);
+      const requesterId = this.escapeMarkdownV2(r.requesterId.toString());
+      const time = this.escapeMarkdownV2(r.requestTime);
 
-      lines += `${i + 1}. ${domain} — ${status}\n`;
-      lines += `   requester: @${requesterUsername} (ID: ${requesterId})\n`;
-      lines += `   waktu: ${requestTime}\n\n`;
+      lines += `*${i + 1}\\. ${domain}* — _${status}_\n`;
+      lines += `   requester: @${requester} \\(ID: ${requesterId}\\)\n`;
+      lines += `   waktu: ${time}\n\n`;
     });
-    // Bungkus dengan triple backticks agar monospace dan rapi
-    const message = `📋 Daftar Semua Request:\n\n\`\`\`\n${lines}\`\`\``;
+    const message = `📋 *Daftar Semua Request:*\n\n${lines}`;
     await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
   }
   return new Response('OK', { status: 200 });
 }
+
+
+    // fallback
+    return new Response('OK', { status: 200 });
+  }
 
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, ...options };
