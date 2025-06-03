@@ -102,6 +102,7 @@ export class TelegramWildcardBot {
     this.ownerId = ownerId;
     this.globalBot = globalBotInstance;
     this.handleUpdate = this.handleUpdate.bind(this);
+    this.handleCallbackQuery = this.handleCallbackQuery.bind(this);
   }
 
   escapeMarkdownV2(text) {
@@ -112,56 +113,16 @@ export class TelegramWildcardBot {
   }
 
   async handleUpdate(update) {
-    // Handle callback_query for delete buttons
+    if (!update.message && !update.callback_query) return new Response('OK', { status: 200 });
+
     if (update.callback_query) {
-      const chatId = update.callback_query.message.chat.id;
-      const messageId = update.callback_query.message.message_id;
-      const fromId = update.callback_query.from.id;
-      const data = update.callback_query.data;
-
-      if (fromId !== this.ownerId) {
-        // Not authorized to delete
-        await this.answerCallbackQuery(update.callback_query.id, '⛔ Not authorized.');
-        return new Response('OK', { status: 200 });
-      }
-
-      if (data.startsWith('del_subdomain_')) {
-        const subdomain = data.replace('del_subdomain_', '');
-
-        // Delete subdomain
-        let status = 500;
-        try {
-          status = await this.globalBot.deleteSubdomain(subdomain);
-        } catch (e) {
-          console.error('Error deleting subdomain:', e);
-        }
-
-        const domainFull = `${subdomain}.${this.globalBot.rootDomain}`;
-        const domainEscaped = this.escapeMarkdownV2(domainFull);
-
-        if (status === 200) {
-          // Edit original message to show success and remove the button for that subdomain
-          const newText = `✅ Subdomain *${domainEscaped}* deleted successfully.`;
-          await this.editMessageText(chatId, messageId, newText, { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard: [] } });
-          await this.answerCallbackQuery(update.callback_query.id, 'Deleted successfully.');
-        } else if (status === 404) {
-          await this.answerCallbackQuery(update.callback_query.id, '⚠️ Subdomain not found.');
-        } else {
-          await this.answerCallbackQuery(update.callback_query.id, `❌ Failed to delete. Status: ${status}`);
-        }
-
-        return new Response('OK', { status: 200 });
-      }
-
-      return new Response('OK', { status: 200 });
+      return this.handleCallbackQuery(update.callback_query);
     }
-
-    if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    // Authorization
+    // Authorization check for add/del commands
     const unauthorized = (text.startsWith('/add ') || text.startsWith('/del')) && chatId !== this.ownerId;
     if (unauthorized) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
@@ -216,67 +177,73 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Delete Subdomain command without args -> show list with buttons
-    if (text.startsWith('/del') && text.trim() === '/del') {
-      let domains = [];
+    // Delete Subdomain - two modes:
+    // /del without parameter = show list + buttons
+    // /del <subdomain> = delete directly
+    if (text.startsWith('/del')) {
+      const parts = text.split(' ');
+      if (parts.length === 1) {
+        // Show list with buttons
+        let domains = [];
+        try {
+          domains = await this.globalBot.getDomainList();
+        } catch (err) {
+          console.error('❌ getDomainList() error:', err);
+        }
 
-      try {
-        domains = await this.globalBot.getDomainList();
-      } catch (err) {
-        console.error('❌ getDomainList() error:', err);
-      }
+        if (domains.length === 0) {
+          await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
+          return new Response('OK', { status: 200 });
+        }
 
-      if (domains.length === 0) {
-        await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
-      } else {
-        // Create inline keyboard with buttons to delete each subdomain
-        // Format: { text: '1. subdomain.domain.com', callback_data: 'del_subdomain_subdomain' }
-        const inlineKeyboard = [];
-        domains.forEach((domain, idx) => {
-          // extract subdomain part (remove rootDomain suffix)
-          let subdomain = domain;
-          if (domain.endsWith(`.${this.globalBot.rootDomain}`)) {
-            subdomain = domain.slice(0, domain.length - this.globalBot.rootDomain.length - 1);
+        // Create inline keyboard buttons with callback_data = "del:<index>"
+        const buttons = [];
+        for (let i = 0; i < domains.length; i++) {
+          buttons.push([{ text: `${i + 1}`, callback_data: `del:${i}` }]);
+        }
+
+        const formattedList = domains
+          .map((d, i) => `${i + 1}\\. ${this.escapeMarkdownV2(d)}`)
+          .join('\n');
+        const summary = `\n\nClick a button below to delete the corresponding subdomain.`;
+
+        await this.sendMessage(chatId,
+          `\`\`\`Delete Subdomain List\`\`\`\n${formattedList}${summary}`,
+          {
+            parse_mode: 'MarkdownV2',
+            reply_markup: JSON.stringify({ inline_keyboard: buttons }),
           }
-          inlineKeyboard.push([{ text: `${idx + 1}. ${domain}`, callback_data: `del_subdomain_${subdomain}` }]);
-        });
+        );
 
-        await this.sendMessage(chatId, '*Select subdomain to delete:*', {
-          parse_mode: 'MarkdownV2',
-          reply_markup: { inline_keyboard: inlineKeyboard }
-        });
+        return new Response('OK', { status: 200 });
+      } else if (parts.length === 2) {
+        // Direct delete by subdomain
+        const subdomain = parts[1];
+        if (!subdomain) return new Response('OK', { status: 200 });
+
+        const fullDomain = `${subdomain}.${this.globalBot.rootDomain}`;
+        let status = 500;
+
+        try {
+          status = await this.globalBot.deleteSubdomain(subdomain);
+        } catch (err) {
+          console.error('❌ deleteSubdomain() error:', err);
+        }
+
+        const domainMsg = this.escapeMarkdownV2(fullDomain);
+        switch (status) {
+          case 200:
+            await this.sendMessage(chatId, `\`\`\`Wildcard\n${domainMsg} deleted successfully.\`\`\``, { parse_mode: 'MarkdownV2' });
+            break;
+          case 404:
+            await this.sendMessage(chatId, `⚠️ Subdomain *${domainMsg}* not found.`, { parse_mode: 'MarkdownV2' });
+            break;
+          default:
+            await this.sendMessage(chatId, `❌ Failed to delete *${domainMsg}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
+        }
+
+        return new Response('OK', { status: 200 });
       }
-
-      return new Response('OK', { status: 200 });
-    }
-
-    // Delete Subdomain with argument (fallback - like old behavior)
-    if (text.startsWith('/del ')) {
-      const subdomain = text.split(' ')[1];
-      if (!subdomain) return new Response('OK', { status: 200 });
-
-      const fullDomain = `${subdomain}.${this.globalBot.rootDomain}`;
-      let status = 500;
-
-      try {
-        status = await this.globalBot.deleteSubdomain(subdomain);
-      } catch (err) {
-        console.error('❌ deleteSubdomain() error:', err);
-      }
-
-      const domainMsg = this.escapeMarkdownV2(fullDomain);
-      switch (status) {
-        case 200:
-          await this.sendMessage(chatId, `\`\`\`Wildcard\n${domainMsg} deleted successfully.\`\`\``, { parse_mode: 'MarkdownV2' });
-          break;
-        case 404:
-          await this.sendMessage(chatId, `⚠️ Subdomain *${domainMsg}* not found.`, { parse_mode: 'MarkdownV2' });
-          break;
-        default:
-          await this.sendMessage(chatId, `❌ Failed to delete *${domainMsg}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
-      }
-
-      return new Response('OK', { status: 200 });
     }
 
     // List Subdomains
@@ -309,51 +276,153 @@ export class TelegramWildcardBot {
     return new Response('OK', { status: 200 });
   }
 
-  async sendMessage(chatId, text, options = {}) {
-    const payload = { chat_id: chatId, text, ...options };
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    return response.json();
+  async handleCallbackQuery(callbackQuery) {
+    const chatId = callbackQuery.message.chat.id;
+    const messageId = callbackQuery.message.message_id;
+    const data = callbackQuery.data;
+
+    if (!data.startsWith('del:')) {
+      // Not our callback, ignore
+      return new Response('OK', { status: 200 });
+    }
+
+    // Authorization: only owner can delete
+    if (chatId !== this.ownerId) {
+      await this.answerCallbackQuery(callbackQuery.id, { text: '⛔ You are not authorized.' });
+      return new Response('OK', { status: 200 });
+    }
+
+    // Extract index from callback data "del:<index>"
+    const indexStr = data.split(':')[1];
+    const index = parseInt(indexStr);
+    if (isNaN(index)) {
+      await this.answerCallbackQuery(callbackQuery.id, { text: 'Invalid index.' });
+      return new Response('OK', { status: 200 });
+    }
+
+    // Get current domain list
+    let domains = [];
+    try {
+      domains = await this.globalBot.getDomainList();
+    } catch (err) {
+      console.error('❌ getDomainList() error:', err);
+      await this.answerCallbackQuery(callbackQuery.id, { text: 'Failed to get domain list.' });
+      return new Response('OK', { status: 200 });
+    }
+
+    if (index < 0 || index >= domains.length) {
+      await this.answerCallbackQuery(callbackQuery.id, { text: 'Index out of range.' });
+      return new Response('OK', { status: 200 });
+    }
+
+    const domainToDelete = domains[index];
+    const subdomain = domainToDelete.replace(`.${this.globalBot.rootDomain}`, '');
+
+    let status = 500;
+    try {
+      status = await this.globalBot.deleteSubdomain(subdomain);
+    } catch (err) {
+      console.error('❌ deleteSubdomain() error:', err);
+    }
+
+    const domainMsg = this.escapeMarkdownV2(domainToDelete);
+
+    if (status === 200) {
+      await this.answerCallbackQuery(callbackQuery.id, { text: `✅ Deleted ${domainToDelete}` });
+      // Edit message to remove deleted domain from list
+      domains.splice(index, 1);
+
+      if (domains.length === 0) {
+        // No more domains left, edit message to say empty
+        await this.editMessageText(chatId, messageId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard: [] } });
+      } else {
+        // Rebuild buttons
+        const buttons = [];
+        for (let i = 0; i < domains.length; i++) {
+          buttons.push([{ text: `${i + 1}`, callback_data: `del:${i}` }]);
+        }
+
+        const formattedList = domains
+          .map((d, i) => `${i + 1}\\. ${this.escapeMarkdownV2(d)}`)
+          .join('\n');
+
+        await this.editMessageText(chatId, messageId,
+          `\`\`\`Delete Subdomain List\`\`\`\n${formattedList}\n\nClick a button below to delete the corresponding subdomain.`,
+          {
+            parse_mode: 'MarkdownV2',
+            reply_markup: JSON.stringify({ inline_keyboard: buttons }),
+          });
+      }
+    } else if (status === 404) {
+      await this.answerCallbackQuery(callbackQuery.id, { text: `⚠️ ${domainToDelete} not found.` });
+    } else {
+      await this.answerCallbackQuery(callbackQuery.id, { text: `❌ Failed to delete ${domainToDelete}, status: ${status}` });
+    }
+
+    return new Response('OK', { status: 200 });
   }
 
-  async editMessageText(chatId, messageId, text, options = {}) {
-    const payload = { chat_id: chatId, message_id: messageId, text, ...options };
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/editMessageText`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    return response.json();
+  async sendMessage(chatId, text, options = {}) {
+    const params = new URLSearchParams({ chat_id: chatId, text, ...options });
+    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage?${params.toString()}`);
+    return res.json();
   }
 
   async deleteMessage(chatId, messageId) {
-    await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
-    });
+    const params = new URLSearchParams({ chat_id: chatId, message_id: messageId });
+    const res = await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage?${params.toString()}`);
+    return res.json();
   }
 
-  async answerCallbackQuery(callbackQueryId, text = '') {
-    await fetch(`${this.apiUrl}/bot${this.token}/answerCallbackQuery`, {
+  async editMessageText(chatId, messageId, text, options = {}) {
+    const body = {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      ...options,
+    };
+    const res = await fetch(`${this.apiUrl}/bot${this.token}/editMessageText`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+      body: JSON.stringify(body),
     });
+    return res.json();
   }
 
-  async sendDocument(chatId, content, filename, mimeType = 'text/plain') {
-    const formData = new FormData();
-    const blob = new Blob([content], { type: mimeType });
-    formData.append('chat_id', chatId);
-    formData.append('document', blob, filename);
+  async answerCallbackQuery(callbackQueryId, options = {}) {
+    const params = new URLSearchParams({ callback_query_id: callbackQueryId, ...options });
+    const res = await fetch(`${this.apiUrl}/bot${this.token}/answerCallbackQuery?${params.toString()}`);
+    return res.json();
+  }
 
-    await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+  async sendDocument(chatId, content, filename, mimeType) {
+    // Create multipart/form-data body manually
+    const boundary = `----WebKitFormBoundary${Math.random().toString(36).slice(2)}`;
+    const crlf = '\r\n';
+
+    let body = '';
+    body += `--${boundary}${crlf}`;
+    body += `Content-Disposition: form-data; name="chat_id"${crlf}${crlf}`;
+    body += `${chatId}${crlf}`;
+    body += `--${boundary}${crlf}`;
+    body += `Content-Disposition: form-data; name="document"; filename="${filename}"${crlf}`;
+    body += `Content-Type: ${mimeType}${crlf}${crlf}`;
+    const preamble = new TextEncoder().encode(body);
+    const fileContent = new TextEncoder().encode(content);
+    const ending = new TextEncoder().encode(`${crlf}--${boundary}--${crlf}`);
+
+    const uint8Array = new Uint8Array(preamble.length + fileContent.length + ending.length);
+    uint8Array.set(preamble, 0);
+    uint8Array.set(fileContent, preamble.length);
+    uint8Array.set(ending, preamble.length + fileContent.length);
+
+    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: uint8Array,
     });
+    return res.json();
   }
 }
