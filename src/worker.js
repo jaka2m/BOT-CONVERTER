@@ -21,12 +21,19 @@ export default {
       const ngasal = parts.join('');
       const apiKey = atob(ngasal);
 
-      const globalBot = new KonstantaGlobalbot({ apiKey });
-
-      const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
-      const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId);
-      const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId);
-      const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId);
+      const globalBot = new KonstantaGlobalbot({
+        apiKey,
+        accountID: "e9930d5ca683b0461f73477050fee0c7",
+        zoneID: "80423e7547d2fa85e13796a1f41deced",
+        apiEmail: "ambebalong@gmail.com",
+        serviceName: "siren",
+        rootDomain: "joss.checker-ip.xyz",
+      });
+      
+      const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId, globalBot);
+      const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId, globalBot);
+      const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId, globalBot);
+      const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot5 = new Bot5(token, 'https://api.telegram.org', ownerId, globalBot);
 
       await Promise.all([
