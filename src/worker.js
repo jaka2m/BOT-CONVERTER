@@ -15,7 +15,7 @@ export default {
 
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
-      const apiKey = env.API_KEY;
+      const apiKey = Number(env.API_KEY);
       
       // Buat instance global bot dengan API key
       const globalBot = new KonstantaGlobalbot({ apiKey });
