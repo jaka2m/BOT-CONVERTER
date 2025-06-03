@@ -112,65 +112,162 @@ export class TelegramWildcardBot {
   }
 
   async handleUpdate(update) {
-    if (!update.message) return new Response('OK', { status: 200 });
+  if (!update.message) return new Response('OK', { status: 200 });
 
-    const chatId = update.message.chat.id;
-    const text = update.message.text || '';
+  const chatId = update.message.chat.id;
+  const fromId = update.message.from.id;
+  const username = update.message.from.username || 'Unknown';
+  const text = update.message.text || '';
+  const timeStr = new Date().toLocaleString('en-US', { hour12: true });
 
-    // Authorization
-    const unauthorized = (text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId;
-    if (unauthorized) {
-      await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
+  // Authorization for /add and /del commands for non-owner users
+  const unauthorized = (text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId;
+  if (unauthorized) {
+    await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
+    return new Response('OK', { status: 200 });
+  }
+
+  if (text.startsWith('/add ')) {
+    const subdomain = text.split(' ')[1]?.trim();
+    if (!subdomain) {
+      await this.sendMessage(chatId, '⚠️ Please specify a subdomain after /add command.');
       return new Response('OK', { status: 200 });
     }
 
-    // Add Subdomain
-    if (text.startsWith('/add ')) {
-      const subdomain = text.split(' ')[1]?.trim();
-      if (!subdomain) return new Response('OK', { status: 200 });
+    const fullDomain = `${subdomain}.${this.globalBot.rootDomain}`;
 
-      const fullDomain = `${subdomain}.${this.globalBot.rootDomain}`;
-      let loadingMsgId;
-
-      try {
-        const loadingMsg = await this.sendMessage(chatId, '⏳ Adding subdomain, please wait...');
-        loadingMsgId = loadingMsg.result?.message_id;
-      } catch (err) {
-        console.error('❌ Failed to send loading message:', err);
+    // Jika yang request adalah owner, langsung proses tanpa kirim pesan "Request domain berhasil dikirim!"
+    if (fromId === this.ownerId) {
+      const status = await this.globalBot.addSubdomain(subdomain);
+      // Kirim feedback langsung ke owner
+      if (status === 200) {
+        await this.sendMessage(chatId, `✅ Domain ${fullDomain} berhasil ditambahkan oleh owner.`);
+      } else {
+        await this.sendMessage(chatId, `❌ Gagal menambahkan domain ${fullDomain}, status: ${status}`);
       }
-
-      let status = 500;
-      try {
-        status = await this.globalBot.addSubdomain(subdomain);
-      } catch (err) {
-        console.error('❌ addSubdomain() error:', err);
-      }
-
-      if (loadingMsgId) {
-        try {
-          await this.deleteMessage(chatId, loadingMsgId);
-        } catch (err) {
-          console.error('❌ Failed to delete loading message:', err);
-        }
-      }
-
-      const domainMsg = this.escapeMarkdownV2(fullDomain);
-      switch (status) {
-        case 200:
-          await this.sendMessage(chatId, `\`\`\`Wildcard\n${domainMsg} added successfully\`\`\``, { parse_mode: 'MarkdownV2' });
-          break;
-        case 409:
-          await this.sendMessage(chatId, `⚠️ Subdomain *${domainMsg}* already exists.`, { parse_mode: 'MarkdownV2' });
-          break;
-        case 530:
-          await this.sendMessage(chatId, `❌ Subdomain *${domainMsg}* not active (error 530).`, { parse_mode: 'MarkdownV2' });
-          break;
-        default:
-          await this.sendMessage(chatId, `❌ Failed to add *${domainMsg}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
-      }
-
       return new Response('OK', { status: 200 });
     }
+
+    // Untuk user biasa, kirim pesan request berhasil dan notify admin (misal ke owner)
+    await this.sendMessage(chatId,
+`✅ Request domain berhasil dikirim!
+
+🔗 Domain: ${fullDomain}
+👤 Requester: @${username}
+📅 Time: ${timeStr}
+
+⏳ Status: Menunggu approval admin
+📬 Admin akan dinotifikasi untuk approve/reject request Anda
+
+💡 Tip: Anda akan mendapat notifikasi ketika admin memproses request ini.`);
+
+    // Kirim notifikasi ke admin/owner untuk approval
+    await this.sendMessage(this.ownerId,
+`🔔 New domain request pending approval
+
+🔗 Domain: ${fullDomain}
+👤 Requester: @${username}
+📅 Time: ${timeStr}
+
+Gunakan command untuk approve/reject:
+  /approve ${subdomain}
+  /reject ${subdomain}`);
+
+    // Simpan request ke database atau storage sesuai implementasi globalBot
+    await this.globalBot.savePendingRequest({
+      domain: fullDomain,
+      requesterId: fromId,
+      requesterUsername: username,
+      time: new Date(),
+      status: 'pending',
+    });
+
+    return new Response('OK', { status: 200 });
+  }
+
+  // Command untuk admin approve domain
+  if (text.startsWith('/approve ')) {
+    if (chatId !== this.ownerId) {
+      await this.sendMessage(chatId, '⛔ Anda bukan admin.');
+      return new Response('OK', { status: 200 });
+    }
+    const subdomain = text.split(' ')[1]?.trim();
+    if (!subdomain) {
+      await this.sendMessage(chatId, '⚠️ Mohon sertakan subdomain yang ingin diapprove.');
+      return new Response('OK', { status: 200 });
+    }
+    const fullDomain = `${subdomain}.${this.globalBot.rootDomain}`;
+
+    // Update status di DB/storage
+    const request = await this.globalBot.getPendingRequest(fullDomain);
+    if (!request) {
+      await this.sendMessage(chatId, `⚠️ Request domain ${fullDomain} tidak ditemukan atau sudah diproses.`);
+      return new Response('OK', { status: 200 });
+    }
+
+    // Add domain
+    const status = await this.globalBot.addSubdomain(subdomain);
+
+    if (status === 200) {
+      await this.globalBot.updatePendingRequest(fullDomain, { status: 'approved' });
+
+      // Notify user
+      await this.sendMessage(request.requesterId,
+`✅ Domain Request APPROVED
+
+🔗 Domain: ${fullDomain}
+✅ Status: Disetujui oleh admin
+📅 Time: ${new Date().toLocaleString('en-US', { hour12: true })}
+
+🎉 Domain Anda sudah aktif!`);
+
+      // Notify admin
+      await this.sendMessage(chatId, `✅ Domain ${fullDomain} berhasil diapprove dan ditambahkan.`);
+    } else {
+      await this.sendMessage(chatId, `❌ Gagal menambahkan domain ${fullDomain}, status: ${status}`);
+    }
+    return new Response('OK', { status: 200 });
+  }
+
+  // Command untuk admin reject domain
+  if (text.startsWith('/reject ')) {
+    if (chatId !== this.ownerId) {
+      await this.sendMessage(chatId, '⛔ Anda bukan admin.');
+      return new Response('OK', { status: 200 });
+    }
+    const subdomain = text.split(' ')[1]?.trim();
+    if (!subdomain) {
+      await this.sendMessage(chatId, '⚠️ Mohon sertakan subdomain yang ingin direject.');
+      return new Response('OK', { status: 200 });
+    }
+    const fullDomain = `${subdomain}.${this.globalBot.rootDomain}`;
+
+    const request = await this.globalBot.getPendingRequest(fullDomain);
+    if (!request) {
+      await this.sendMessage(chatId, `⚠️ Request domain ${fullDomain} tidak ditemukan atau sudah diproses.`);
+      return new Response('OK', { status: 200 });
+    }
+
+    await this.globalBot.updatePendingRequest(fullDomain, { status: 'rejected' });
+
+    // Notify user
+    await this.sendMessage(request.requesterId,
+`❌ Domain Request REJECTED / approval
+
+🔗 Domain: ${fullDomain}
+❌ Status: Ditolak oleh admin
+📅 Time: ${new Date().toLocaleString('en-US', { hour12: true })}
+
+💡 Saran:
+- Pastikan domain yang direquest sesuai dengan kebijakan
+- Hubungi admin jika ada pertanyaan
+- Anda bisa request domain lain yang sesuai`);
+
+    // Notify admin
+    await this.sendMessage(chatId, `❌ Domain ${fullDomain} berhasil direject.`);
+    return new Response('OK', { status: 200 });
+  }
+
 
     // Delete Subdomain
     if (text.startsWith('/del ')) {
