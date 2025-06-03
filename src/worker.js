@@ -5,14 +5,7 @@ import { TelegramProxyCekBot as Bot3 } from './proxyip/botCek.js';
 import { TelegramProxyBot as Bot4 } from './proxyip/bot3.js';
 import { TelegramWildcardBot as Bot5, KonstantaGlobalbot } from './wildcard/botwild.js';
 
-// Konstanta global
-const accountID = "e9930d5ca683b0461f73477050fee0c7";
-const zoneID = "80423e7547d2fa85e13796a1f41deced";
-const apiEmail = "ambebalong@gmail.com";
-const serviceName = "siren";
-const rootDomain = "joss.checker-ip.xyz";
-
-// Export default untuk handler fetch
+// Export Cloudflare Worker handler
 export default {
   async fetch(request, env) {
     if (request.method !== 'POST') {
@@ -25,28 +18,24 @@ export default {
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
-      // Dekode API key yang terenkripsi
-      const parts = [
-        'NWZhZTlm',
-        'Y2I5YzE5',
-        'M2NlNjVk',
-        'ZTRiNTc2',
-        'ODlhOTQ5',
-        'MzhiNzA4ZQ=='
-      ];
-      const ngasal = parts.join('');
-      const apiKey = atob(ngasal);
+      // Inisialisasi globalBot dengan semua properti
+      const globalBot = new KonstantaGlobalbot({
+        apiKey: "5fae9fcb9c193ce65de4b57689a94938b708e",
+        accountID: "e9930d5ca683b0461f73477050fee0c7",
+        zoneID: "80423e7547d2fa85e13796a1f41deced",
+        apiEmail: "ambebalong@gmail.com",
+        serviceName: "siren",
+        rootDomain: "joss.checker-ip.xyz",
+      });
 
-      const globalBot = new KonstantaGlobalbot({ apiKey });
-
-      // Inisialisasi semua bot dengan token dan URL API Telegram
+      // Inisialisasi semua bot Telegram
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId);
       const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId);
       const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId);
       const bot5 = new Bot5(token, 'https://api.telegram.org', ownerId, globalBot);
 
-      // Jalankan semua handler update secara paralel
+      // Tangani semua update secara paralel
       await Promise.all([
         bot1.handleUpdate(update),
         bot2.handleUpdate(update),
