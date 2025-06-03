@@ -6,10 +6,7 @@ export async function WildcardBot(link) {
   console.log("Bot link:", link);
 }
 
-// ========================================
-// Konstanta Global untuk Cloudflare API
-// ========================================
-
+// Konstanta global
 export class KonstantaGlobalbot {
   constructor({ apiKey }) {
     this.apiKey = apiKey;
@@ -21,19 +18,19 @@ export class KonstantaGlobalbot {
     this.serviceName = "siren";
 
     this.headers = {
-      'Authorization': `Bearer ${apiKey}`,
+      'Authorization': `Bearer ${this.apiKey}`,
       'X-Auth-Email': this.apiEmail,
-      'X-Auth-Key': apiKey,
+      'X-Auth-Key': this.apiKey,
       'Content-Type': 'application/json'
     };
   }
 
-  // Escape MarkdownV2 untuk Telegram agar karakter khusus tidak error
+  // Escape MarkdownV2 for Telegram messages
   escapeMarkdownV2(text) {
     return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
   }
 
-  // Ambil list domain yang terdaftar di Cloudflare Workers
+  // Get list of domains from Cloudflare Workers for this account and service
   async getDomainList() {
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const res = await fetch(url, { headers: this.headers });
@@ -44,8 +41,8 @@ export class KonstantaGlobalbot {
     return [];
   }
 
-  // Tambah subdomain ke Cloudflare Workers
-  async addsubdomain(subdomain) {
+  // Add a subdomain wildcard to Cloudflare Workers
+  async addSubdomain(subdomain) {
     const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
     if (!domain.endsWith(this.rootDomain)) return 400;
 
@@ -53,6 +50,7 @@ export class KonstantaGlobalbot {
     if (registeredDomains.includes(domain)) return 409;
 
     try {
+      // Test domain availability (returns 530 if not active)
       const testUrl = `https://${domain.replace(`.${this.rootDomain}`, '')}`;
       const domainTest = await fetch(testUrl);
       if (domainTest.status === 530) return 530;
@@ -77,8 +75,8 @@ export class KonstantaGlobalbot {
     return res.status;
   }
 
-  // Hapus subdomain dari Cloudflare Workers
-  async deletesubdomain(subdomain) {
+  // Delete a subdomain wildcard from Cloudflare Workers
+  async deleteSubdomain(subdomain) {
     const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
     const urlList = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
 
@@ -97,11 +95,6 @@ export class KonstantaGlobalbot {
 
     return res.status;
   }
-
-  // Ambil semua subdomain yang terdaftar
-  async listSubdomains() {
-    return await this.getDomainList();
-  }
 }
 
 // ========================================
@@ -109,28 +102,36 @@ export class KonstantaGlobalbot {
 // ========================================
 
 export class TelegramWildcardBot {
-  constructor(token, apiUrl, ownerId, constants) {
+  constructor(token, apiUrl, ownerId, globalBotInstance) {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
-    this.constants = constants; // instance dari KonstantaGlobalbot
-    this.handleUpdate = this.handleUpdate.bind(this);
+    this.globalBot = globalBotInstance; // instance of KonstantaGlobalbot for API calls
+    this.handleUpdate = this.handleUpdate.bind(this); // bind for webhook
   }
 
-  // Tangani update dari webhook Telegram
+  // Escape markdown using the global bot method
+  escapeMarkdownV2(text) {
+    if (this.globalBot && typeof this.globalBot.escapeMarkdownV2 === 'function') {
+      return this.globalBot.escapeMarkdownV2(text);
+    }
+    return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
+  }
+
+  // Telegram webhook update handler
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    // Perintah /add dan /del hanya boleh oleh owner
+    // Only owner allowed to add or delete subdomains
     if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /add <subdomain>
+    // Handle /add subdomain
     if (text.startsWith('/add ')) {
       const subdomain = text.split(' ')[1]?.trim();
       if (!subdomain) return new Response('OK', { status: 200 });
@@ -145,13 +146,13 @@ export class TelegramWildcardBot {
 
       let status;
       try {
-        status = await this.constants.addsubdomain(subdomain);
+        status = await this.globalBot.addSubdomain(subdomain);
       } catch (err) {
-        console.error('❌ addsubdomain() error:', err);
+        console.error('❌ addSubdomain() error:', err);
         status = 500;
       }
 
-      const fullDomain = `${subdomain}.${this.constants.rootDomain}`;
+      const fullDomain = `${subdomain}.${this.globalBot.rootDomain}`;
 
       if (loadingMsgId) {
         try {
@@ -162,59 +163,57 @@ export class TelegramWildcardBot {
       }
 
       if (status === 200) {
-        await this.sendMessage(chatId, `\`\`\`Wildcard\n${this.constants.escapeMarkdownV2(fullDomain)} added successfully\`\`\``, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `\`\`\`Wildcard\n${this.escapeMarkdownV2(fullDomain)} added successfully\`\`\``, { parse_mode: 'MarkdownV2' });
       } else if (status === 409) {
-        await this.sendMessage(chatId, `⚠️ Subdomain *${this.constants.escapeMarkdownV2(fullDomain)}* already exists.`, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `⚠️ Subdomain *${this.escapeMarkdownV2(fullDomain)}* already exists.`, { parse_mode: 'MarkdownV2' });
       } else if (status === 530) {
-        await this.sendMessage(chatId, `❌ Subdomain *${this.constants.escapeMarkdownV2(fullDomain)}* not active (error 530).`, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `❌ Subdomain *${this.escapeMarkdownV2(fullDomain)}* not active (error 530).`, { parse_mode: 'MarkdownV2' });
       } else {
-        await this.sendMessage(chatId, `❌ Failed to add *${this.constants.escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `❌ Failed to add *${this.escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
       }
 
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /del <subdomain>
+    // Handle /del subdomain
     if (text.startsWith('/del ')) {
       const subdomain = text.split(' ')[1];
       if (!subdomain) return new Response('OK', { status: 200 });
 
       let status;
       try {
-        status = await this.constants.deletesubdomain(subdomain);
+        status = await this.globalBot.deleteSubdomain(subdomain);
       } catch (err) {
-        console.error('❌ deletesubdomain() error:', err);
+        console.error('❌ deleteSubdomain() error:', err);
         status = 500;
       }
 
-      const fullDomain = `${subdomain}.${this.constants.rootDomain}`;
+      const fullDomain = `${subdomain}.${this.globalBot.rootDomain}`;
 
       if (status === 200) {
-        await this.sendMessage(chatId, `\`\`\`Wildcard\n${this.constants.escapeMarkdownV2(fullDomain)} deleted successfully.\`\`\``, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `\`\`\`Wildcard\n${this.escapeMarkdownV2(fullDomain)} deleted successfully.\`\`\``, { parse_mode: 'MarkdownV2' });
       } else if (status === 404) {
-        await this.sendMessage(chatId, `⚠️ Subdomain *${this.constants.escapeMarkdownV2(fullDomain)}* not found.`, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `⚠️ Subdomain *${this.escapeMarkdownV2(fullDomain)}* not found.`, { parse_mode: 'MarkdownV2' });
       } else {
-        await this.sendMessage(chatId, `❌ Failed to delete *${this.constants.escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
+        await this.sendMessage(chatId, `❌ Failed to delete *${this.escapeMarkdownV2(fullDomain)}*, status: \`${status}\``, { parse_mode: 'MarkdownV2' });
       }
 
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /list - daftar semua subdomain
+    // Handle /list subdomains
     if (text.startsWith('/list')) {
       let domains = [];
       try {
-        domains = await this.constants.listSubdomains();
+        domains = await this.globalBot.getDomainList();
       } catch (err) {
-        console.error('❌ listSubdomains() error:', err);
-        await this.sendMessage(chatId, '❌ Failed to fetch subdomain list.');
-        return new Response('OK', { status: 200 });
+        console.error('❌ getDomainList() error:', err);
       }
 
       if (domains.length === 0) {
         await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
       } else {
-        const formattedList = domains.map((d, i) => `${i + 1}\\. ${this.constants.escapeMarkdownV2(d)}`).join('\n');
+        const formattedList = domains.map((d, i) => `${i + 1}\\. ${this.escapeMarkdownV2(d)}`).join('\n');
         const totalLine = `\n\nTotal: *${domains.length}* subdomain${domains.length > 1 ? 's' : ''}`;
         const textPreview = `\`\`\`List-Wildcard\n${formattedList}\`\`\`` + totalLine;
 
@@ -227,11 +226,10 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Jika command lain atau tidak ada command, tetap OK
     return new Response('OK', { status: 200 });
   }
 
-  // Kirim pesan teks ke Telegram
+  // Send message to Telegram chat
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, ...options };
     const response = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
@@ -242,7 +240,7 @@ export class TelegramWildcardBot {
     return response.json();
   }
 
-  // Hapus pesan Telegram (misal loading message)
+  // Delete a Telegram message
   async deleteMessage(chatId, messageId) {
     await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
       method: 'POST',
@@ -251,7 +249,7 @@ export class TelegramWildcardBot {
     });
   }
 
-  // Kirim file ke Telegram
+  // Send a file/document to Telegram chat
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
