@@ -267,7 +267,6 @@ async notifyUserApproval(request, approved) {
 - Anda bisa request domain lain yang sesuai`;
     await this.sendMessage(chatId, msgReject);
   }
-}
 
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, ...options };
