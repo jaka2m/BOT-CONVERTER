@@ -132,6 +132,7 @@ export class TelegramWildcardBot {
       const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
       if (isOwner) {
+        // Owner langsung proses tanpa notifikasi
         let status = 500;
         try {
           status = await this.globalBot.addSubdomain(subdomain);
@@ -147,7 +148,6 @@ export class TelegramWildcardBot {
         return new Response('OK', { status: 200 });
       }
 
-      // Cek jika sudah request sebelumnya
       try {
         const existingRequest = await this.globalBot.findPendingRequest(subdomain, chatId);
         if (existingRequest) {
@@ -158,7 +158,7 @@ export class TelegramWildcardBot {
         console.error('Error checking existing request:', err);
       }
 
-      // Kirim pesan ke user
+      // Notifikasi user bahwa request berhasil dikirim
       const msgRequest = 
 `✅ Request domain berhasil dikirim!
 
@@ -170,9 +170,10 @@ export class TelegramWildcardBot {
 📬 Admin akan dinotifikasi untuk approve/reject request Anda
 
 💡 Tip: Anda akan mendapat notifikasi ketika admin memproses request ini.`;
+
       await this.sendMessage(chatId, msgRequest);
 
-      // Simpan request & kirim notif ke admin
+      // Simpan request
       try {
         await this.globalBot.saveDomainRequest({
           domain: fullDomain,
@@ -181,9 +182,13 @@ export class TelegramWildcardBot {
           requestTime: now,
           status: 'pending',
         });
+      } catch (err) {
+        console.error('Error saving domain request:', err);
+      }
 
-        if (this.ownerId && this.ownerId !== chatId) {
-          const adminNotif = 
+      // ✅ Kirim notifikasi ke admin (OWNER)
+      if (this.ownerId && this.ownerId !== chatId) {
+        const adminNotif = 
 `📬 Permintaan subdomain baru!
 
 🔗 Domain: ${fullDomain}
@@ -191,17 +196,20 @@ export class TelegramWildcardBot {
 📅 Waktu: ${now}
 
 Silakan approve/reject melalui dashboard atau bot.`;
-          await this.sendMessage(this.ownerId, adminNotif);
-        }
 
-      } catch (err) {
-        console.error('Error saving domain request:', err);
+        try {
+          await this.sendMessage(this.ownerId, adminNotif);
+        } catch (e) {
+          console.error('❌ Gagal kirim notifikasi ke admin:', e);
+        }
       }
 
       return new Response('OK', { status: 200 });
     }
 
+    // =========================
     // Command /del
+    // =========================
     if (text.startsWith('/del ')) {
       if (!isOwner) {
         await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
@@ -234,7 +242,9 @@ Silakan approve/reject melalui dashboard atau bot.`;
       return new Response('OK', { status: 200 });
     }
 
+    // =========================
     // Command /list
+    // =========================
     if (text.startsWith('/list')) {
       let domains = [];
       try {
@@ -258,6 +268,7 @@ Silakan approve/reject melalui dashboard atau bot.`;
       return new Response('OK', { status: 200 });
     }
 
+    // Default fallback
     return new Response('OK', { status: 200 });
   }
 
