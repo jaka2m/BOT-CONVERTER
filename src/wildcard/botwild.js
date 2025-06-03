@@ -8,14 +8,13 @@ export async function WildcardBot(link) {
 
 // Konstanta global
 export class KonstantaGlobalbot {
-  constructor({ apiKey }) {
+  constructor({ apiKey, rootDomain, accountID, zoneID, apiEmail, serviceName}) {
     this.apiKey = apiKey;
-
-    this.rootDomain = "joss.checker-ip.xyz";
-    this.accountID = "e9930d5ca683b0461f73477050fee0c7";
-    this.zoneID = "80423e7547d2fa85e13796a1f41deced";
-    this.apiEmail = "ambebalong@gmail.com";
-    this.serviceName = "siren";
+    this.rootDomain = rootDomain;
+    this.accountID = accountID;
+    this.zoneID = zoneID;
+    this.apiEmail = apiEmail;
+    this.serviceName = serviceName;
 
     this.headers = {
       'Authorization': `Bearer ${this.apiKey}`,
