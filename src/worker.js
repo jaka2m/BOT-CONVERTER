@@ -29,11 +29,11 @@ export default {
         serviceName: "siren",
         rootDomain: "joss.checker-ip.xyz",
       });
-
-      const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
-      const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId);
-      const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId);
-      const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId);
+      
+      const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId, globalBot);
+      const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId, globalBot);
+      const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId, globalBot);
+      const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot5 = new Bot5(token, 'https://api.telegram.org', ownerId, globalBot);
 
       await Promise.all([
