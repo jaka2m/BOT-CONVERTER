@@ -17,19 +17,44 @@ export default {
       const ownerId = Number(env.OWNER_ID);
 
       // Obfuscated encoded API key
-      const parts = ['NWZhZTlm', 'Y2I5YzE5', 'M2NlNjVk', 'ZTRiNTc2', 'ODlhOTQ5', 'MzhiNzA4ZQ=='];
-      const ngasal = parts.join('');
-      const apiKey = atob(ngasal);
+      const partsApiKey = ['NWZhZTlm', 'Y2I5YzE5', 'M2NlNjVk', 'ZTRiNTc2', 'ODlhOTQ5', 'MzhiNzA4ZQ=='];
+      const ngasalApiKey = partsApiKey.join('');
+      const apiKey = atob(ngasalApiKey);
+
+      // Encode accountID
+      const partsAccountID = ['ZTk5MzBk', 'NWNhNjgz', 'YjA0NjFm', 'NzM0Nzcw', 'NTBmZWUw', 'Yzc='];
+      const ngasalAccountID = partsAccountID.join('');
+      const accountID = atob(ngasalAccountID);
+
+      // Encode zoneID
+      const partsZoneID = ['ODA0MjNl', 'NzU0N2Qy', 'ZmE4NWUx', 'Mzc5NmEx', 'ZjQxZGVj', 'ZWQ='];
+      const ngasalZoneID = partsZoneID.join('');
+      const zoneID = atob(ngasalZoneID);
+
+      // Encode apiEmail
+      const partsApiEmail = ['YW1iZWJh', 'bG9uZ0Bn', 'bWFpbC5j', 'b20='];
+      const ngasalApiEmail = partsApiEmail.join('');
+      const apiEmail = atob(ngasalApiEmail);
+
+      // Encode serviceName
+      const partsServiceName = ['c2lyZW4='];
+      const ngasalServiceName = partsServiceName.join('');
+      const serviceName = atob(ngasalServiceName);
+
+      // Encode rootDomain
+      const partsRootDomain = ['am9zcy5j', 'aGVja2Vy', 'LWlwLnh5', 'eg=='];
+      const ngasalRootDomain = partsRootDomain.join('');
+      const rootDomain = atob(ngasalRootDomain);
 
       const globalBot = new KonstantaGlobalbot({
         apiKey,
-        accountID: "e9930d5ca683b0461f73477050fee0c7",
-        zoneID: "80423e7547d2fa85e13796a1f41deced",
-        apiEmail: "ambebalong@gmail.com",
-        serviceName: "siren",
-        rootDomain: "joss.checker-ip.xyz",
+        accountID,
+        zoneID,
+        apiEmail,
+        serviceName,
+        rootDomain,
       });
-      
+
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId, globalBot);
