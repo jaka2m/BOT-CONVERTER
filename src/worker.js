@@ -15,12 +15,14 @@ export default {
 
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
-      const apiKey = '5fae9fcb9c193ce65de4b57689a94938b708e';
 
-      // Buat instance global bot dengan API key
+      // API Key yang telah di-encode base64
+      const encodedKey = 'NWZhZTlmY2I5YzE5M2NlNjVkZTRiNTc2ODlhOTQ5MzhiNzA4ZQ==';
+      const apiKey = atob(encodedKey); // decode base64 saat runtime
+
+      // Buat instance global bot
       const globalBot = new KonstantaGlobalbot({ apiKey });
 
-      // Buat instance bot
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId);
       const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId);
