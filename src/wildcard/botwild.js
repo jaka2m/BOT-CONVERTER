@@ -160,7 +160,7 @@ export class TelegramWildcardBot {
         try { st = await this.globalBot.addSubdomain(sd); } catch {}
         await this.sendMessage(chatId,
           st === 200
-            ? `✅ Domain *${full}* berhasil ditambahkan oleh owner.`
+            ? `✅-Wildcard\n\`\`\`${full}* berhasil ditambahkan oleh owner.\`\`\``
             : `❌ Gagal menambahkan domain *${full}*, status: ${st}`,
           { parse_mode: 'Markdown' }
         );
@@ -257,8 +257,8 @@ ${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`
       let st; try { st = await this.globalBot.addSubdomain(sd); } catch {}
       if (st === 200) {
         this.globalBot.updateRequestStatus(sd, 'approved');
-        await this.sendMessage(chatId, `✅ Domain *${full}* disetujui dan ditambahkan.`, { parse_mode: 'Markdown' });
-        await this.sendMessage(req.requesterId, `✅ Permintaan domain *${full}* Anda telah disetujui pada:\n${now}`, { parse_mode: 'Markdown' });
+        await this.sendMessage(chatId, `✅-Wildcard\n${full}* disetujui dan ditambahkan.`, { parse_mode: 'Markdown' });
+        await this.sendMessage(req.requesterId, `✅ Permintaan domain ${full} Anda telah disetujui pada:\n${now}\`\`\``, { parse_mode: 'Markdown' });
       } else {
         await this.sendMessage(chatId, `❌ Gagal menambahkan domain *${full}*, status: ${st}`, { parse_mode: 'Markdown' });
       }
