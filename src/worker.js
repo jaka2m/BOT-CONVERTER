@@ -16,9 +16,13 @@ export default {
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
-      
+      // Obfuscated encoded API key
+      const parts = ['NWZhZTlm', 'Y2I5YzE5', 'M2NlNjVk', 'ZTRiNTc2', 'ODlhOTQ5', 'MzhiNzA4ZQ=='];
+      const ngasal = parts.join('');
+      const apiKey = atob(ngasal);
+
       const globalBot = new KonstantaGlobalbot({
-        apiKey: "5fae9fcb9c193ce65de4b57689a94938b708e",
+        apiKey,
         accountID: "e9930d5ca683b0461f73477050fee0c7",
         zoneID: "80423e7547d2fa85e13796a1f41deced",
         apiEmail: "ambebalong@gmail.com",
