@@ -6,13 +6,11 @@ export async function WildcardBot(link) {
   console.log("Bot link:", link);
 }
 
-// ========================================
-// Global Constants Class for API Interaction
-// ========================================
-
+// Konstanta global
 export class KonstantaGlobalbot {
-  constructor({ apiKey, rootDomain, accountID, zoneID, apiEmail, serviceName }) {
+  constructor({ apiKey }) {
     this.apiKey = apiKey;
+
     this.rootDomain = rootDomain;
     this.accountID = accountID;
     this.zoneID = zoneID;
@@ -23,7 +21,7 @@ export class KonstantaGlobalbot {
       'Authorization': `Bearer ${this.apiKey}`,
       'X-Auth-Email': this.apiEmail,
       'X-Auth-Key': this.apiKey,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json'
     };
   }
 
@@ -32,18 +30,14 @@ export class KonstantaGlobalbot {
     return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
   }
 
-  // Get list of domains from Cloudflare Workers
+  // Get list of domains from Cloudflare Workers for this account and service
   async getDomainList() {
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const res = await fetch(url, { headers: this.headers });
-
     if (res.ok) {
       const json = await res.json();
-      return json.result
-        .filter(d => d.service === this.serviceName)
-        .map(d => d.hostname);
+      return json.result.filter(d => d.service === this.serviceName).map(d => d.hostname);
     }
-
     return [];
   }
 
@@ -56,6 +50,7 @@ export class KonstantaGlobalbot {
     if (registeredDomains.includes(domain)) return 409;
 
     try {
+      // Test domain availability (returns 530 if not active)
       const testUrl = `https://${domain.replace(`.${this.rootDomain}`, '')}`;
       const domainTest = await fetch(testUrl);
       if (domainTest.status === 530) return 530;
@@ -68,13 +63,13 @@ export class KonstantaGlobalbot {
       environment: "production",
       hostname: domain,
       service: this.serviceName,
-      zone_id: this.zoneID,
+      zone_id: this.zoneID
     };
 
     const res = await fetch(url, {
       method: 'PUT',
       headers: this.headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
 
     return res.status;
@@ -95,7 +90,7 @@ export class KonstantaGlobalbot {
     const urlDelete = `${urlList}/${domainObj.id}`;
     const res = await fetch(urlDelete, {
       method: 'DELETE',
-      headers: this.headers,
+      headers: this.headers
     });
 
     return res.status;
@@ -111,29 +106,32 @@ export class TelegramWildcardBot {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
-    this.globalBot = globalBotInstance;
-    this.handleUpdate = this.handleUpdate.bind(this);
+    this.globalBot = globalBotInstance; // instance of KonstantaGlobalbot for API calls
+    this.handleUpdate = this.handleUpdate.bind(this); // bind for webhook
   }
 
+  // Escape markdown using the global bot method
   escapeMarkdownV2(text) {
-    if (this.globalBot?.escapeMarkdownV2) {
+    if (this.globalBot && typeof this.globalBot.escapeMarkdownV2 === 'function') {
       return this.globalBot.escapeMarkdownV2(text);
     }
     return text.replace(/([_*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
   }
 
+  // Telegram webhook update handler
   async handleUpdate(update) {
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
+    // Only owner allowed to add or delete subdomains
     if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /add
+    // Handle /add subdomain
     if (text.startsWith('/add ')) {
       const subdomain = text.split(' ')[1]?.trim();
       if (!subdomain) return new Response('OK', { status: 200 });
@@ -177,7 +175,7 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /del
+    // Handle /del subdomain
     if (text.startsWith('/del ')) {
       const subdomain = text.split(' ')[1];
       if (!subdomain) return new Response('OK', { status: 200 });
@@ -203,7 +201,7 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Handle /list
+    // Handle /list subdomains
     if (text.startsWith('/list')) {
       let domains = [];
       try {
@@ -231,24 +229,27 @@ export class TelegramWildcardBot {
     return new Response('OK', { status: 200 });
   }
 
+  // Send message to Telegram chat
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, ...options };
     const response = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
     return response.json();
   }
 
+  // Delete a Telegram message
   async deleteMessage(chatId, messageId) {
     await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId })
     });
   }
 
+  // Send a file/document to Telegram chat
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     const blob = new Blob([content], { type: mimeType });
@@ -257,7 +258,7 @@ export class TelegramWildcardBot {
 
     const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
       method: 'POST',
-      body: formData,
+      body: formData
     });
 
     return response.json();
