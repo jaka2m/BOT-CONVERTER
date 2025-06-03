@@ -304,7 +304,7 @@ ${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`
           lines += `   requester: @${r.requesterUsername} (ID: ${r.requesterId})\n`;
           lines += `   waktu: ${r.requestTime}\n\n`;
         });
-        await this.sendMessage(chatId, `📋 Daftar Semua Request:\n\n${lines}`, { parse_mode: 'Markdown' });
+        await this.sendMessage(chatId, `📋 Daftar Semua Request:\n\`\`\`${lines}\`\`\``, { parse_mode: 'Markdown' });
       }
       return new Response('OK', { status: 200 });
     }
