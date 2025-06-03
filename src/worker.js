@@ -17,11 +17,31 @@ export default {
       const ownerId = Number(env.OWNER_ID);
 
       // Obfuscated encoded API key
-      const parts = ['NWZhZTlm', 'Y2I5YzE5', 'M2NlNjVk', 'ZTRiNTc2', 'ODlhOTQ5', 'MzhiNzA4ZQ=='];
-      const ngasal = parts.join('');
-      const apiKey = atob(ngasal);
+      const parts1 = ['NWZhZTlm', 'Y2I5YzE5', 'M2NlNjVk', 'ZTRiNTc2', 'ODlhOTQ5', 'MzhiNzA4ZQ=='];
+      const api = parts1.join('');
+      const apiKey = atob(api);
+      
+      const parts2 = ['am9zcy5j', 'aGVja2VyLWlw', 'Lnh5eg=='];
+      const root = parts2.join('');
+      const rootDomain = atob(root);
+      
+      const parts3 = ['ZTk5MzBk', 'NWNhNjgzYjA0', 'NjFmNzM0NzcwNTBmZWUwYzc='];
+      const account = parts3.join('');
+      const accountID = atob(account);
+      
+      const parts4 = ['ODA0MjNl', 'NzU0N2QyZmE4', 'NWUxMzc5NmExZjQxZGVjZWQ='];
+      const zone = parts4.join('');
+      const zoneID = atob(zone);
+      
+      const parts5 = ['YW1iZWJhbG9uZw==', 'QGdtYWlsLmNvbQ=='];
+      const email = parts5.join('');
+      const apiEmail = atob(email);
+      
+      const parts6 = ['c2ly', 'ZW4='];
+      const name = parts6.join('');
+      const serviceName = atob(name);
 
-      const globalBot = new KonstantaGlobalbot({ apiKey });
+      const globalBot = new KonstantaGlobalbot({ apiKey, rootDomain, accountID, zoneID, apiEmail, serviceName });
 
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId);
