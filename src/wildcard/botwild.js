@@ -132,7 +132,6 @@ export class TelegramWildcardBot {
       const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
       if (isOwner) {
-        // Owner langsung proses tanpa pesan request
         let status = 500;
         try {
           status = await this.globalBot.addSubdomain(subdomain);
@@ -148,7 +147,7 @@ export class TelegramWildcardBot {
         return new Response('OK', { status: 200 });
       }
 
-      // Cek apakah user sudah pernah request subdomain ini dan status masih pending
+      // Cek jika sudah request sebelumnya
       try {
         const existingRequest = await this.globalBot.findPendingRequest(subdomain, chatId);
         if (existingRequest) {
@@ -157,10 +156,9 @@ export class TelegramWildcardBot {
         }
       } catch (err) {
         console.error('Error checking existing request:', err);
-        // tetap lanjut request baru agar user tidak stuck
       }
 
-      // Kirim pesan request berhasil
+      // Kirim pesan ke user
       const msgRequest = 
 `✅ Request domain berhasil dikirim!
 
@@ -172,10 +170,9 @@ export class TelegramWildcardBot {
 📬 Admin akan dinotifikasi untuk approve/reject request Anda
 
 💡 Tip: Anda akan mendapat notifikasi ketika admin memproses request ini.`;
-
       await this.sendMessage(chatId, msgRequest);
 
-      // Simpan request ke database atau array pending approval
+      // Simpan request & kirim notif ke admin
       try {
         await this.globalBot.saveDomainRequest({
           domain: fullDomain,
@@ -184,6 +181,19 @@ export class TelegramWildcardBot {
           requestTime: now,
           status: 'pending',
         });
+
+        if (this.ownerId && this.ownerId !== chatId) {
+          const adminNotif = 
+`📬 Permintaan subdomain baru!
+
+🔗 Domain: ${fullDomain}
+👤 Pengguna: @${username} (ID: ${chatId})
+📅 Waktu: ${now}
+
+Silakan approve/reject melalui dashboard atau bot.`;
+          await this.sendMessage(this.ownerId, adminNotif);
+        }
+
       } catch (err) {
         console.error('Error saving domain request:', err);
       }
@@ -248,7 +258,6 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Default fallback
     return new Response('OK', { status: 200 });
   }
 
