@@ -16,29 +16,12 @@ export default {
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
-      const partsApiKey = ['NWZhZTlm', 'Y2I5YzE5', 'M2NlNjVk', 'ZTRiNTc2', 'ODlhOTQ5', 'MzhiNzA4ZQ=='];
-      const apiKey = atob(partsApiKey.join(''));
+      // Obfuscated encoded API key
+      const parts = ['NWZhZTlm', 'Y2I5YzE5', 'M2NlNjVk', 'ZTRiNTc2', 'ODlhOTQ5', 'MzhiNzA4ZQ=='];
+      const ngasal = parts.join('');
+      const apiKey = atob(ngasal);
 
-      const partsRootDomain = ['am9zcy5j', 'aGVja2VyLWlw', 'Lnh5eg=='];
-      const partsAccountID = ['ZTk5MzBk', 'NWNhNjgzYjA0', 'NjFmNzM0NzcwNTBmZWUwYzc='];
-      const partsZoneID = ['ODA0MjNl', 'NzU0N2QyZmE4', 'NWUxMzc5NmExZjQxZGVjZWQ='];
-      const partsApiEmail = ['YW1iZWJhbG9uZw==', 'QGdtYWlsLmNvbQ=='];
-      const partsServiceName = ['c2ly', 'ZW4='];
-
-      const rootDomain = atob(partsRootDomain.join(''));
-      const accountID = atob(partsAccountID.join(''));
-      const zoneID = atob(partsZoneID.join(''));
-      const apiEmail = atob(partsApiEmail.join(''));
-      const serviceName = atob(partsServiceName.join(''));
-
-      const globalBot = new KonstantaGlobalbot({
-        apiKey,
-        rootDomain,
-        accountID,
-        zoneID,
-        apiEmail,
-        serviceName,
-      });
+      const globalBot = new KonstantaGlobalbot({ apiKey });
 
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId);
