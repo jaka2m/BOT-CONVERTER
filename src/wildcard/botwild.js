@@ -8,9 +8,8 @@ export async function WildcardBot(link) {
 
 // Konstanta global
 export class KonstantaGlobalbot {
-  constructor({ apiKey }) {
+  constructor({ apiKey, rootDomain, accountID, zoneID, apiEmail, serviceName }) {
     this.apiKey = apiKey;
-
     this.rootDomain = rootDomain;
     this.accountID = accountID;
     this.zoneID = zoneID;
