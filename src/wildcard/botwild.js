@@ -119,7 +119,7 @@ export class TelegramWildcardBot {
 
     // contoh properti bot
 const ownerId = this.ownerId;
-const rootDomain = this.globalBot.rootDomain; // misal: "anu.com.afrcloud.fun"
+const rootDomain = this.globalBot.rootDomain; 
 
 // authorization check (ubah sesuai kebutuhan)
 if ((text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== ownerId) {
@@ -214,7 +214,7 @@ if (chatId === ownerId) {
 
       // kirim pesan ke requester
       // kamu perlu tahu requesterId dari DB
-      const requesterId = /* ambil dari DB */;
+      const requesterId = null; // TODO: Ambil dari DB
 
       await this.sendMessage(requesterId,
 `✅ Domain Request ACCEPTED / approval
