@@ -112,13 +112,57 @@ export class TelegramWildcardBot {
   }
 
   async handleUpdate(update) {
+    // Handle callback_query for delete buttons
+    if (update.callback_query) {
+      const chatId = update.callback_query.message.chat.id;
+      const messageId = update.callback_query.message.message_id;
+      const fromId = update.callback_query.from.id;
+      const data = update.callback_query.data;
+
+      if (fromId !== this.ownerId) {
+        // Not authorized to delete
+        await this.answerCallbackQuery(update.callback_query.id, '⛔ Not authorized.');
+        return new Response('OK', { status: 200 });
+      }
+
+      if (data.startsWith('del_subdomain_')) {
+        const subdomain = data.replace('del_subdomain_', '');
+
+        // Delete subdomain
+        let status = 500;
+        try {
+          status = await this.globalBot.deleteSubdomain(subdomain);
+        } catch (e) {
+          console.error('Error deleting subdomain:', e);
+        }
+
+        const domainFull = `${subdomain}.${this.globalBot.rootDomain}`;
+        const domainEscaped = this.escapeMarkdownV2(domainFull);
+
+        if (status === 200) {
+          // Edit original message to show success and remove the button for that subdomain
+          const newText = `✅ Subdomain *${domainEscaped}* deleted successfully.`;
+          await this.editMessageText(chatId, messageId, newText, { parse_mode: 'MarkdownV2', reply_markup: { inline_keyboard: [] } });
+          await this.answerCallbackQuery(update.callback_query.id, 'Deleted successfully.');
+        } else if (status === 404) {
+          await this.answerCallbackQuery(update.callback_query.id, '⚠️ Subdomain not found.');
+        } else {
+          await this.answerCallbackQuery(update.callback_query.id, `❌ Failed to delete. Status: ${status}`);
+        }
+
+        return new Response('OK', { status: 200 });
+      }
+
+      return new Response('OK', { status: 200 });
+    }
+
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
     // Authorization
-    const unauthorized = (text.startsWith('/add ') || text.startsWith('/del ')) && chatId !== this.ownerId;
+    const unauthorized = (text.startsWith('/add ') || text.startsWith('/del')) && chatId !== this.ownerId;
     if (unauthorized) {
       await this.sendMessage(chatId, '⛔ You are not authorized to use this command.');
       return new Response('OK', { status: 200 });
@@ -172,7 +216,41 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // Delete Subdomain
+    // Delete Subdomain command without args -> show list with buttons
+    if (text.startsWith('/del') && text.trim() === '/del') {
+      let domains = [];
+
+      try {
+        domains = await this.globalBot.getDomainList();
+      } catch (err) {
+        console.error('❌ getDomainList() error:', err);
+      }
+
+      if (domains.length === 0) {
+        await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
+      } else {
+        // Create inline keyboard with buttons to delete each subdomain
+        // Format: { text: '1. subdomain.domain.com', callback_data: 'del_subdomain_subdomain' }
+        const inlineKeyboard = [];
+        domains.forEach((domain, idx) => {
+          // extract subdomain part (remove rootDomain suffix)
+          let subdomain = domain;
+          if (domain.endsWith(`.${this.globalBot.rootDomain}`)) {
+            subdomain = domain.slice(0, domain.length - this.globalBot.rootDomain.length - 1);
+          }
+          inlineKeyboard.push([{ text: `${idx + 1}. ${domain}`, callback_data: `del_subdomain_${subdomain}` }]);
+        });
+
+        await this.sendMessage(chatId, '*Select subdomain to delete:*', {
+          parse_mode: 'MarkdownV2',
+          reply_markup: { inline_keyboard: inlineKeyboard }
+        });
+      }
+
+      return new Response('OK', { status: 200 });
+    }
+
+    // Delete Subdomain with argument (fallback - like old behavior)
     if (text.startsWith('/del ')) {
       const subdomain = text.split(' ')[1];
       if (!subdomain) return new Response('OK', { status: 200 });
@@ -241,6 +319,16 @@ export class TelegramWildcardBot {
     return response.json();
   }
 
+  async editMessageText(chatId, messageId, text, options = {}) {
+    const payload = { chat_id: chatId, message_id: messageId, text, ...options };
+    const response = await fetch(`${this.apiUrl}/bot${this.token}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
   async deleteMessage(chatId, messageId) {
     await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
       method: 'POST',
@@ -249,16 +337,23 @@ export class TelegramWildcardBot {
     });
   }
 
-  async sendDocument(chatId, content, filename, mimeType) {
-    const formData = new FormData();
-    formData.append('document', new Blob([content], { type: mimeType }), filename);
-    formData.append('chat_id', chatId.toString());
+  async answerCallbackQuery(callbackQueryId, text = '') {
+    await fetch(`${this.apiUrl}/bot${this.token}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callback_query_id: callbackQueryId, text }),
+    });
+  }
 
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+  async sendDocument(chatId, content, filename, mimeType = 'text/plain') {
+    const formData = new FormData();
+    const blob = new Blob([content], { type: mimeType });
+    formData.append('chat_id', chatId);
+    formData.append('document', blob, filename);
+
+    await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
       method: 'POST',
       body: formData,
     });
-
-    return response.json();
   }
 }
