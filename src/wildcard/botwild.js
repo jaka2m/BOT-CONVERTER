@@ -210,11 +210,7 @@ if (chatId === ownerId) {
     const now = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
     if (status === 200) {
-      // update DB: status = 'approved'
-
-      // kirim pesan ke requester
-      // kamu perlu tahu requesterId dari DB
-      const requesterId = null; // TODO: Ambil dari DB
+      const requesterId = chatId; // sementara pakai chatId sebagai requesterId
 
       await this.sendMessage(requesterId,
 `✅ Domain Request ACCEPTED / approval
