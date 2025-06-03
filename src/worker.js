@@ -16,7 +16,6 @@ export default {
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
-      // Obfuscated encoded API key
       const partsApiKey = [
         'NWZhZTlm',
         'Y2I5YzE5',
@@ -28,7 +27,6 @@ export default {
       const ngasalApiKey = partsApiKey.join('');
       const apiKey = atob(ngasalApiKey);
 
-      // Encode accountID
       const partsAccountID = [
         'ZTk5MzBk',
         'NWNhNjgz',
@@ -40,7 +38,6 @@ export default {
       const ngasalAccountID = partsAccountID.join('');
       const accountID = atob(ngasalAccountID);
 
-      // Encode zoneID
       const partsZoneID = [
         'ODA0MjNl',
         'NzU0N2Qy',
@@ -52,7 +49,6 @@ export default {
       const ngasalZoneID = partsZoneID.join('');
       const zoneID = atob(ngasalZoneID);
 
-      // Encode apiEmail
       const partsApiEmail = [
         'YW1iZWJh',
         'bG9uZ0Bn',
@@ -62,12 +58,10 @@ export default {
       const ngasalApiEmail = partsApiEmail.join('');
       const apiEmail = atob(ngasalApiEmail);
 
-      // Encode serviceName
       const partsServiceName = ['c2lyZW4='];
       const ngasalServiceName = partsServiceName.join('');
       const serviceName = atob(ngasalServiceName);
 
-      // Encode rootDomain
       const partsRootDomain = [
         'am9zcy5j',
         'aGVja2Vy',
