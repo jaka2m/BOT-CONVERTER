@@ -16,10 +16,11 @@ export default {
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
-      const acak = 'NWZhZTlmY2I5YzE5M2NlNjVkZTRiNTc2ODlhOTQ5MzhiNzA4ZQ==';
-      const apiKey = atob(acak);
+      // Obfuscated encoded API key
+      const parts = ['NWZhZTlm', 'Y2I5YzE5', 'M2NlNjVk', 'ZTRiNTc2', 'ODlhOTQ5', 'MzhiNzA4ZQ=='];
+      const ngasal = parts.join('');
+      const apiKey = atob(ngasal);
 
-      // Buat instance global bot
       const globalBot = new KonstantaGlobalbot({ apiKey });
 
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId);
