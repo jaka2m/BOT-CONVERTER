@@ -1,4 +1,12 @@
 // ========================================
+// Main Telegram Wildcard Bot Entry Point
+// ========================================
+export async function WildcardBot(link) {
+  console.log("Bot link:", link);
+}
+
+
+// ========================================
 // Global Constants & Methods for Cloudflare API
 // ========================================
 export class KonstantaGlobalbot {
