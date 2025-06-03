@@ -247,12 +247,7 @@ atau /reject ${subdomain} untuk reject.
 
       return new Response('OK', { status: 200 });
     }
-  }
-
-  // Default fallback
-  return new Response('OK', { status: 200 });
-}
-
+  
     // List Subdomains
     if (text.startsWith('/list')) {
       let domains = [];
