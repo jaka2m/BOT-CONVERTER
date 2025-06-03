@@ -17,22 +17,48 @@ export default {
       const ownerId = Number(env.OWNER_ID);
 
       // Obfuscated encoded API key
-      const partsApiKey = ['NWZhZTlm', 'Y2I5YzE5', 'M2NlNjVk', 'ZTRiNTc2', 'ODlhOTQ5', 'MzhiNzA4ZQ=='];
+      const partsApiKey = [
+        'NWZhZTlm',
+        'Y2I5YzE5',
+        'M2NlNjVk',
+        'ZTRiNTc2',
+        'ODlhOTQ5',
+        'MzhiNzA4ZQ==',
+      ];
       const ngasalApiKey = partsApiKey.join('');
       const apiKey = atob(ngasalApiKey);
 
       // Encode accountID
-      const partsAccountID = ['ZTk5MzBk', 'NWNhNjgz', 'YjA0NjFm', 'NzM0Nzcw', 'NTBmZWUw', 'Yzc='];
+      const partsAccountID = [
+        'ZTk5MzBk',
+        'NWNhNjgz',
+        'YjA0NjFm',
+        'NzM0Nzcw',
+        'NTBmZWUw',
+        'Yzc=',
+      ];
       const ngasalAccountID = partsAccountID.join('');
       const accountID = atob(ngasalAccountID);
 
       // Encode zoneID
-      const partsZoneID = ['ODA0MjNl', 'NzU0N2Qy', 'ZmE4NWUx', 'Mzc5NmEx', 'ZjQxZGVj', 'ZWQ='];
+      const partsZoneID = [
+        'ODA0MjNl',
+        'NzU0N2Qy',
+        'ZmE4NWUx',
+        'Mzc5NmEx',
+        'ZjQxZGVj',
+        'ZWQ=',
+      ];
       const ngasalZoneID = partsZoneID.join('');
       const zoneID = atob(ngasalZoneID);
 
       // Encode apiEmail
-      const partsApiEmail = ['YW1iZWJh', 'bG9uZ0Bn', 'bWFpbC5j', 'b20='];
+      const partsApiEmail = [
+        'YW1iZWJh',
+        'bG9uZ0Bn',
+        'bWFpbC5j',
+        'b20=',
+      ];
       const ngasalApiEmail = partsApiEmail.join('');
       const apiEmail = atob(ngasalApiEmail);
 
@@ -42,7 +68,12 @@ export default {
       const serviceName = atob(ngasalServiceName);
 
       // Encode rootDomain
-      const partsRootDomain = ['am9zcy5j', 'aGVja2Vy', 'LWlwLnh5', 'eg=='];
+      const partsRootDomain = [
+        'am9zcy5j',
+        'aGVja2Vy',
+        'LWlwLnh5',
+        'eg==',
+      ];
       const ngasalRootDomain = partsRootDomain.join('');
       const rootDomain = atob(ngasalRootDomain);
 
@@ -71,10 +102,13 @@ export default {
 
       return new Response('OK', { status: 200 });
     } catch (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
   },
 };
