@@ -1,7 +1,3 @@
-export async function Cekkuota(link) {
-  console.log("Bot link:", link);
-}
-
 export class TelegramCekkuotaBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
@@ -50,62 +46,56 @@ export class TelegramCekkuotaBot {
 
     const response = await fetch(url, { headers });
 
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
+    if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Respons bukan JSON:\n${text.slice(0, 100)}...`);
+      throw new Error(`HTTP Error ${response.status}: ${text.slice(0, 100)}`);
     }
 
     const data = await response.json();
-    const dataSp = data?.data?.data_sp;
 
-    if (!dataSp) {
-      return `❌ Gagal mendapatkan data untuk *${number}*.`;
+    if (!data?.data?.data_sp) {
+      throw new Error(`Data pelanggan tidak ditemukan di response:\n${JSON.stringify(data).slice(0, 300)}`);
     }
 
-    let infoPelanggan = `
-📌 *Info Pelanggan:*
-🔢 *Nomor:* ${number}
-🏷️ *Provider:* ${dataSp.prefix?.value || '-'}
-⌛️ *Umur Kartu:* ${dataSp.active_card?.value || '-'}
-📶 *Status Simcard:* ${dataSp.status_4g?.value || '-'}
-📋 *Status Dukcapil:* ${dataSp.dukcapil?.value || '-'}
-⏳ *Masa Aktif:* ${dataSp.active_period?.value || '-'}
-⚠️ *Masa Tenggang:* ${dataSp.grace_period?.value || '-'}`;
+    const sp = data.data.data_sp;
 
-    let infoPaket = `\n\n📦 *Paket Aktif:*\n`;
+    // Bangun pesan format Markdown
+    let msg = `📌 *Info Pelanggan:*\n`;
+    msg += `🔢 *Nomor:* ${number}\n`;
+    msg += `🏷️ *Tipe Kartu:* ${sp.prefix?.value || '-'}\n`;
+    msg += `⌛️ *Umur Kartu:* ${sp.active_card?.value || '-'}\n`;
+    msg += `📶 *Status 4G:* ${sp.status_4g?.value || '-'}\n`;
+    msg += `📋 *Status Dukcapil:* ${sp.dukcapil?.value || '-'}\n`;
+    msg += `⏳ *Masa Aktif:* ${sp.active_period?.value || '-'}\n`;
+    msg += `⚠️ *Masa Tenggang:* ${sp.grace_period?.value || '-'}\n\n`;
 
-    if (dataSp.quotas?.success && Array.isArray(dataSp.quotas.value)) {
-      for (const paketGroup of dataSp.quotas.value) {
+    msg += `📦 *Paket Aktif:*\n`;
+
+    if (sp.quotas?.success && Array.isArray(sp.quotas.value)) {
+      for (const paketGroup of sp.quotas.value) {
         for (const paket of paketGroup) {
           const pkg = paket.packages;
-          const benefits = paket.benefits;
+          msg += `🎁 *Nama Paket:* ${pkg.name}\n`;
+          msg += `📅 *Aktif Hingga:* ${pkg.expDate.replace('T', ' ').replace('Z', '')}\n`;
 
-          infoPaket += `
-🎁 *Nama Paket:* ${pkg.name}
-📅 *Masa Aktif:* ${pkg.expDate}`;
-
-          if (benefits && benefits.length > 0) {
-            for (const benefit of benefits) {
-              infoPaket += `
-  ─ 📌 *Benefit:* ${benefit.bname}
-     🧧 *Tipe:* ${benefit.type}
-     💾 *Kuota:* ${benefit.quota}
-     ✅ *Sisa:* ${benefit.remaining}`;
+          if (paket.benefits.length > 0) {
+            for (const benefit of paket.benefits) {
+              msg += `\n📌 *Benefit:* ${benefit.bname}\n`;
+              msg += `   🧾 *Tipe Kuota:* ${benefit.type}\n`;
+              msg += `   💾 *Kuota:* ${benefit.quota}\n`;
+              msg += `   ✅ *Sisa Kuota:* ${benefit.remaining}\n`;
             }
           } else {
-            infoPaket += `
-  🚫 Tidak ada detail benefit.`;
+            msg += `\n🚫 Tidak ada benefit.\n`;
           }
-
-          infoPaket += `\n-----------------------------\n`;
+          msg += `------------------------------\n`;
         }
       }
     } else {
-      infoPaket += `❌ Tidak ada paket aktif.`;
+      msg += `❌ Tidak ada paket aktif.\n`;
     }
 
-    return infoPelanggan + infoPaket;
+    return msg;
   }
 
   async sendMessage(chatId, text) {
@@ -116,7 +106,7 @@ export class TelegramCekkuotaBot {
       body: JSON.stringify({
         chat_id: chatId,
         text,
-        parse_mode: "Markdown"
+        parse_mode: 'Markdown'
       })
     });
     return response.json();
