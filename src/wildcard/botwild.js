@@ -212,7 +212,7 @@ return new Response('OK', { status: 200 });
             status:            'pending'
           });
 
-          results.push(`✅ Request domain *${full}* berhasil dikirim!`);
+          results.push(`\`\`\`✅ Request Wildcard ${full} berhasil dikirim!\`\`\``);
 
           // notif ke owner
           if (this.ownerId !== chatId) {
@@ -328,7 +328,11 @@ support.zoom.us
     // ================================
     if (text.startsWith('/approve ')) {
       if (!isOwner) {
-        await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
+        await this.sendMessage(chatId, `
+\`\`\`
+⛔ Anda tidak berwenang menggunakan perintah ini.
+\`\`\`
+`);
         return new Response('OK', { status: 200 });
       }
       const sd = text.split(' ')[1]?.trim();
@@ -342,9 +346,10 @@ support.zoom.us
         try { st = await this.globalBot.addSubdomain(sd); } catch {}
         if (st === 200) {
           this.globalBot.updateRequestStatus(sd, 'approved');
-          await this.sendMessage(chatId, `✅ Domain *${full}* disetujui dan ditambahkan.`, { parse_mode: 'Markdown' });
-          await this.sendMessage(req.requesterId, `✅ Permintaan domain *${full}* Anda telah disetujui pada:\n${now}`, { parse_mode: 'Markdown' });
-        } else {
+          await this.sendMessage(chatId, `\`\`\`\n✅ Wildcard ${full} disetujui dan ditambahkan.\n\`\`\``, { parse_mode: 'Markdown' });
+
+await this.sendMessage(req.requesterId, `\`\`\`\n✅ Permintaan Wildcard ${full} Anda telah disetujui pada:\n${now}\n\`\`\``, { parse_mode: 'Markdown' });
+} else {
           await this.sendMessage(chatId, `❌ Gagal menambahkan domain *${full}*, status: ${st}`, { parse_mode: 'Markdown' });
         }
       }
@@ -356,9 +361,9 @@ support.zoom.us
     // ================================
     if (text.startsWith('/reject ')) {
       if (!isOwner) {
-        await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
-        return new Response('OK', { status: 200 });
-      }
+        await this.sendMessage(chatId, '```\n⛔ Anda tidak berwenang menggunakan perintah ini.\n```');
+return new Response('OK', { status: 200 });
+}
       const sd = text.split(' ')[1]?.trim();
       if (!sd) return new Response('OK', { status: 200 });
       const full = `${sd}.${this.globalBot.rootDomain}`;
@@ -367,9 +372,14 @@ support.zoom.us
         await this.sendMessage(chatId, `⚠️ Tidak ada request pending untuk subdomain *${full}*.`, { parse_mode: 'Markdown' });
       } else {
         this.globalBot.updateRequestStatus(sd, 'rejected');
-        await this.sendMessage(chatId, `❌ Permintaan domain *${full}* telah ditolak.`, { parse_mode: 'Markdown' });
-        await this.sendMessage(req.requesterId, `❌ Permintaan domain *${full}* Anda telah ditolak pada:\n${now}`, { parse_mode: 'Markdown' });
-      }
+        await this.sendMessage(chatId, 
+  "```\n❌ Wildcard " + full + " telah ditolak.\n```", 
+  { parse_mode: 'Markdown' });
+
+await this.sendMessage(req.requesterId, 
+  "```\n❌ Permintaan Wildcard " + full + " Anda telah ditolak pada:\n" + now + "\n```", 
+  { parse_mode: 'Markdown' });
+}
       return new Response('OK', { status: 200 });
     }
 
@@ -397,9 +407,9 @@ support.zoom.us
           lines += `   requester: @${requester} \\(ID: ${requesterId}\\)\n`;
           lines += `   waktu: ${time}\n\n`;
         });
-        const message = `📋 *Daftar Semua Request:*\n\n${lines}`;
-        await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
-      }
+        const message = `📋 *Daftar Semua Request:*\n\n\`\`\`\n${lines}\n\`\`\``;
+await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
+}
       return new Response('OK', { status: 200 });
     }
 
