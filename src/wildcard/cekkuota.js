@@ -1,26 +1,76 @@
-export async function Cekkuota(number) {
-  console.log("Cek kuota nomor:", number);
+  export async function Cekkuota(link) {
+  console.log("Bot link:", link);
+}
 
-  try {
-    const url = `https://apigw.kmsp-store.com/sidompul/v4/cek_kuota?msisdn=${number}&isJSON=true`;
+export class TelegramCekkuotaBot {
+  constructor(token, apiUrl = 'https://api.telegram.org') {
+    this.token = token;
+    this.apiUrl = apiUrl;
+    // Menyimpan status menunggu input nomor, key = chatId, value = true/false
+    this.waitingForNumbers = new Map();
+  }
 
-    const headers = {
-      'Authorization': 'Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw',
-      'X-API-Key': '60ef29aa-a648-4668-90ae-20951ef90c55',
-      'X-App-Version': '4.0.0',
-      'Content-Type': 'application/x-www-form-urlencoded'
-    };
+  // Fungsi utama menerima update dari Telegram (webhook)
+  async handleUpdate(update) {
+    // Hanya tangani message teks
+    if (!update.message || !update.message.text) return;
 
-    const response = await fetch(url, { headers });
-    const data = await response.json();
+    const chatId = update.message.chat.id;
+    const text = update.message.text.trim();
 
-    if (!data || !data.data || !data.data.data_sp) {
-      return `❌ Gagal mendapatkan data untuk nomor *${number}*.`;
+    // Jika sedang menunggu nomor dari user ini
+    if (this.waitingForNumbers.get(chatId)) {
+      this.waitingForNumbers.delete(chatId); // reset status
+      const inputText = text;
+
+      // Ambil nomor valid: mulai 0, 7-15 digit
+      const numbers = inputText.split(/[\s\n]+/).filter(n => /^0\d{6,15}$/.test(n));
+
+      if (numbers.length === 0) {
+        await this.sendMessage(chatId, "❌ Nomor tidak valid. Gunakan format yang benar (contoh: 081234567890).");
+        return;
+      }
+
+      await this.sendMessage(chatId, `⏳ Sedang memproses ${numbers.length} nomor, harap tunggu...`);
+
+      let hasilAkhir = "";
+      for (const number of numbers) {
+        const hasilCek = await this.cekkuota(number);
+        hasilAkhir += `${hasilCek}\n\n`;
+      }
+
+      await this.sendMessage(chatId, hasilAkhir.trim());
+      return;
     }
 
-    const dataSp = data.data.data_sp;
+    // Jika perintah cekkuota
+    if (text.toLowerCase() === "/cekkuota") {
+      await this.sendMessage(chatId, "📌 Silakan masukkan nomor yang ingin dicek (bisa lebih dari satu, pisahkan dengan spasi atau baris baru):");
+      this.waitingForNumbers.set(chatId, true);
+      return;
+    }
 
-    let result = `
+    // Respon default
+    await this.sendMessage(chatId, "Kirim /cekkuota untuk mulai cek nomor.");
+  }
+
+  // Fungsi cek kuota (contoh)
+  async cekkuota(number) {
+    try {
+      const url = `https://apigw.kmsp-store.com/sidompul/v4/cek_kuota?msisdn=${number}&isJSON=true`;
+      const headers = {
+        'Authorization': 'Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw',
+        'X-API-Key': '60ef29aa-a648-4668-90ae-20951ef90c55',
+        'X-App-Version': '4.0.0',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      };
+      const res = await fetch(url, { headers });
+      const data = await res.json();
+
+      const dataSp = data?.data?.data_sp;
+      if (!dataSp) return `❌ Gagal mendapatkan data untuk *${number}*.`;
+
+      let infoPelanggan = `
 📌 *Info Pelanggan:*
 🔢 *Nomor:* ${number}
 🏷️ *Provider:* ${dataSp.prefix?.value || '-'}
@@ -28,116 +78,57 @@ export async function Cekkuota(number) {
 📶 *Status Simcard:* ${dataSp.status_4g?.value || '-'}
 📋 *Status Dukcapil:* ${dataSp.dukcapil?.value || '-'}
 ⏳ *Masa Aktif:* ${dataSp.active_period?.value || '-'}
-⚠️ *Masa Tenggang:* ${dataSp.grace_period?.value || '-'}
-`;
+⚠️ *Masa Tenggang:* ${dataSp.grace_period?.value || '-'}`;
 
-    // Paket aktif dan kuota
-    if (dataSp.quotas?.success && Array.isArray(dataSp.quotas.value)) {
-      result += `\n📦 *Paket Aktif:*\n`;
-      for (const paketGroup of dataSp.quotas.value) {
-        for (const paket of paketGroup) {
-          const pkg = paket.packages;
-          const benefits = paket.benefits || [];
-          result += `🎁 *Nama Paket:* ${pkg.name}\n📅 *Masa Aktif:* ${pkg.expDate}\n`;
-          if (benefits.length === 0) {
-            result += `  🚫 Tidak ada benefit.\n`;
-          } else {
-            for (const benefit of benefits) {
-              result += `  ─ 📌 *Benefit:* ${benefit.bname}\n     🧧 *Tipe:* ${benefit.type}\n     💾 *Kuota:* ${benefit.quota}\n     ✅ *Sisa:* ${benefit.remaining}\n`;
+      let infoPaket = `\n\n📦 *Paket Aktif:*\n`;
+      if (dataSp.quotas?.success && Array.isArray(dataSp.quotas.value)) {
+        for (const paketGroup of dataSp.quotas.value) {
+          for (const paket of paketGroup) {
+            const pkg = paket.packages;
+            const benefits = paket.benefits;
+            infoPaket += `
+🎁 *Nama Paket:* ${pkg.name}
+📅 *Masa Aktif:* ${pkg.expDate}`;
+            if (benefits && benefits.length > 0) {
+              for (const benefit of benefits) {
+                infoPaket += `
+  ─ 📌 *Benefit:* ${benefit.bname}
+     🧧 *Tipe:* ${benefit.type}
+     💾 *Kuota:* ${benefit.quota}
+     ✅ *Sisa:* ${benefit.remaining}`;
+              }
+            } else {
+              infoPaket += `
+  🚫 Tidak ada detail benefit.`;
             }
+            infoPaket += `\n-----------------------------\n`;
           }
-          result += `-----------------------------\n`;
         }
-      }
-    } else {
-      result += `\n❌ Tidak ada paket aktif.\n`;
-    }
-
-    return result;
-  } catch (err) {
-    console.error("Error cek kuota:", err);
-    return `❌ Terjadi kesalahan saat memeriksa nomor *${number}*.`;
-  }
-}
-
-export class TelegramCekkuotaBot {
-  constructor(token, apiUrl = 'https://api.telegram.org') {
-    this.token = token;
-    this.apiUrl = apiUrl;
-    this.waitingForNumbers = new Map(); // chatId => true/false, menyimpan state apakah bot menunggu nomor HP
-  }
-
-  async handleUpdate(update) {
-    // Tangani callback_query jika ada (opsional)
-    if (update.callback_query) {
-      // Bisa tambahkan handler callback query di sini jika perlu
-      return new Response('OK', { status: 200 });
-    }
-
-    if (!update.message) return new Response('OK', { status: 200 });
-
-    const chatId = update.message.chat.id;
-    const text = update.message.text || '';
-
-    if (this.waitingForNumbers.get(chatId)) {
-      // Bot sedang menunggu input nomor dari user
-      const inputText = text.trim();
-      // Pisahkan input berdasar spasi atau newline, validasi format nomor minimal 7 digit diawali 0
-      const numbers = inputText.split(/[\s\n]+/).filter(n => /^0\d{6,15}$/.test(n));
-
-      if (numbers.length === 0) {
-        await this.sendMessage(chatId, "❌ Nomor tidak valid. Silakan masukkan nomor yang benar, contoh: 081234567890");
       } else {
-        // Kirim pesan loading dulu
-        const loadingMsg = await this.sendMessage(chatId, `⏳ Sedang memproses ${numbers.length} nomor, mohon tunggu...`);
-
-        let hasilGabungan = "";
-        for (const number of numbers) {
-          const hasil = await Cekkuota(number);
-          hasilGabungan += hasil + "\n\n";
-        }
-
-        try {
-          // Coba edit pesan loading dengan hasil cek kuota
-          await this.editMessageText(chatId, loadingMsg.result.message_id, hasilGabungan.trim(), { parse_mode: 'Markdown' });
-        } catch {
-          // Jika gagal edit pesan, kirim pesan baru
-          await this.sendMessage(chatId, hasilGabungan.trim(), { parse_mode: 'Markdown' });
-        }
+        infoPaket += `❌ Tidak ada paket aktif.`;
       }
 
-      this.waitingForNumbers.delete(chatId);
-      return new Response('OK', { status: 200 });
+      return infoPelanggan + infoPaket;
+    } catch (error) {
+      console.error("Gagal cek kuota:", error);
+      return `❌ *Terjadi kesalahan saat memeriksa nomor ${number}.*`;
     }
-
-    // Kalau pesan adalah perintah /cekkuota
-    if (text.startsWith('/cekkuota')) {
-      await this.sendMessage(chatId, "📌 Silakan masukkan nomor yang ingin dicek (bisa lebih dari satu, pisahkan dengan spasi atau baris baru):");
-      this.waitingForNumbers.set(chatId, true);
-      return new Response('OK', { status: 200 });
-    }
-
-    // Jika pesan lain, abaikan
-    return new Response('OK', { status: 200 });
   }
 
+  // Fungsi kirim pesan ke chat Telegram
   async sendMessage(chatId, text, options = {}) {
-    const payload = { chat_id: chatId, text, ...options };
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    return await res.json();
-  }
-
-  async editMessageText(chatId, messageId, text, options = {}) {
-    const payload = { chat_id: chatId, message_id: messageId, text, ...options };
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/editMessageText`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    return await res.json();
+    try {
+      const payload = { chat_id: chatId, text, parse_mode: "Markdown", ...options };
+      const res = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!json.ok) console.error("Error kirim pesan:", json);
+      return json;
+    } catch (e) {
+      console.error("Exception kirim pesan:", e);
+    }
   }
 }
