@@ -237,10 +237,18 @@ export class TelegramWildcardBot {
           return new Response('OK', { status: 200 });
         }
         this.awaitingDeleteList[chatId] = true;
-        await this.sendMessage(chatId,
-          '\`\`\`Contoh\n📝 Silakan kirim daftar subdomain yang ingin dihapus (satu per baris).\n\n' +
-          '\n/del\nava.game.naver.com\nzaintest.vuclip.com\nsupport.zoom.us\`\`\`'
-        );
+        await this.sendMessage(
+  chatId,
+  `\`\`\`Contoh
+📝 Silakan kirim daftar subdomain yang ingin dihapus (satu per baris).
+
+/del
+ava.game.naver.com
+zaintest.vuclip.com
+support.zoom.us
+\`\`\``,
+  { parse_mode: 'MarkdownV2' }
+);
         return new Response('OK', { status: 200 });
       }
 
