@@ -197,12 +197,18 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // ketika user kirim /del tanpa argumen, minta input subdomain multiple
+    // Simpan sementara userId/chatId yang diminta input list subdomain
+const waitingForSubdomains = new Map();
+
+// Saat menerima pesan:
 if (text === '/del') {
   if (!isOwner) {
     await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
     return new Response('OK', { status: 200 });
   }
+  // Tandai chat ini sedang menunggu input subdomain
+  waitingForSubdomains.set(chatId, true);
+
   const promptMsg = `Masukkan beberapa subdomain yang ingin dihapus, satu per baris. Contoh:\n\n` +
     `ava.game.naver.com\nzaintest.vuclip.com\nsupport.zoom.us\n\n` +
     `Kirim pesan balasan dengan daftar subdomain.`;
@@ -210,49 +216,40 @@ if (text === '/del') {
   return new Response('OK', { status: 200 });
 }
 
-// ketika user kirim /del <subdomain1> <subdomain2> ... (atau multiline)
-if (text.startsWith('/del ')) {
+// Kalau chatId ada di waitingForSubdomains, artinya pesan ini dianggap daftar subdomain untuk dihapus
+if (waitingForSubdomains.has(chatId)) {
   if (!isOwner) {
     await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
+    waitingForSubdomains.delete(chatId);
     return new Response('OK', { status: 200 });
   }
-  // ambil argumen sesudah /del, bisa multiline atau spasi
-  const arg = text.slice(5).trim();
-  if (!arg) {
+
+  const textClean = text.trim();
+  if (!textClean) {
     await this.sendMessage(chatId, '⚠️ Tidak ada subdomain yang diberikan.');
+    waitingForSubdomains.delete(chatId);
     return new Response('OK', { status: 200 });
   }
 
-  // split argumen dengan newline atau spasi (gabungkan semua spasi jadi newline dulu)
-  // supaya bisa handle spasi atau newline
-  let subs = arg.split(/\s+/).filter(Boolean);
+  // Hapus dari map karena sudah dapat input
+  waitingForSubdomains.delete(chatId);
 
-  // proses hapus per subdomain
+  // Split berdasarkan baris atau spasi
+  const subs = textClean.split(/\s+/).filter(Boolean);
+
   const results = [];
   for (const fullSubdomain of subs) {
-    // fullSubdomain bisa seperti ava.game.naver.com, kita perlu ambil bagian subdomain yg jadi prefix rootDomain
-    // misal rootDomain = naver.com, kita ambil prefix: ava.game
-    // atau rootDomain = zoom.us, prefix support
-
-    // Jadi kita harus cari subdomain tanpa rootDomain:
-    // contoh: fullSubdomain = 'ava.game.naver.com', rootDomain='naver.com'
-    // subdomain = 'ava.game'
-
     const rootDomain = this.globalBot.rootDomain;
     let sd = null;
     if (fullSubdomain.endsWith(rootDomain)) {
-      // potong rootDomain + dot
       sd = fullSubdomain.slice(0, fullSubdomain.length - rootDomain.length - 1);
     } else {
-      // subdomain tidak cocok dengan rootDomain bot, skip
       results.push(`⚠️ Subdomain *${fullSubdomain}* bukan bagian dari root domain *${rootDomain}*`);
       continue;
     }
 
     let st = 500;
-    try { st = await this.globalBot.deleteSubdomain(sd); } catch (e) {
-      // bisa log error e jika perlu
-    }
+    try { st = await this.globalBot.deleteSubdomain(sd); } catch {}
     const dm = this.escapeMarkdownV2(fullSubdomain);
     if (st === 200) results.push(`✅ *${dm}* berhasil dihapus.`);
     else if (st === 404) results.push(`⚠️ Subdomain *${dm}* tidak ditemukan.`);
@@ -264,6 +261,7 @@ if (text.startsWith('/del ')) {
 
   return new Response('OK', { status: 200 });
 }
+
 
     // /list
     if (text.startsWith('/list')) {
