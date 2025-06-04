@@ -1,4 +1,4 @@
-export async function Cekkuota(link) {
+  export async function Cekkuota(link) {
   console.log("Bot link:", link);
 }
 
@@ -6,49 +6,47 @@ export class TelegramCekkuotaBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
-    // Map menyimpan status chatId yang sedang menunggu input nomor
+    // State menunggu input nomor per chatId (hanya untuk sementara di memori)
     this.waitingForNumbers = new Map();
   }
 
   // Fungsi utama menangani update Telegram
   async handleUpdate(update) {
-    if (update.callback_query) {
-      // Kalau mau handle callback_query, buat fungsi handleCallbackQuery sendiri
-      // await this.handleCallbackQuery(update.callback_query);
-      return new Response('OK', { status: 200 });
-    }
-
     if (!update.message || !update.message.chat) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
 
-    // Kalau chat ini sedang menunggu input nomor
+    if (text.startsWith('/cekkuota')) {
+      const args = text.split(' ').slice(1);
+      if (args.length === 0) {
+        // Minta input nomor
+        await this.sendMessage(chatId, "📌 Silakan masukkan nomor yang ingin dicek (bisa lebih dari satu, pisahkan dengan spasi atau baris baru):");
+        this.waitingForNumbers.set(chatId, true);
+      } else {
+        // Langsung proses nomor yang dikirim di command
+        const nomorText = args.join(' ');
+        await this.processNumbers(chatId, nomorText);
+      }
+      return new Response('OK', { status: 200 });
+    }
+
+    // Jika bot menunggu input nomor untuk chatId ini
     if (this.waitingForNumbers.get(chatId)) {
-      // Proses input nomor
       await this.processNumbers(chatId, text);
-      // Setelah diproses, hapus status menunggu nomor
       this.waitingForNumbers.delete(chatId);
       return new Response('OK', { status: 200 });
     }
 
-    // Jika user kirim perintah /cekkuota
-    if (text.startsWith('/cekkuota')) {
-      this.waitingForNumbers.set(chatId, true);
-      await this.sendMessage(chatId, "📌 Silakan masukkan nomor yang ingin dicek (bisa lebih dari satu, pisahkan dengan spasi atau baris baru):");
-      return new Response('OK', { status: 200 });
-    }
-
-    // Respon default kalau bukan perintah atau bukan input nomor
+    // Default reply jika bukan perintah
     await this.sendMessage(chatId, "Kirim /cekkuota untuk mulai cek nomor.");
     return new Response('OK', { status: 200 });
   }
 
-  // Proses input nomor yang dimasukkan user
-  async processNumbers(chatId, text) {
-    const inputText = text.trim();
-    // Split berdasarkan spasi, titik, atau baris baru
-    const numbers = inputText.split(/[\s.\n]+/).filter(num => /^0\d{6,15}$/.test(num));
+  // Proses input nomor dan kirim hasil cek kuota
+  async processNumbers(chatId, nomorText) {
+    // Pisahkan input berdasarkan spasi, newline, titik
+    const numbers = nomorText.split(/[\s.\n]+/).filter(num => /^0\d{6,15}$/.test(num));
 
     if (numbers.length === 0) {
       await this.sendMessage(chatId, "❌ Nomor tidak valid. Gunakan format yang benar (contoh: 081234567890).");
@@ -63,27 +61,25 @@ export class TelegramCekkuotaBot {
       hasilAkhir += `${hasilCek}\n\n`;
     }
 
+    // Edit pesan loading jadi hasil akhir
     try {
-      // Edit pesan loading jadi hasil akhir
       await this.editMessageText(chatId, loadingMessage.message_id, hasilAkhir.trim());
-    } catch (error) {
-      // Kalau gagal edit pesan, kirim pesan baru
+    } catch {
+      // Kalau gagal edit, kirim pesan baru
       await this.sendMessage(chatId, hasilAkhir.trim());
     }
   }
 
-  // Fungsi cek kuota yang memanggil API eksternal
+  // Fungsi cek kuota nomor
   async cekkuota(number) {
     try {
       const url = `https://apigw.kmsp-store.com/sidompul/v4/cek_kuota?msisdn=${number}&isJSON=true`;
-
       const headers = {
         'Authorization': 'Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw',
         'X-API-Key': '60ef29aa-a648-4668-90ae-20951ef90c55',
         'X-App-Version': '4.0.0',
         'Content-Type': 'application/x-www-form-urlencoded'
       };
-
       const response = await fetch(url, { headers });
       const data = await response.json();
 
@@ -141,31 +137,29 @@ export class TelegramCekkuotaBot {
     }
   }
 
-  // Kirim pesan teks ke chat Telegram
+  // Fungsi kirim pesan text
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, parse_mode: 'Markdown', ...options };
     const res = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
-    if (!res.ok) {
-      console.error('Failed to send message:', await res.text());
-    }
-    return await res.json();
+    const data = await res.json();
+    if (!data.ok) throw new Error(`Telegram sendMessage failed: ${JSON.stringify(data)}`);
+    return data.result;
   }
 
-  // Edit pesan yang sudah dikirim (mengubah teks pesan)
+  // Fungsi edit pesan text (misal dari loading ke hasil)
   async editMessageText(chatId, messageId, text, options = {}) {
     const payload = { chat_id: chatId, message_id: messageId, text, parse_mode: 'Markdown', ...options };
     const res = await fetch(`${this.apiUrl}/bot${this.token}/editMessageText`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
-    if (!res.ok) {
-      console.error('Failed to edit message:', await res.text());
-    }
-    return await res.json();
+    const data = await res.json();
+    if (!data.ok) throw new Error(`Telegram editMessageText failed: ${JSON.stringify(data)}`);
+    return data.result;
   }
 }
