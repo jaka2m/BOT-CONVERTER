@@ -5,6 +5,7 @@ import { botku, TelegramBotku } from './randomip/bot2.js';
 import { ProxyCekBot, TelegramProxyCekBot } from './proxyip/botCek.js';
 import { proxyBot, TelegramProxyBot } from './proxyip/bot3.js';
 import { TelegramWildcardBot } from './wildcard/botwild.js';
+import { Cekkuota, TelegramCekkuotaBot } from './wildcard/cekkuota.js';
 
 const HOSTKU = 'joss.checker-ip.xyz';
 
