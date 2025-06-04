@@ -118,7 +118,6 @@ export class KonstantaGlobalbot {
   }
 }
 
-
 // ========================================
 // Telegram Bot Handler: TelegramWildcardBot
 // ========================================
@@ -128,6 +127,10 @@ export class TelegramWildcardBot {
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
     this.globalBot = globalBot;
+
+    // Untuk menandai user yang diminta kirim daftar subdomain delete
+    this.awaitingDeleteList = {};
+
     this.handleUpdate = this.handleUpdate.bind(this);
   }
 
@@ -166,15 +169,13 @@ export class TelegramWildcardBot {
         );
         return new Response('OK', { status: 200 });
       }
-      try {
-        if (await this.globalBot.findPendingRequest(sd, chatId)) {
-          await this.sendMessage(chatId,
-            `⚠️ Anda sudah request domain *${full}* dan menunggu approval.`,
-            { parse_mode: 'Markdown' }
-          );
-          return new Response('OK', { status: 200 });
-        }
-      } catch {}
+      if (await this.globalBot.findPendingRequest(sd, chatId)) {
+        await this.sendMessage(chatId,
+          `⚠️ Anda sudah request domain *${full}* dan menunggu approval.`,
+          { parse_mode: 'Markdown' }
+        );
+        return new Response('OK', { status: 200 });
+      }
       await this.sendMessage(chatId,
 `✅ Request domain berhasil dikirim!
 
@@ -184,7 +185,14 @@ export class TelegramWildcardBot {
 
 ⏳ Status: Menunggu approval admin`
       );
-      this.globalBot.saveDomainRequest({ domain: full, subdomain: sd, requesterId: chatId, requesterUsername: username, requestTime: now, status: 'pending' });
+      this.globalBot.saveDomainRequest({
+        domain: full,
+        subdomain: sd,
+        requesterId: chatId,
+        requesterUsername: username,
+        requestTime: now,
+        status: 'pending'
+      });
       if (this.ownerId !== chatId) {
         await this.sendMessage(this.ownerId,
 `📬 Permintaan subdomain baru!
@@ -197,24 +205,74 @@ export class TelegramWildcardBot {
       return new Response('OK', { status: 200 });
     }
 
-    // /del <subdomain>
-    if (text.startsWith('/del ')) {
+    // /del [subdomain] atau tanpa argumen
+    if (text.startsWith('/del')) {
       if (!isOwner) {
         await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
         return new Response('OK', { status: 200 });
       }
-      const sd = text.split(' ')[1]?.trim();
-      if (!sd) return new Response('OK', { status: 200 });
+
+      const parts = text.split(' ').filter(Boolean);
+      // Jika hanya /del
+      if (parts.length === 1) {
+        this.awaitingDeleteList[chatId] = true;
+        await this.sendMessage(chatId,
+          `📝 Silakan kirim daftar subdomain yang ingin dihapus (satu per baris):\n\nContoh:\n\`\`\`\nava.game.naver.com\nzoom.us\n...\n\`\`\``,
+          { parse_mode: 'Markdown' }
+        );
+        return new Response('OK', { status: 200 });
+      }
+
+      // Jika /del <subdomain>
+      const sd = parts[1].trim();
       const full = `${sd}.${this.globalBot.rootDomain}`;
       let st = 500;
       try { st = await this.globalBot.deleteSubdomain(sd); } catch {}
       const dm = this.escapeMarkdownV2(full);
       const msgs = {
-        200: `\`\`\`Wildcard
-${dm} deleted successfully.\`\`\``,
+        200: `\`\`\`Wildcard\n${dm} deleted successfully.\`\`\``,
         404: `⚠️ Subdomain *${dm}* not found.`,
       };
       await this.sendMessage(chatId, msgs[st] || `❌ Gagal hapus *${dm}*, status: \`${st}\``, { parse_mode: 'MarkdownV2' });
+      return new Response('OK', { status: 200 });
+    }
+
+    // Proses daftar subdomain setelah /del
+    if (this.awaitingDeleteList[chatId]) {
+      delete this.awaitingDeleteList[chatId];
+
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      if (!lines.length) {
+        await this.sendMessage(chatId, '⚠️ Tidak ada subdomain yang ditemukan dalam input Anda.');
+        return new Response('OK', { status: 200 });
+      }
+
+      let hasil = '';
+      for (const domain of lines) {
+        const d = domain.toLowerCase();
+        if (!d.endsWith(this.globalBot.rootDomain)) {
+          hasil += `🔸 ${d} → ❌ Domain tidak sesuai root (${this.globalBot.rootDomain})\n`;
+          continue;
+        }
+        const sub = d.replace(`.${this.globalBot.rootDomain}`, '');
+        try {
+          const st = await this.globalBot.deleteSubdomain(sub);
+          if (st === 200) {
+            hasil += `✅ ${d} dihapus.\n`;
+          } else if (st === 404) {
+            hasil += `⚠️ ${d} tidak ditemukan.\n`;
+          } else {
+            hasil += `❌ ${d} gagal (status: ${st}).\n`;
+          }
+        } catch {
+          hasil += `❌ ${d} error saat menghapus.\n`;
+        }
+      }
+
+      await this.sendMessage(chatId,
+        `\`\`\`\nHasil penghapusan:\n${hasil}\`\`\``,
+        { parse_mode: 'MarkdownV2' }
+      );
       return new Response('OK', { status: 200 });
     }
 
@@ -227,8 +285,7 @@ ${dm} deleted successfully.\`\`\``,
       } else {
         const list = domains.map((d,i) => `${i+1}\\. ${this.escapeMarkdownV2(d)}`).join('\n');
         await this.sendMessage(chatId,
-          `\`\`\`List-Wildcard
-${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`,
+          `\`\`\`List-Wildcard\n${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`,
           { parse_mode: 'MarkdownV2' }
         );
         const file = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
@@ -243,24 +300,24 @@ ${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`
         await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
         return new Response('OK', { status: 200 });
       }
-      const sd = text.split(' ')[1]?.trim();
-      if (!sd) return new Response('OK', { status: 200 });
-      const full = `${sd}.${this.globalBot.rootDomain}`;
-      const req = this.globalBot.findPendingRequest(sd);
+      const sd2 = text.split(' ')[1]?.trim();
+      if (!sd2) return new Response('OK', { status: 200 });
+      const full2 = `${sd2}.${this.globalBot.rootDomain}`;
+      const req = this.globalBot.findPendingRequest(sd2);
       if (!req) {
         await this.sendMessage(chatId,
-          `⚠️ Tidak ada request pending untuk subdomain *${full}*.`,
+          `⚠️ Tidak ada request pending untuk subdomain *${full2}*.`,
           { parse_mode: 'Markdown' }
         );
         return new Response('OK', { status: 200 });
       }
-      let st; try { st = await this.globalBot.addSubdomain(sd); } catch {}
-      if (st === 200) {
-        this.globalBot.updateRequestStatus(sd, 'approved');
-        await this.sendMessage(chatId, `✅ Domain *${full}* disetujui dan ditambahkan.`, { parse_mode: 'Markdown' });
-        await this.sendMessage(req.requesterId, `✅ Permintaan domain *${full}* Anda telah disetujui pada:\n${now}`, { parse_mode: 'Markdown' });
+      let st2; try { st2 = await this.globalBot.addSubdomain(sd2); } catch {}
+      if (st2 === 200) {
+        this.globalBot.updateRequestStatus(sd2, 'approved');
+        await this.sendMessage(chatId, `✅ Domain *${full2}* disetujui dan ditambahkan.`, { parse_mode: 'Markdown' });
+        await this.sendMessage(req.requesterId, `✅ Permintaan domain *${full2}* Anda telah disetujui pada:\n${now}`, { parse_mode: 'Markdown' });
       } else {
-        await this.sendMessage(chatId, `❌ Gagal menambahkan domain *${full}*, status: ${st}`, { parse_mode: 'Markdown' });
+        await this.sendMessage(chatId, `❌ Gagal menambahkan domain *${full2}*, status: ${st2}`, { parse_mode: 'Markdown' });
       }
       return new Response('OK', { status: 200 });
     }
@@ -271,50 +328,50 @@ ${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`
         await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
         return new Response('OK', { status: 200 });
       }
-      const sd = text.split(' ')[1]?.trim();
-      if (!sd) return new Response('OK', { status: 200 });
-      const full = `${sd}.${this.globalBot.rootDomain}`;
-      const req = this.globalBot.findPendingRequest(sd);
-      if (!req) {
+      const sd3 = text.split(' ')[1]?.trim();
+      if (!sd3) return new Response('OK', { status: 200 });
+      const full3 = `${sd3}.${this.globalBot.rootDomain}`;
+      const req3 = this.globalBot.findPendingRequest(sd3);
+      if (!req3) {
         await this.sendMessage(chatId,
-          `⚠️ Tidak ada request pending untuk subdomain *${full}*.`,
+          `⚠️ Tidak ada request pending untuk subdomain *${full3}*.`,
           { parse_mode: 'Markdown' }
         );
         return new Response('OK', { status: 200 });
       }
-      this.globalBot.updateRequestStatus(sd, 'rejected');
-      await this.sendMessage(chatId, `❌ Permintaan domain *${full}* telah ditolak.`, { parse_mode: 'Markdown' });
-      await this.sendMessage(req.requesterId, `❌ Permintaan domain *${full}* Anda telah ditolak pada:\n${now}`, { parse_mode: 'Markdown' });
+      this.globalBot.updateRequestStatus(sd3, 'rejected');
+      await this.sendMessage(chatId, `❌ Permintaan domain *${full3}* telah ditolak.`, { parse_mode: 'Markdown' });
+      await this.sendMessage(req3.requesterId, `❌ Permintaan domain *${full3}* Anda telah ditolak pada:\n${now}`, { parse_mode: 'Markdown' });
       return new Response('OK', { status: 200 });
     }
 
+    // /req
     if (text.startsWith('/req')) {
-  if (!isOwner) {
-    await this.sendMessage(chatId, '⛔ Anda tidak berwenang melihat daftar request.', { parse_mode: 'MarkdownV2' });
-    return new Response('OK', { status: 200 });
-  }
-  const all = this.globalBot.getAllRequests();
-  if (!all.length) {
-    await this.sendMessage(chatId, '📭 Belum ada request subdomain masuk.', { parse_mode: 'MarkdownV2' });
-  } else {
-    let lines = '';
-    all.forEach((r, i) => {
-      const domain = this.escapeMarkdownV2(r.domain);
-      const status = this.escapeMarkdownV2(r.status);
-      const requester = this.escapeMarkdownV2(r.requesterUsername);
-      const requesterId = this.escapeMarkdownV2(r.requesterId.toString());
-      const time = this.escapeMarkdownV2(r.requestTime);
+      if (!isOwner) {
+        await this.sendMessage(chatId, '⛔ Anda tidak berwenang melihat daftar request.', { parse_mode: 'MarkdownV2' });
+        return new Response('OK', { status: 200 });
+      }
+      const all = this.globalBot.getAllRequests();
+      if (!all.length) {
+        await this.sendMessage(chatId, '📭 Belum ada request subdomain masuk.', { parse_mode: 'MarkdownV2' });
+      } else {
+        let lines = '';
+        all.forEach((r, i) => {
+          const domain = this.escapeMarkdownV2(r.domain);
+          const status = this.escapeMarkdownV2(r.status);
+          const requester = this.escapeMarkdownV2(r.requesterUsername);
+          const requesterId = this.escapeMarkdownV2(r.requesterId.toString());
+          const time = this.escapeMarkdownV2(r.requestTime);
 
-      lines += `*${i + 1}\\. ${domain}* — _${status}_\n`;
-      lines += `   requester: @${requester} \\(ID: ${requesterId}\\)\n`;
-      lines += `   waktu: ${time}\n\n`;
-    });
-    const message = `📋 *Daftar Semua Request:*\n\n${lines}`;
-    await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
-  }
-  return new Response('OK', { status: 200 });
-}
-
+          lines += `*${i + 1}\\. ${domain}* — _${status}_\n`;
+          lines += `   requester: @${requester} \\(ID: ${requesterId}\\)\n`;
+          lines += `   waktu: ${time}\n\n`;
+        });
+        const message = `📋 *Daftar Semua Request:*\n\n${lines}`;
+        await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
+      }
+      return new Response('OK', { status: 200 });
+    }
 
     // fallback
     return new Response('OK', { status: 200 });
@@ -322,13 +379,20 @@ ${list}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`
 
   async sendMessage(chatId, text, options = {}) {
     const payload = { chat_id: chatId, text, ...options };
-    await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
   }
 
   async sendDocument(chatId, content, filename, mimeType) {
     const formData = new FormData();
     formData.append('chat_id', chatId.toString());
     formData.append('document', new Blob([content], { type: mimeType }), filename);
-    await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, { method: 'POST', body: formData });
+    await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
+      method: 'POST',
+      body: formData
+    });
   }
 }
