@@ -1,3 +1,5 @@
+import fetch from 'node-fetch';
+
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
 }
@@ -6,21 +8,19 @@ export class TelegramCekkuotaBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
-    this.waitingForNumbers = new Map(); // chatId => true/false, untuk tracking state input nomor
+    this.waitingForNumbers = new Map(); // chatId => true/false
   }
 
   async handleUpdate(update) {
     if (!update.message) return { status: 200, message: 'No message' };
 
     const chatId = update.message.chat.id;
-    const text = update.message.text || '';
+    const text = (update.message.text || '').trim();
 
-    // Jika sebelumnya bot menunggu input nomor dari user
     if (this.waitingForNumbers.get(chatId)) {
       this.waitingForNumbers.delete(chatId);
-      const inputText = text.trim();
-      // Validasi nomor, minimal diawali 0 dan 6-15 digit
-      const numbers = inputText.split(/[\s\n]+/).filter(num => /^0\d{6,15}$/.test(num));
+
+      const numbers = text.split(/[\s\n]+/).filter(num => /^0\d{6,15}$/.test(num));
 
       if (numbers.length === 0) {
         await this.sendMessage(chatId, "❌ Nomor tidak valid. Gunakan format yang benar (contoh: 081234567890).");
@@ -39,7 +39,6 @@ export class TelegramCekkuotaBot {
       return { status: 200 };
     }
 
-    // Handle command /cekkuota
     if (text.startsWith('/cekkuota')) {
       await this.sendMessage(chatId, "📌 Silakan masukkan nomor yang ingin dicek (bisa lebih dari satu, pisahkan dengan spasi atau baris baru):");
       this.waitingForNumbers.set(chatId, true);
