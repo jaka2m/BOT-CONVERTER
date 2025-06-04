@@ -190,10 +190,10 @@ return new Response('OK', { status: 200 });
           let st = 500;
           try { st = await this.globalBot.addSubdomain(cleanSd); } catch {}
           results.push(
-            st === 200
-              ? `✅ Domain *${full}* berhasil ditambahkan oleh owner.`
-              : `❌ Gagal menambahkan domain *${full}*, status: ${st}`
-          );
+  st === 200
+    ? '```✅-Wildcard\n' + full + ' berhasil ditambahkan oleh owner.```'
+    : `❌ Gagal menambahkan domain *${full}*, status: ${st}`
+);
         } else {
           try {
             if (await this.globalBot.findPendingRequest(cleanSd, chatId)) {
