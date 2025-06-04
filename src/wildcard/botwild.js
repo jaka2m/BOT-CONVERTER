@@ -199,24 +199,32 @@ export class TelegramWildcardBot {
 
     // /del <subdomain>
     if (text.startsWith('/del ')) {
-      if (!isOwner) {
-        await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
-        return new Response('OK', { status: 200 });
-      }
-      const sd = text.split(' ')[1]?.trim();
-      if (!sd) return new Response('OK', { status: 200 });
-      const full = `${sd}.${this.globalBot.rootDomain}`;
-      let st = 500;
-      try { st = await this.globalBot.deleteSubdomain(sd); } catch {}
-      const dm = this.escapeMarkdownV2(full);
-      const msgs = {
-        200: `\`\`\`Wildcard
+  if (!isOwner) {
+    await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
+    return new Response('OK', { status: 200 });
+  }
+  // Ambil subdomain (multi-level) langsung dari teks (semua setelah /del )
+  const sd = text.slice(5).trim();  // ambil substring setelah '/del '
+  if (!sd) return new Response('OK', { status: 200 });
+
+  // Gunakan sd langsung tanpa nambahin rootDomain
+  const full = sd;
+  
+  let st = 500;
+  try {
+    // Misal deleteSubdomain menerima full domain/subdomain
+    st = await this.globalBot.deleteSubdomain(full);
+  } catch {}
+
+  const dm = this.escapeMarkdownV2(full);
+  const msgs = {
+    200: `\`\`\`Wildcard
 ${dm} deleted successfully.\`\`\``,
-        404: `⚠️ Subdomain *${dm}* not found.`,
-      };
-      await this.sendMessage(chatId, msgs[st] || `❌ Gagal hapus *${dm}*, status: \`${st}\``, { parse_mode: 'MarkdownV2' });
-      return new Response('OK', { status: 200 });
-    }
+    404: `⚠️ Subdomain *${dm}* not found.`,
+  };
+  await this.sendMessage(chatId, msgs[st] || `❌ Gagal hapus *${dm}*, status: \`${st}\``, { parse_mode: 'MarkdownV2' });
+  return new Response('OK', { status: 200 });
+}
 
     // /list
     if (text.startsWith('/list')) {
