@@ -16,6 +16,7 @@ export class KonstantaGlobalbot {
     this.zoneID = zoneID;
     this.apiEmail = apiEmail;
     this.serviceName = serviceName;
+    this.waitingForDeleteList = this.waitingForDeleteList || new Set();
 
     this.headers = {
       'Authorization': `Bearer ${this.apiKey}`,
@@ -196,10 +197,6 @@ export class TelegramWildcardBot {
       }
       return new Response('OK', { status: 200 });
     }
-
-    // /del <subdomain>
-    // Map untuk menyimpan chatId yang sedang menunggu daftar subdomain hapus
-this.waitingForDeleteList = this.waitingForDeleteList || new Set();
 
 if (text === '/del') {
   if (!isOwner) {
