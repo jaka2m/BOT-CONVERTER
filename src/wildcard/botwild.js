@@ -5,6 +5,8 @@ export async function WildcardBot(link) {
   console.log("Bot link:", link);
 }
 
+const waitingForDeleteList = new Set();
+
 // ========================================
 // Global Constants & In-Memory Request Storage
 // ========================================
@@ -15,8 +17,7 @@ export class KonstantaGlobalbot {
     this.accountID = accountID;
     this.zoneID = zoneID;
     this.apiEmail = apiEmail;
-    this.serviceName = serviceName;
-    this.waitingForDeleteList = this.waitingForDeleteList || new Set();
+    this.serviceName = serviceName;    
 
     this.headers = {
       'Authorization': `Bearer ${this.apiKey}`,
@@ -196,52 +197,69 @@ export class TelegramWildcardBot {
         );
       }
       return new Response('OK', { status: 200 });
+  
+    // Jika user mengirim /del, mulai proses hapus banyak subdomain
+  if (text === '/del') {
+    if (!isOwner) {
+      await sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
+      return new Response('OK', { status: 200 });
     }
-
-if (text === '/del') {
-  if (!isOwner) {
-    await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
-    return new Response('OK', { status: 200 });
-  }
-  await this.sendMessage(chatId, 'Silakan kirim daftar subdomain yang ingin dihapus, satu per baris.');
-  this.waitingForDeleteList.add(chatId);
-  return new Response('OK', { status: 200 });
-}
-
-if (this.waitingForDeleteList.has(chatId)) {
-  // Pesan berikutnya setelah /del dianggap daftar subdomain hapus
-  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  if (lines.length === 0) {
-    await this.sendMessage(chatId, '❌ Tidak ada subdomain yang diterima, batal hapus.');
-    this.waitingForDeleteList.delete(chatId);
+    await sendMessage(chatId, 'Silakan kirim daftar subdomain yang ingin dihapus, satu per baris.\n\nKirim pesan kosong atau /cancel untuk membatalkan.');
+    waitingForDeleteList.add(chatId);
     return new Response('OK', { status: 200 });
   }
 
-  let results = [];
-  for (const sd of lines) {
-    let st = 500;
-    try {
-      st = await this.globalBot.deleteSubdomain(sd);
-    } catch {}
-    results.push({ domain: sd, status: st });
-  }
-  this.waitingForDeleteList.delete(chatId);
-
-  let msg = 'Hasil penghapusan subdomain:\n\n';
-  for (const r of results) {
-    const dm = this.escapeMarkdownV2(r.domain);
-    if (r.status === 200) {
-      msg += `✅ \`\`\`Wildcard\n${dm} deleted successfully.\`\`\`\n\n`;
-    } else if (r.status === 404) {
-      msg += `⚠️ Subdomain *${dm}* not found.\n\n`;
-    } else {
-      msg += `❌ Gagal hapus *${dm}*, status: \`${r.status}\`\n\n`;
+  // Jika user sedang dalam mode menunggu daftar subdomain
+  if (waitingForDeleteList.has(chatId)) {
+    // Batalkan proses jika user kirim /cancel atau pesan kosong
+    if (text === '/cancel' || text.length === 0) {
+      await sendMessage(chatId, '❌ Proses hapus dibatalkan.');
+      waitingForDeleteList.delete(chatId);
+      return new Response('OK', { status: 200 });
     }
+
+    // Proses hapus subdomain
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) {
+      await sendMessage(chatId, '❌ Tidak ada subdomain valid yang diterima, proses dibatalkan.');
+      waitingForDeleteList.delete(chatId);
+      return new Response('OK', { status: 200 });
+    }
+
+    let results = [];
+    for (const sd of lines) {
+      let st = 500;
+      try {
+        st = await globalBot.deleteSubdomain(sd);
+      } catch {}
+      results.push({ domain: sd, status: st });
+    }
+
+    waitingForDeleteList.delete(chatId);
+
+    let msg = 'Hasil penghapusan subdomain:\n\n';
+    for (const r of results) {
+      const dm = escapeMarkdownV2(r.domain);
+      if (r.status === 200) {
+        msg += `✅ \`\`\`Wildcard\n${dm} deleted successfully.\`\`\`\n\n`;
+      } else if (r.status === 404) {
+        msg += `⚠️ Subdomain *${dm}* not found.\n\n`;
+      } else {
+        msg += `❌ Gagal hapus *${dm}*, status: \`${r.status}\`\n\n`;
+      }
+    }
+
+    await sendMessage(chatId, msg, { parse_mode: 'MarkdownV2' });
+    return new Response('OK', { status: 200 });
   }
 
-  await this.sendMessage(chatId, msg, { parse_mode: 'MarkdownV2' });
+  // Kalau bukan /del dan bukan mode menunggu input, bot tidak merespon
   return new Response('OK', { status: 200 });
 }
+
+// Contoh fungsi sendMessage dan escapeMarkdownV2, sesuaikan dengan implementasimu
+async function sendMessage(chatId, text, options = {}) {
+  }
 
     // /list
     if (text.startsWith('/list')) {
