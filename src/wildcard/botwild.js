@@ -197,10 +197,10 @@ return new Response('OK', { status: 200 });
         } else {
           try {
             if (await this.globalBot.findPendingRequest(cleanSd, chatId)) {
-              results.push(`⚠️ Domain *${full}* sudah direquest dan menunggu approval.`);
-              continue;
-            }
-          } catch {}
+  results.push('```⚠️-Wildcard\n' + full + ' sudah direquest dan menunggu approval.\n```');
+  continue;
+}
+} catch {}
 
           // simpan request
           this.globalBot.saveDomainRequest({
