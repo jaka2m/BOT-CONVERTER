@@ -15,13 +15,13 @@ export class TelegramCekkuotaBot {
     const text = update.message.text?.trim() || '';
 
     if (text.startsWith('/cekkuota')) {
-      await this.sendMessage(chatId, '📌 Silakan kirim nomor yang ingin dicek (format: 081234567890 atau beberapa nomor dipisah spasi/baris baru).');
+      await this.sendMessage(chatId, '📌 Kirim nomor (format: 081234567890). Bisa beberapa, pisahkan spasi atau baris baru.');
       return new Response('OK', { status: 200 });
     }
 
     const numbers = text.split(/[\s\n]+/).filter(num => /^0\d{6,15}$/.test(num));
     if (numbers.length === 0) {
-      await this.sendMessage(chatId, '❌ Nomor tidak valid. Gunakan format yang benar.');
+      await this.sendMessage(chatId, '❌ Nomor tidak valid. Gunakan format angka 08xxxxxxxxxx.');
       return new Response('OK', { status: 200 });
     }
 
@@ -32,7 +32,7 @@ export class TelegramCekkuotaBot {
         const result = await this.cekkuota(number);
         await this.sendMessage(chatId, result);
       } catch (err) {
-        await this.sendMessage(chatId, `❌ Gagal memproses ${number}: ${err.message}`);
+        await this.sendMessage(chatId, `❌ Gagal memproses ${number}:\n${err.message}`);
       }
     }
 
@@ -49,69 +49,58 @@ export class TelegramCekkuotaBot {
     };
 
     const response = await fetch(url, { headers });
-    const data = await response.json();
+    const json = await response.json();
 
-    const dataSp = data?.data?.data_sp;
-    if (!dataSp) {
-      return `❌ Gagal mendapatkan data untuk *${number}*.`;
-    }
+    const d = json?.data?.data_sp;
+    if (!d) return `❌ Gagal ambil data dari nomor *${number}*.`;
 
-    let infoPelanggan = `
-📌 *Info Pelanggan:*
-🔢 *Nomor:* ${number}
-🏷️ *Provider:* ${dataSp.prefix?.value || '-'}
-⌛️ *Umur Kartu:* ${dataSp.active_card?.value || '-'}
-📶 *Status Simcard:* ${dataSp.status_4g?.value || '-'}
-📋 *Status Dukcapil:* ${dataSp.dukcapil?.value || '-'}
-⏳ *Masa Aktif:* ${dataSp.active_period?.value || '-'}
-⚠️ *Masa Tenggang:* ${dataSp.grace_period?.value || '-'}`;
+    let hasil = `📄 *HASIL CEK:*\n\n`;
+    hasil += `📱 *Nomor:* ${number}\n`;
+    hasil += `🏷️ *Provider:* ${d.prefix?.value || '-'}\n`;
+    hasil += `📶 *Status 4G:* ${d.status_4g?.value || '-'}\n`;
+    hasil += `🆔 *Dukcapil:* ${d.dukcapil?.value || '-'}\n`;
+    hasil += `📅 *Umur Kartu:* ${d.active_card?.value || '-'}\n`;
+    hasil += `📆 *Masa Aktif:* ${d.active_period?.value || '-'}\n`;
+    hasil += `⛔ *Tenggang:* ${d.grace_period?.value || '-'}\n\n`;
 
-    let infoPaket = `\n\n📦 *Paket Aktif:*\n`;
-
-    if (dataSp.quotas?.success && Array.isArray(dataSp.quotas.value)) {
-      for (const paketGroup of dataSp.quotas.value) {
-        for (const paket of paketGroup) {
+    if (Array.isArray(d.quotas?.value)) {
+      for (const group of d.quotas.value) {
+        for (const paket of group) {
           const pkg = paket.packages;
-          const benefits = paket.benefits;
+          hasil += `📦 *Paket:* ${pkg.name}\n`;
+          hasil += `📅 *Aktif s.d:* ${pkg.expDate.replace('T', ' ')}\n`;
 
-          infoPaket += `
-🎁 *Nama Paket:* ${pkg.name}
-📅 *Masa Aktif:* ${pkg.expDate}`;
-
-          if (benefits && benefits.length > 0) {
-            for (const benefit of benefits) {
-              infoPaket += `
-  ─ 📌 *Benefit:* ${benefit.bname}
-     🧧 *Tipe:* ${benefit.type}
-     💾 *Kuota:* ${benefit.quota}
-     ✅ *Sisa:* ${benefit.remaining}`;
+          if (Array.isArray(paket.benefits) && paket.benefits.length > 0) {
+            for (const b of paket.benefits) {
+              hasil += `  └ 🎁 *${b.bname}*\n`;
+              hasil += `     • Tipe: ${b.type}\n`;
+              hasil += `     • Kuota: ${b.quota}\n`;
+              hasil += `     • Sisa: ${b.remaining}\n`;
             }
           } else {
-            infoPaket += `
-  🚫 Tidak ada detail benefit.`;
+            hasil += `  🚫 Tidak ada benefit.\n`;
           }
 
-          infoPaket += `\n-----------------------------\n`;
+          hasil += `-----------------------------\n`;
         }
       }
     } else {
-      infoPaket += `❌ Tidak ada paket aktif.`;
+      hasil += `❌ Tidak ada paket aktif.\n`;
     }
 
-    return infoPelanggan + infoPaket;
+    return hasil;
   }
 
   async sendMessage(chatId, text) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const response = await fetch(url, {
+    return await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
         text,
-        parse_mode: "Markdown"
+        parse_mode: 'Markdown'
       })
     });
-    return response.json();
   }
 }
