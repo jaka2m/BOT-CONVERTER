@@ -307,19 +307,19 @@ support.zoom.us
     if (text.startsWith('/list')) {
   let domains = [];
   try { domains = await this.globalBot.getDomainList(); } catch {}
+
   if (!domains.length) {
     await this.sendMessage(chatId, '_No subdomains registered yet._', { parse_mode: 'MarkdownV2' });
   } else {
-    // Indentasi spasi untuk "rata kanan" kasar
-    const indent = '               '; // 15 spasi
+    const indent = ' '.repeat(12); // Kasar kanan
     const listText = domains.map((d, i) =>
-      indent + `${i + 1}\\. _${this.escapeMarkdownV2(d)}_`
+      `${indent}\`${i + 1}. ${this.escapeMarkdownV2(d)}\``
     ).join('\n');
-    
-    const totalText = `\n\nTotal: _${domains.length}_ subdomain${domains.length > 1 ? 's' : ''}`;
-    
+
+    const totalText = `\n\n_Total: ${domains.length} subdomain${domains.length > 1 ? 's' : ''}_`;
+
     await this.sendMessage(chatId,
-      `\`\`\`List-Wildcard\`\`\`\n${listText}${totalText}`,
+      `📋 *List-Wildcard:*\n${listText}${totalText}`,
       { parse_mode: 'MarkdownV2' }
     );
 
