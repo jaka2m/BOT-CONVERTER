@@ -6,7 +6,7 @@ export class TelegramCekkuotaBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
-    this.waitingForNumbers = new Map(); // chatId => true/false
+    this.waitingForNumbers = new Map(); // chatId => boolean
   }
 
   async handleUpdate(update) {
@@ -18,7 +18,9 @@ export class TelegramCekkuotaBot {
     if (this.waitingForNumbers.get(chatId)) {
       this.waitingForNumbers.delete(chatId);
 
-      const numbers = text.split(/[\s\n]+/).filter(num => /^0\d{6,15}$/.test(num));
+      const numbers = text
+        .split(/[\s\n]+/)
+        .filter(num => /^0\d{6,15}$/.test(num));
 
       if (numbers.length === 0) {
         await this.sendMessage(chatId, "❌ Nomor tidak valid. Gunakan format yang benar (contoh: 081234567890).");
@@ -58,8 +60,8 @@ export class TelegramCekkuotaBot {
 
       const response = await fetch(url, { headers });
       const data = await response.json();
-
       const dataSp = data?.data?.data_sp;
+
       if (!dataSp) {
         return `❌ Gagal mendapatkan data untuk *${number}*.`;
       }
@@ -86,7 +88,7 @@ export class TelegramCekkuotaBot {
 🎁 *Nama Paket:* ${pkg.name}
 📅 *Masa Aktif:* ${pkg.expDate}`;
 
-            if (benefits && benefits.length > 0) {
+            if (benefits?.length > 0) {
               for (const benefit of benefits) {
                 infoPaket += `
   ─ 📌 *Benefit:* ${benefit.bname}
@@ -95,8 +97,7 @@ export class TelegramCekkuotaBot {
      ✅ *Sisa:* ${benefit.remaining}`;
               }
             } else {
-              infoPaket += `
-  🚫 Tidak ada detail benefit.`;
+              infoPaket += `\n  🚫 Tidak ada detail benefit.`;
             }
 
             infoPaket += `\n-----------------------------\n`;
@@ -120,7 +121,7 @@ export class TelegramCekkuotaBot {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: text,
+        text,
         parse_mode: "Markdown"
       })
     });
@@ -135,10 +136,31 @@ export class TelegramCekkuotaBot {
       body: JSON.stringify({
         chat_id: chatId,
         message_id: messageId,
-        text: text,
+        text,
         parse_mode: "Markdown"
       })
     });
     return response.json();
+  }
+
+  async startPolling() {
+    console.log("Bot is polling for updates...");
+    let offset = 0;
+
+    while (true) {
+      try {
+        const res = await fetch(`${this.apiUrl}/bot${this.token}/getUpdates?offset=${offset}&timeout=30`);
+        const json = await res.json();
+
+        if (json.ok && Array.isArray(json.result)) {
+          for (const update of json.result) {
+            offset = update.update_id + 1;
+            await this.handleUpdate(update);
+          }
+        }
+      } catch (error) {
+        console.error("Polling error:", error);
+      }
+    }
   }
 }
