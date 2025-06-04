@@ -305,25 +305,23 @@ support.zoom.us
     // 3) /list
     // ================================
     if (text.startsWith('/list')) {
-  let domains = [];
-  try { domains = await this.globalBot.getDomainList(); } catch {}
-  if (!domains.length) {
-    await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
-  } else {
-    const listText = domains.map((d,i) =>
-      `_${this.escapeMarkdownV2(`${i+1}. ${d}`)}_`  // italic kanan
-    ).join('\n');
-
-    await this.sendMessage(chatId,
-      `*List-Wildcard:*\n\n${listText}\n\nTotal: *${domains.length}* subdomain${domains.length > 1 ? 's' : ''}`,
-      { parse_mode: 'MarkdownV2' }
-    );
-
-    const fileContent = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
-    await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
-  }
-  return new Response('OK', { status: 200 });
-}
+      let domains = [];
+      try { domains = await this.globalBot.getDomainList(); } catch {}
+      if (!domains.length) {
+        await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
+      } else {
+        const listText = domains.map((d,i) =>
+          `${i+1}\\. ${this.escapeMarkdownV2(d)}`
+        ).join('\n');
+        await this.sendMessage(chatId,
+          `\`\`\`List-Wildcard\n${listText}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`,
+          { parse_mode: 'MarkdownV2' }
+        );
+        const fileContent = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
+        await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
+      }
+      return new Response('OK', { status: 200 });
+    }
 
     // ================================
     // 4) /approve <subdomain>
@@ -409,9 +407,9 @@ await this.sendMessage(req.requesterId,
           lines += `   requester: @${requester} \\(ID: ${requesterId}\\)\n`;
           lines += `   waktu: ${time}\n\n`;
         });
-        const message = `📋 *Daftar Semua Request:*\n\n\`\`\`\n${lines}\n\`\`\``;
-await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
-}
+        const message = `📋 *Daftar Semua Request:*\n\n${lines}`;
+        await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
+      }
       return new Response('OK', { status: 200 });
     }
 
