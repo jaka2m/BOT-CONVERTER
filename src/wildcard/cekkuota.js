@@ -48,17 +48,35 @@ export class TelegramCekkuotaBot {
       'Content-Type': 'application/x-www-form-urlencoded'
     };
 
-    const response = await fetch(url, { headers });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // timeout 15 detik
 
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text();
-      throw new Error(`Respons bukan JSON:\n${text.slice(0, 100)}...`);
+    let response;
+    try {
+      response = await fetch(url, { headers, signal: controller.signal });
+      clearTimeout(timeoutId);
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        throw new Error('Request timeout (15 detik)');
+      }
+      throw err;
     }
 
-    const data = await response.json();
-    const dataSp = data?.data?.data_sp;
+    // Cek tipe konten
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      throw new Error(`Respons bukan JSON:\n${text.slice(0, 200)}`);
+    }
 
+    let data;
+    try {
+      data = await response.json();
+    } catch (err) {
+      throw new Error(`Gagal parse JSON: ${err.message}`);
+    }
+
+    const dataSp = data?.data?.data_sp;
     if (!dataSp) {
       return `❌ Gagal mendapatkan data untuk *${number}*.`;
     }
