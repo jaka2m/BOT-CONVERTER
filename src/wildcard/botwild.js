@@ -198,32 +198,56 @@ export class TelegramWildcardBot {
     }
 
     // /del <subdomain>
-    if (text.startsWith('/del ')) {
+    // Map untuk menyimpan chatId yang sedang menunggu daftar subdomain hapus
+this.waitingForDeleteList = this.waitingForDeleteList || new Set();
+
+if (text === '/del') {
   if (!isOwner) {
     await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
     return new Response('OK', { status: 200 });
   }
-  // Ambil subdomain (multi-level) langsung dari teks (semua setelah /del )
-  const sd = text.slice(5).trim();  // ambil substring setelah '/del '
-  if (!sd) return new Response('OK', { status: 200 });
-
-  // Gunakan sd langsung tanpa nambahin rootDomain
-  const full = sd;
-  
-  let st = 500;
-  try {
-    // Misal deleteSubdomain menerima full domain/subdomain
-    st = await this.globalBot.deleteSubdomain(full);
-  } catch {}
-
-  const dm = this.escapeMarkdownV2(full);
-  const msgs = {
-    200: `\`\`\`Wildcard
-${dm} deleted successfully.\`\`\``,
-    404: `⚠️ Subdomain *${dm}* not found.`,
-  };
-  await this.sendMessage(chatId, msgs[st] || `❌ Gagal hapus *${dm}*, status: \`${st}\``, { parse_mode: 'MarkdownV2' });
+  await this.sendMessage(chatId, 'Silakan kirim daftar subdomain yang ingin dihapus, satu per baris.');
+  this.waitingForDeleteList.add(chatId);
   return new Response('OK', { status: 200 });
+}
+
+if (this.waitingForDeleteList.has(chatId)) {
+  // Pesan berikutnya setelah /del dianggap daftar subdomain hapus
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length === 0) {
+    await this.sendMessage(chatId, '❌ Tidak ada subdomain yang diterima, batal hapus.');
+    this.waitingForDeleteList.delete(chatId);
+    return new Response('OK', { status: 200 });
+  }
+
+  let results = [];
+  for (const sd of lines) {
+    let st = 500;
+    try {
+      st = await this.globalBot.deleteSubdomain(sd);
+    } catch {}
+    results.push({ domain: sd, status: st });
+  }
+  this.waitingForDeleteList.delete(chatId);
+
+  let msg = 'Hasil penghapusan subdomain:\n\n';
+  for (const r of results) {
+    const dm = this.escapeMarkdownV2(r.domain);
+    if (r.status === 200) {
+      msg += `✅ \`\`\`Wildcard\n${dm} deleted successfully.\`\`\`\n\n`;
+    } else if (r.status === 404) {
+      msg += `⚠️ Subdomain *${dm}* not found.\n\n`;
+    } else {
+      msg += `❌ Gagal hapus *${dm}*, status: \`${r.status}\`\n\n`;
+    }
+  }
+
+  await this.sendMessage(chatId, msg, { parse_mode: 'MarkdownV2' });
+  return new Response('OK', { status: 200 });
+}
+
+// Kalau bukan /del dan bukan sedang menunggu input hapus, bot diam, gak balas apapun
+return new Response('OK', { status: 200 });
 }
 
     // /list
