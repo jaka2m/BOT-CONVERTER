@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
 }
