@@ -173,8 +173,12 @@ export class TelegramWildcardBot {
       }
 
       if (subdomains.length === 0) {
-        await this.sendMessage(chatId, '⚠️ Mohon sertakan satu atau lebih subdomain setelah /add.');
-        return new Response('OK', { status: 200 });
+        await this.sendMessage(
+  chatId,
+  '⚠️ ```\nMohon sertakan satu atau lebih subdomain setelah /add.\n```',
+  { parse_mode: 'Markdown' }
+);
+return new Response('OK', { status: 200 });
       }
 
       const results = [];
