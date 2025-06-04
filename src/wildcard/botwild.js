@@ -231,19 +231,20 @@ return new Response('OK', { status: 200 });
     }
 
     // ================================
-    // 2) /del – support single & multi
-    // ================================
-    if (text.startsWith('/del')) {
-      // handle “/del” tanpa argumen → minta daftar
-      if (text === '/del') {
-        if (!isOwner) {
-          await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
-          return new Response('OK', { status: 200 });
-        }
-        this.awaitingDeleteList[chatId] = true;
-        await this.sendMessage(
-  chatId,
-  `\`\`\`Contoh
+// 2) /del – support single & multi (admin only)
+// ================================
+if (text.startsWith('/del')) {
+  if (!isOwner) {
+    await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
+    return new Response('OK', { status: 200 });
+  }
+
+  // handle “/del” tanpa argumen → minta daftar
+  if (text === '/del') {
+    this.awaitingDeleteList[chatId] = true;
+    await this.sendMessage(
+      chatId,
+      `\`\`\`Contoh
 📝 Silakan kirim daftar subdomain yang ingin dihapus (satu per baris).
 
 /del
@@ -251,55 +252,55 @@ ava.game.naver.com
 zaintest.vuclip.com
 support.zoom.us
 \`\`\``,
-  { parse_mode: 'MarkdownV2' }
-);
-        return new Response('OK', { status: 200 });
-      }
+      { parse_mode: 'MarkdownV2' }
+    );
+    return new Response('OK', { status: 200 });
+  }
 
-      // handle /del abc def ghi  atau multiline
-      const lines     = text.split('\n').map(l => l.trim()).filter(Boolean);
-      const firstLine = lines[0];
-      const restLines = lines.slice(1);
+  // handle /del abc def ghi  atau multiline
+  const lines     = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const firstLine = lines[0];
+  const restLines = lines.slice(1);
 
-      let toDelete = [];
-      // mode: /del abc def ghi
-      if (firstLine.includes(' ') && restLines.length === 0) {
-        toDelete = firstLine.split(' ').slice(1).map(s => s.trim()).filter(Boolean);
-      }
-      // mode:
-      // /del
-      // abc
-      // def
-      else if (restLines.length > 0) {
-        toDelete = restLines;
-      }
+  let toDelete = [];
+  // mode: /del abc def ghi
+  if (firstLine.includes(' ') && restLines.length === 0) {
+    toDelete = firstLine.split(' ').slice(1).map(s => s.trim()).filter(Boolean);
+  }
+  // mode:
+  // /del
+  // abc
+  // def
+  else if (restLines.length > 0) {
+    toDelete = restLines;
+  }
 
-      if (toDelete.length === 0) {
-        await this.sendMessage(chatId, '⚠️ Mohon sertakan satu atau lebih subdomain setelah /del.');
-        return new Response('OK', { status: 200 });
-      }
+  if (toDelete.length === 0) {
+    await this.sendMessage(chatId, '⚠️ Mohon sertakan satu atau lebih subdomain setelah /del.');
+    return new Response('OK', { status: 200 });
+  }
 
-      const results = [];
-      for (const raw of toDelete) {
-        let d = raw.toLowerCase().trim();
-        let sd;
-        if (d.endsWith(`.${this.globalBot.rootDomain}`)) {
-          sd = d.slice(0, d.lastIndexOf(`.${this.globalBot.rootDomain}`));
-        } else {
-          sd = d;
-        }
-        const full = `${sd}.${this.globalBot.rootDomain}`;
-
-        let st = 500;
-        try { st = await this.globalBot.deleteSubdomain(sd); } catch {}
-        if      (st === 200) results.push(`\`\`\`Wildcard\n${full}deleted successfully.\`\`\``);
-        else if (st === 404) results.push(`⚠️ Domain *${full}* tidak ditemukan.`);
-        else                 results.push(`❌ Gagal menghapus domain *${full}*, status: ${st}.`);
-      }
-
-      await this.sendMessage(chatId, results.join('\n\n'), { parse_mode: 'Markdown' });
-      return new Response('OK', { status: 200 });
+  const results = [];
+  for (const raw of toDelete) {
+    let d = raw.toLowerCase().trim();
+    let sd;
+    if (d.endsWith(`.${this.globalBot.rootDomain}`)) {
+      sd = d.slice(0, d.lastIndexOf(`.${this.globalBot.rootDomain}`));
+    } else {
+      sd = d;
     }
+    const full = `${sd}.${this.globalBot.rootDomain}`;
+
+    let st = 500;
+    try { st = await this.globalBot.deleteSubdomain(sd); } catch {}
+    if      (st === 200) results.push(`\`\`\`Wildcard\n${full}deleted successfully.\`\`\``);
+    else if (st === 404) results.push(`⚠️ Domain *${full}* tidak ditemukan.`);
+    else                 results.push(`❌ Gagal menghapus domain *${full}*, status: ${st}.`);
+  }
+
+  await this.sendMessage(chatId, results.join('\n\n'), { parse_mode: 'Markdown' });
+  return new Response('OK', { status: 200 });
+}
 
     // ================================
     // 3) /list
