@@ -1,84 +1,29 @@
-export async function Cekkuota(link) {
-  console.log("cek kuota:", link);
-}
-
 export class TelegramCekkuotaBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
-    this.bot = new TelegramBot(token, { polling: true });
-
-    this.bot.onText(/\/cekkuota/, (msg) => this.handleCekKuotaCommand(msg));
   }
 
-  async handleCekKuotaCommand(msg) {
-    const chatId = msg.chat.id;
-    const messageThreadId = msg.message_thread_id;
-
-    // Minta input nomor dari user
-    await this.bot.sendMessage(chatId, "📌 Silakan masukkan nomor yang ingin dicek (bisa lebih dari satu, pisahkan dengan spasi atau baris baru):", {
-      message_thread_id: messageThreadId
+  async sendMessage(chatId, text, options = {}) {
+    const payload = { chat_id: chatId, text, ...options };
+    await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
-
-    // Tunggu input berikutnya sekali saja
-    const response = await this.waitForNextMessage(chatId);
-
-    if (!response || !response.text) {
-      return this.bot.sendMessage(chatId, "❌ Tidak menerima input nomor.", { message_thread_id: messageThreadId });
-    }
-
-    const inputText = response.text.trim();
-    const numbers = inputText.split(/[\s.\n]+/).filter(num => /^0\d{6,15}$/.test(num));
-
-    if (numbers.length === 0) {
-      return this.bot.sendMessage(chatId, "❌ Nomor tidak valid. Gunakan format yang benar (contoh: 081234567890).", {
-        message_thread_id: messageThreadId
-      });
-    }
-
-    // Kirim pesan loading
-    const loadingMessage = await this.bot.sendMessage(chatId, `⏳ Sedang memproses ${numbers.length} nomor, harap tunggu...`, {
-      message_thread_id: messageThreadId
-    });
-
-    let hasilAkhir = "";
-    for (const number of numbers) {
-      const hasilCek = await this.cekkuota(number);
-      hasilAkhir += `${hasilCek}\n\n`;
-    }
-
-    try {
-      // Edit pesan loading dengan hasil
-      await this.bot.editMessageText(hasilAkhir.trim(), {
-        chat_id: chatId,
-        message_id: loadingMessage.message_id,
-        parse_mode: "Markdown",
-        message_thread_id: messageThreadId
-      });
-    } catch (error) {
-      // Jika gagal edit pesan, kirim pesan baru
-      await this.bot.sendMessage(chatId, hasilAkhir.trim(), {
-        parse_mode: "Markdown",
-        message_thread_id: messageThreadId
-      });
-    }
   }
 
-  waitForNextMessage(chatId, timeout = 60000) {
-    return new Promise((resolve) => {
-      const onMessage = (msg) => {
-        if (msg.chat.id === chatId) {
-          this.bot.removeListener('message', onMessage);
-          clearTimeout(timer);
-          resolve(msg);
-        }
-      };
-      this.bot.on('message', onMessage);
-
-      const timer = setTimeout(() => {
-        this.bot.removeListener('message', onMessage);
-        resolve(null);
-      }, timeout);
+  async editMessage(chatId, messageId, text, options = {}) {
+    const payload = {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      ...options
+    };
+    await fetch(`${this.apiUrl}/bot${this.token}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
   }
 
@@ -95,8 +40,8 @@ export class TelegramCekkuotaBot {
 
       const response = await fetch(url, { headers });
       const data = await response.json();
-
       const dataSp = data?.data?.data_sp;
+
       if (!dataSp) {
         return `❌ Gagal mendapatkan data untuk *${number}*.`;
       }
@@ -132,8 +77,7 @@ export class TelegramCekkuotaBot {
      ✅ *Sisa:* ${benefit.remaining}`;
               }
             } else {
-              infoPaket += `
-  🚫 Tidak ada detail benefit.`;
+              infoPaket += `\n  🚫 Tidak ada detail benefit.`;
             }
 
             infoPaket += `\n-----------------------------\n`;
@@ -148,5 +92,55 @@ export class TelegramCekkuotaBot {
       console.error("Gagal cek kuota:", error);
       return `❌ *Terjadi kesalahan saat memeriksa nomor ${number}.*`;
     }
+  }
+
+  async handleCommand(bot, msg) {
+    const text = msg.text || '';
+    if (!text.startsWith('/cekkuota')) return;
+
+    const chatId = msg.chat.id;
+    const threadId = msg.message_thread_id;
+
+    await bot.sendMessage(chatId, "📌 Silakan masukkan nomor yang ingin dicek (bisa lebih dari satu, pisahkan dengan spasi atau baris baru):", {
+      message_thread_id: threadId
+    });
+
+    bot.once("message", async (response) => {
+      const userChatId = response.chat.id;
+      const userThreadId = response.message_thread_id;
+      const inputText = response.text.trim();
+
+      const numbers = inputText.split(/[\s.\n]+/).filter(num => /^0\d{6,15}$/.test(num));
+
+      if (numbers.length === 0) {
+        return bot.sendMessage(userChatId, "❌ Nomor tidak valid. Gunakan format yang benar (contoh: 081234567890).", {
+          message_thread_id: userThreadId
+        });
+      }
+
+      const loadingMessage = await bot.sendMessage(userChatId, `⏳ Sedang memproses ${numbers.length} nomor, harap tunggu...`, {
+        message_thread_id: userThreadId
+      });
+
+      let hasilAkhir = "";
+      for (const number of numbers) {
+        const hasil = await this.cekkuota(number);
+        hasilAkhir += `${hasil}\n\n`;
+      }
+
+      try {
+        await bot.editMessageText(hasilAkhir.trim(), {
+          chat_id: userChatId,
+          message_id: loadingMessage.message_id,
+          parse_mode: "Markdown",
+          message_thread_id: userThreadId
+        });
+      } catch {
+        await bot.sendMessage(userChatId, hasilAkhir.trim(), {
+          parse_mode: "Markdown",
+          message_thread_id: userThreadId
+        });
+      }
+    });
   }
 }
