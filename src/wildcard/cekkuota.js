@@ -1,3 +1,5 @@
+import fetch from 'node-fetch';
+
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
 }
@@ -19,6 +21,7 @@ export class TelegramCekkuotaBot {
     if (this.waitingForNumbers.get(chatId)) {
       this.waitingForNumbers.delete(chatId);
       const inputText = text.trim();
+      // Validasi nomor, minimal diawali 0 dan 6-15 digit
       const numbers = inputText.split(/[\s\n]+/).filter(num => /^0\d{6,15}$/.test(num));
 
       if (numbers.length === 0) {
@@ -34,7 +37,6 @@ export class TelegramCekkuotaBot {
         hasilAkhir += `${hasilCek}\n\n`;
       }
 
-      // Edit pesan loading jadi hasil (Telegram editMessageText perlu chat_id dan message_id)
       await this.editMessageText(chatId, loadingMsg.result.message_id, hasilAkhir.trim());
       return { status: 200 };
     }
