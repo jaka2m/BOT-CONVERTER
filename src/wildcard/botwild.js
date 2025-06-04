@@ -305,28 +305,23 @@ support.zoom.us
     // 3) /list
     // ================================
     if (text.startsWith('/list')) {
-  let domains = [];
-  try { domains = await this.globalBot.getDomainList(); } catch {}
-  if (!domains.length) {
-    await this.sendMessage(chatId, '_No subdomains registered yet._', { parse_mode: 'MarkdownV2' });
-  } else {
-    const indent = '               '; // 15 spasi
-    const listText = domains.map((d, i) =>
-      indent + `${i + 1}\\. _${this.escapeMarkdownV2(d)}_`
-    ).join('\n');
-    
-    const totalText = `\n\nTotal: _${domains.length}_ subdomain${domains.length > 1 ? 's' : ''}`;
-    
-    await this.sendMessage(chatId,
-      `List-Wildcard\n${listText}${totalText}`,
-      { parse_mode: 'MarkdownV2' }
-    );
-
-    const fileContent = domains.map((d, i) => `${i + 1}. ${d}`).join('\n');
-    await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
-  }
-  return new Response('OK', { status: 200 });
-}
+      let domains = [];
+      try { domains = await this.globalBot.getDomainList(); } catch {}
+      if (!domains.length) {
+        await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
+      } else {
+        const listText = domains.map((d,i) =>
+          `${i+1}\\. ${this.escapeMarkdownV2(d)}`
+        ).join('\n');
+        await this.sendMessage(chatId,
+          `\`\`\`List-Wildcard\n${listText}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`,
+          { parse_mode: 'MarkdownV2' }
+        );
+        const fileContent = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
+        await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
+      }
+      return new Response('OK', { status: 200 });
+    }
 
     // ================================
     // 4) /approve <subdomain>
