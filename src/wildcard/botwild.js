@@ -239,7 +239,7 @@ export class TelegramWildcardBot {
         this.awaitingDeleteList[chatId] = true;
         await this.sendMessage(chatId,
           '📝 Silakan kirim daftar subdomain yang ingin dihapus (satu per baris).\n\n' +
-          'Contoh:\nava.game.naver.com\nzaintest.vuclip.com\nsupport.zoom.us'
+          'Contoh:\n/del\nava.game.naver.com\nzaintest.vuclip.com\nsupport.zoom.us'
         );
         return new Response('OK', { status: 200 });
       }
@@ -280,7 +280,7 @@ export class TelegramWildcardBot {
 
         let st = 500;
         try { st = await this.globalBot.deleteSubdomain(sd); } catch {}
-        if      (st === 200) results.push(`✅ Domain *${full}* dihapus.`);
+        if      (st === 200) results.push(`\`\`\`Wildcard\n${full}deleted successfully.\`\`\``);
         else if (st === 404) results.push(`⚠️ Domain *${full}* tidak ditemukan.`);
         else                 results.push(`❌ Gagal menghapus domain *${full}*, status: ${st}.`);
       }
