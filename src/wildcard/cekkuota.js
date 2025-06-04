@@ -6,67 +6,80 @@ export class TelegramCekkuotaBot {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
+    this.bot = new TelegramBot(token, { polling: true });
+
+    this.bot.onText(/\/cekkuota/, (msg) => this.handleCekKuotaCommand(msg));
   }
 
-  async handleUpdate(update) {
-    if (update.callback_query) {
-      await this.handleCallbackQuery(update.callback_query);
-      return new Response('OK', { status: 200 });
+  async handleCekKuotaCommand(msg) {
+    const chatId = msg.chat.id;
+    const messageThreadId = msg.message_thread_id;
+
+    // Minta input nomor dari user
+    await this.bot.sendMessage(chatId, "📌 Silakan masukkan nomor yang ingin dicek (bisa lebih dari satu, pisahkan dengan spasi atau baris baru):", {
+      message_thread_id: messageThreadId
+    });
+
+    // Tunggu input berikutnya sekali saja
+    const response = await this.waitForNextMessage(chatId);
+
+    if (!response || !response.text) {
+      return this.bot.sendMessage(chatId, "❌ Tidak menerima input nomor.", { message_thread_id: messageThreadId });
     }
 
-    if (!update.message) return new Response('OK', { status: 200 });
+    const inputText = response.text.trim();
+    const numbers = inputText.split(/[\s.\n]+/).filter(num => /^0\d{6,15}$/.test(num));
 
-    const chatId = update.message.chat.id;
-    const text = update.message.text || '';
-    const messageThreadId = update.message.message_thread_id;
-
-    if (text.startsWith('/cekkuota')) {
-      // Minta input nomor dari user
-      await this.sendMessage(chatId, "📌 Silakan masukkan nomor yang ingin dicek (bisa lebih dari satu, pisahkan dengan spasi atau baris baru):", {
+    if (numbers.length === 0) {
+      return this.bot.sendMessage(chatId, "❌ Nomor tidak valid. Gunakan format yang benar (contoh: 081234567890).", {
         message_thread_id: messageThreadId
       });
-
-      // Tunggu input berikutnya sekali saja
-      this.waitingForInput = true; // Flag manual jika diperlukan
     }
 
-    // Tangani input user setelah perintah /cekkuota
-    if (this.waitingForInput && text.match(/^0\d{6,15}/)) {
-      this.waitingForInput = false;
+    // Kirim pesan loading
+    const loadingMessage = await this.bot.sendMessage(chatId, `⏳ Sedang memproses ${numbers.length} nomor, harap tunggu...`, {
+      message_thread_id: messageThreadId
+    });
 
-      const inputText = text.trim();
-      const numbers = inputText.split(/[\s.\n]+/).filter(num => /^0\d{6,15}$/.test(num));
+    let hasilAkhir = "";
+    for (const number of numbers) {
+      const hasilCek = await this.cekkuota(number);
+      hasilAkhir += `${hasilCek}\n\n`;
+    }
 
-      if (numbers.length === 0) {
-        return await this.sendMessage(chatId, "❌ Nomor tidak valid. Gunakan format yang benar (contoh: 081234567890).", {
-          message_thread_id: messageThreadId
-        });
-      }
-
-      const loadingMessage = await this.sendMessage(chatId, `⏳ Sedang memproses ${numbers.length} nomor, harap tunggu...`, {
+    try {
+      // Edit pesan loading dengan hasil
+      await this.bot.editMessageText(hasilAkhir.trim(), {
+        chat_id: chatId,
+        message_id: loadingMessage.message_id,
+        parse_mode: "Markdown",
         message_thread_id: messageThreadId
       });
-
-      let hasilAkhir = "";
-      for (const number of numbers) {
-        const hasilCek = await this.cekkuota(number);
-        hasilAkhir += `${hasilCek}\n\n`;
-      }
-
-      try {
-        await this.editMessageText(chatId, loadingMessage.message_id, hasilAkhir.trim(), {
-          parse_mode: "Markdown",
-          message_thread_id: messageThreadId
-        });
-      } catch (error) {
-        await this.sendMessage(chatId, hasilAkhir.trim(), {
-          parse_mode: "Markdown",
-          message_thread_id: messageThreadId
-        });
-      }
+    } catch (error) {
+      // Jika gagal edit pesan, kirim pesan baru
+      await this.bot.sendMessage(chatId, hasilAkhir.trim(), {
+        parse_mode: "Markdown",
+        message_thread_id: messageThreadId
+      });
     }
+  }
 
-    return new Response('OK', { status: 200 });
+  waitForNextMessage(chatId, timeout = 60000) {
+    return new Promise((resolve) => {
+      const onMessage = (msg) => {
+        if (msg.chat.id === chatId) {
+          this.bot.removeListener('message', onMessage);
+          clearTimeout(timer);
+          resolve(msg);
+        }
+      };
+      this.bot.on('message', onMessage);
+
+      const timer = setTimeout(() => {
+        this.bot.removeListener('message', onMessage);
+        resolve(null);
+      }, timeout);
+    });
   }
 
   async cekkuota(number) {
@@ -135,39 +148,5 @@ export class TelegramCekkuotaBot {
       console.error("Gagal cek kuota:", error);
       return `❌ *Terjadi kesalahan saat memeriksa nomor ${number}.*`;
     }
-  }
-
-  async sendMessage(chatId, text, options = {}) {
-    const payload = { chat_id: chatId, text, ...options };
-    const res = await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    return res.json(); // agar kita bisa ambil message_id jika perlu
-  }
-
-  async editMessageText(chatId, messageId, text, options = {}) {
-    const payload = { chat_id: chatId, message_id: messageId, text, ...options };
-    await fetch(`${this.apiUrl}/bot${this.token}/editMessageText`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-  }
-
-  async sendDocument(chatId, content, filename, mimeType) {
-    const formData = new FormData();
-    formData.append('chat_id', chatId.toString());
-    formData.append('document', new Blob([content], { type: mimeType }), filename);
-    await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
-      method: 'POST',
-      body: formData
-    });
-  }
-
-  async handleCallbackQuery(callbackQuery) {
-    // Kosong sementara, bisa kamu isi logika untuk menangani tombol
-    console.log("CallbackQuery received:", callbackQuery);
   }
 }
