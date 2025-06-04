@@ -5,8 +5,6 @@ export async function WildcardBot(link) {
   console.log("Bot link:", link);
 }
 
-const waitingForDeleteList = new Set();
-
 // ========================================
 // Global Constants & In-Memory Request Storage
 // ========================================
@@ -17,7 +15,7 @@ export class KonstantaGlobalbot {
     this.accountID = accountID;
     this.zoneID = zoneID;
     this.apiEmail = apiEmail;
-    this.serviceName = serviceName;    
+    this.serviceName = serviceName;
 
     this.headers = {
       'Authorization': `Bearer ${this.apiKey}`,
@@ -197,69 +195,75 @@ export class TelegramWildcardBot {
         );
       }
       return new Response('OK', { status: 200 });
-  
-    // Jika user mengirim /del, mulai proses hapus banyak subdomain
-  if (text === '/del') {
-    if (!isOwner) {
-      await sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
-      return new Response('OK', { status: 200 });
     }
-    await sendMessage(chatId, 'Silakan kirim daftar subdomain yang ingin dihapus, satu per baris.\n\nKirim pesan kosong atau /cancel untuk membatalkan.');
-    waitingForDeleteList.add(chatId);
+
+    // ketika user kirim /del tanpa argumen, minta input subdomain multiple
+if (text === '/del') {
+  if (!isOwner) {
+    await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
     return new Response('OK', { status: 200 });
   }
-
-  // Jika user sedang dalam mode menunggu daftar subdomain
-  if (waitingForDeleteList.has(chatId)) {
-    // Batalkan proses jika user kirim /cancel atau pesan kosong
-    if (text === '/cancel' || text.length === 0) {
-      await sendMessage(chatId, '❌ Proses hapus dibatalkan.');
-      waitingForDeleteList.delete(chatId);
-      return new Response('OK', { status: 200 });
-    }
-
-    // Proses hapus subdomain
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    if (lines.length === 0) {
-      await sendMessage(chatId, '❌ Tidak ada subdomain valid yang diterima, proses dibatalkan.');
-      waitingForDeleteList.delete(chatId);
-      return new Response('OK', { status: 200 });
-    }
-
-    let results = [];
-    for (const sd of lines) {
-      let st = 500;
-      try {
-        st = await globalBot.deleteSubdomain(sd);
-      } catch {}
-      results.push({ domain: sd, status: st });
-    }
-
-    waitingForDeleteList.delete(chatId);
-
-    let msg = 'Hasil penghapusan subdomain:\n\n';
-    for (const r of results) {
-      const dm = escapeMarkdownV2(r.domain);
-      if (r.status === 200) {
-        msg += `✅ \`\`\`Wildcard\n${dm} deleted successfully.\`\`\`\n\n`;
-      } else if (r.status === 404) {
-        msg += `⚠️ Subdomain *${dm}* not found.\n\n`;
-      } else {
-        msg += `❌ Gagal hapus *${dm}*, status: \`${r.status}\`\n\n`;
-      }
-    }
-
-    await sendMessage(chatId, msg, { parse_mode: 'MarkdownV2' });
-    return new Response('OK', { status: 200 });
-  }
-
-  // Kalau bukan /del dan bukan mode menunggu input, bot tidak merespon
+  const promptMsg = `Masukkan beberapa subdomain yang ingin dihapus, satu per baris. Contoh:\n\n` +
+    `ava.game.naver.com\nzaintest.vuclip.com\nsupport.zoom.us\n\n` +
+    `Kirim pesan balasan dengan daftar subdomain.`;
+  await this.sendMessage(chatId, promptMsg);
   return new Response('OK', { status: 200 });
 }
 
-// Contoh fungsi sendMessage dan escapeMarkdownV2, sesuaikan dengan implementasimu
-async function sendMessage(chatId, text, options = {}) {
+// ketika user kirim /del <subdomain1> <subdomain2> ... (atau multiline)
+if (text.startsWith('/del ')) {
+  if (!isOwner) {
+    await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
+    return new Response('OK', { status: 200 });
   }
+  // ambil argumen sesudah /del, bisa multiline atau spasi
+  const arg = text.slice(5).trim();
+  if (!arg) {
+    await this.sendMessage(chatId, '⚠️ Tidak ada subdomain yang diberikan.');
+    return new Response('OK', { status: 200 });
+  }
+
+  // split argumen dengan newline atau spasi (gabungkan semua spasi jadi newline dulu)
+  // supaya bisa handle spasi atau newline
+  let subs = arg.split(/\s+/).filter(Boolean);
+
+  // proses hapus per subdomain
+  const results = [];
+  for (const fullSubdomain of subs) {
+    // fullSubdomain bisa seperti ava.game.naver.com, kita perlu ambil bagian subdomain yg jadi prefix rootDomain
+    // misal rootDomain = naver.com, kita ambil prefix: ava.game
+    // atau rootDomain = zoom.us, prefix support
+
+    // Jadi kita harus cari subdomain tanpa rootDomain:
+    // contoh: fullSubdomain = 'ava.game.naver.com', rootDomain='naver.com'
+    // subdomain = 'ava.game'
+
+    const rootDomain = this.globalBot.rootDomain;
+    let sd = null;
+    if (fullSubdomain.endsWith(rootDomain)) {
+      // potong rootDomain + dot
+      sd = fullSubdomain.slice(0, fullSubdomain.length - rootDomain.length - 1);
+    } else {
+      // subdomain tidak cocok dengan rootDomain bot, skip
+      results.push(`⚠️ Subdomain *${fullSubdomain}* bukan bagian dari root domain *${rootDomain}*`);
+      continue;
+    }
+
+    let st = 500;
+    try { st = await this.globalBot.deleteSubdomain(sd); } catch (e) {
+      // bisa log error e jika perlu
+    }
+    const dm = this.escapeMarkdownV2(fullSubdomain);
+    if (st === 200) results.push(`✅ *${dm}* berhasil dihapus.`);
+    else if (st === 404) results.push(`⚠️ Subdomain *${dm}* tidak ditemukan.`);
+    else results.push(`❌ Gagal hapus *${dm}*, status: \`${st}\`.`);
+  }
+
+  const reply = 'Hasil penghapusan subdomain:\n\n' + results.join('\n');
+  await this.sendMessage(chatId, reply, { parse_mode: 'MarkdownV2' });
+
+  return new Response('OK', { status: 200 });
+}
 
     // /list
     if (text.startsWith('/list')) {
