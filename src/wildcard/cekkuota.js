@@ -1,4 +1,3 @@
-import fetch from 'node-fetch';
 
 export async function Cekkuota(number) {
   console.log("cek kuota:", number);
