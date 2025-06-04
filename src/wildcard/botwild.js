@@ -246,10 +246,6 @@ if (this.waitingForDeleteList.has(chatId)) {
   return new Response('OK', { status: 200 });
 }
 
-// Kalau bukan /del dan bukan sedang menunggu input hapus, bot diam, gak balas apapun
-return new Response('OK', { status: 200 });
-}
-
     // /list
     if (text.startsWith('/list')) {
       let domains = [];
