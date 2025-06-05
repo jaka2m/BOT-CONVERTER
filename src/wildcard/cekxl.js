@@ -1,68 +1,77 @@
-// worker.js
-
-// ===============================
-// 1. Stub fungsi Cekkuota(link) — hanya logging
-// ===============================
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
-  // (Anda bisa menambahkan logika lain di sini jika diperlukan)
+  const response = await fetch(`https://dompul.free-accounts.workers.dev/?number=${link}`);
+  const data = await response.json();
+
+  if (!data || !data.nomor) {
+    return '❌ Data tidak ditemukan atau nomor tidak valid.';
+  }
+
+  let pesan = `📱 *Nomor:* ${data.nomor}\n`;
+  pesan += `📡 *Provider:* ${data.provider}\n`;
+  pesan += `📅 *Umur Kartu:* ${data.umur_kartu}\n`;
+  pesan += `📶 *Status SIM:* ${data.status_simcard}\n`;
+  pesan += `📇 *Dukcapil:* ${data.status_dukcapil}\n`;
+  pesan += `📆 *Masa Aktif:* ${data.masa_aktif}\n`;
+  pesan += `⏳ *Masa Tenggang:* ${data.masa_tenggang}\n\n`;
+  pesan += `📦 *Paket Aktif:*\n`;
+
+  data.paket_aktif.forEach((paket, i) => {
+    pesan += ` ${i + 1}. ${paket.nama_paket}\n    Aktif sampai: ${paket.masa_aktif}\n`;
+  });
+
+  return pesan;
 }
 
-async function _cekkuota(number) {
-  try {
-    const url = `https://dompul.free-accounts.workers.dev/?number=${number}`;
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-        'Accept': 'application/json'
+
+export class TelegramCekkuota {
+  constructor(token, apiUrl = 'https://api.telegram.org') {
+    this.token  = token;
+    this.apiUrl = apiUrl;
+  }
+
+  async handleUpdate(update) {
+    if (!update.message) return new Response('OK', { status: 200 });
+
+    const chatId = update.message.chat.id;
+    const text = update.message.text || '';
+
+    try {
+      if (text.startsWith('/cek')) {
+        const parts = text.split(' ');
+        const nomor = parts[1];
+
+        if (!nomor) {
+          await this.sendMessage(chatId, '❗ Format salah.\nGunakan: /cek <nomor>');
+        } else {
+          const hasil = await Cekkuota(nomor);
+          await this.sendMessage(chatId, hasil, { parse_mode: 'Markdown' });
+        }
+      } else {
+        await this.sendMessage(chatId, '📌 Kirim perintah: /cek <nomor>\nContoh: /cek 087756116610');
       }
+    } catch (error) {
+      console.error('Error processing links:', error);
+      await this.sendMessage(chatId, `❌ Error: ${error.message}`);
+    }
+
+    return new Response('OK', { status: 200 });
+  }
+
+  async sendMessage(chatId, text, options = {}) {
+    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+    const body = {
+      chat_id: chatId,
+      text: text,
+      ...options
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     });
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      // Kalau status bukan OK, anggap ada error dari API
-      if (data.error_code && data.message) {
-        return `❌ Gagal cek *${number}*:\nError code: ${data.error_code}\nPesan: ${data.message}`;
-      } else {
-        return `❌ Gagal cek *${number}*:\nResponse error tapi tanpa pesan jelas.`;
-      }
-    }
-
-    if (!data || !data.nomor) {
-      return `❌ Gagal mendapatkan data untuk *${number}*.`;
-    }
-
-    let out = [
-      `📲 *Cek Nomor:* ${data.nomor}`,
-      `🏷️ *Provider:* ${data.provider || '-'}`,
-      `📅 *Umur Kartu:* ${data.umur_kartu || '-'}`,
-      `📶 *Status SIM:* ${data.status_simcard || '-'}`,
-      `🆔 *Status Dukcapil:* ${data.status_dukcapil || '-'}`,
-      `🗓️ *Masa Aktif:* ${data.masa_aktif || '-'}`,
-      `⏳ *Masa Tenggang:* ${data.masa_tenggang || '-'}`
-    ].join('\n');
-
-    if (Array.isArray(data.paket_aktif) && data.paket_aktif.length > 0) {
-      out += `\n\n📦 *Paket Aktif:*`;
-      data.paket_aktif.forEach((paket, idx) => {
-        out += `\n\n${idx + 1}. 🎁 *${paket.nama_paket}*`;
-        out += `\n   📆 *Masa Aktif:* ${paket.masa_aktif || '-'}`;
-        if (Array.isArray(paket.benefits) && paket.benefits.length > 0) {
-          paket.benefits.forEach(b => {
-            out += `\n     ▫️ ${b}`;
-          });
-        } else {
-          out += `\n     🚫 Tidak ada benefit detail.`;
-        }
-      });
-    } else {
-      out += `\n\n🚫 Tidak ada paket aktif.`;
-    }
-
-    return out;
-
-  } catch (e) {
-    return `❌ Error cek *${number}*: ${e.message}`;
+    return response.json();
   }
 }
