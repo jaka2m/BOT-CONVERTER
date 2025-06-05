@@ -8,23 +8,16 @@ export class TelegramCekkuota {
     this.apiUrl = apiUrl;
   }
 
+  // Class method without 'function' keyword
   async cekKuota(msisdn) {
     const url = `https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${msisdn}`;
+
     try {
       const response = await fetch(url);
-      const text = await response.text();
+      const data = await response.json();
 
-      // Tangani error code misal "error code: 1042"
-      if (/^error code:\s*\d+/i.test(text.trim())) {
-        const code = text.trim().split(':')[1].trim();
-        if (code === '1042') {
-          return '❌ Nomor tidak valid atau belum terdaftar.';
-        }
-        return `❌ Server mengembalikan error code ${code}.`;
-      }
-
-      const data = JSON.parse(text);
       const dataSp = data?.data?.data_sp;
+
       if (!dataSp) {
         return `❌ Gagal mendapatkan data untuk *${msisdn}*.`;
       }
@@ -60,8 +53,10 @@ export class TelegramCekkuota {
      ✅ *Sisa:* ${benefit.remaining}`;
               }
             } else {
-              infoPaket += `\n  🚫 Tidak ada detail benefit.`;
+              infoPaket += `
+  🚫 Tidak ada detail benefit.`;
             }
+
             infoPaket += `\n-----------------------------\n`;
           }
         }
@@ -70,51 +65,10 @@ export class TelegramCekkuota {
       }
 
       return infoPelanggan + infoPaket;
+
     } catch (err) {
-      console.error('❌ Error cekKuota:', err);
+      console.error('❌ Error:', err);
       return `❌ Terjadi kesalahan: ${err.message}`;
-    }
-  }
-
-  async sendMessage(chatId, text, markdown = false) {
-    const payload = {
-      chat_id: chatId,
-      text,
-      ...(markdown ? { parse_mode: 'Markdown' } : {})
-    };
-
-    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-
-    try {
-      await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {
-      console.error('❌ Gagal mengirim pesan:', err);
-    }
-  }
-
-  async handleUpdate(update) {
-    const message = update.message;
-    if (!message?.text) return;
-
-    const chatId = message.chat.id;
-    const text = message.text.trim();
-
-    if (text.startsWith('/cekkuota')) {
-      const parts = text.split(' ');
-      if (parts.length < 2) {
-        await this.sendMessage(chatId, '❗ Format salah. Contoh penggunaan:\n`/cekkuota 081234567890`', true);
-        return;
-      }
-      const msisdn = parts[1].trim();
-      await this.sendMessage(chatId, `⏳ Sedang mengecek kuota untuk: ${msisdn}...`);
-      const result = await this.cekKuota(msisdn);
-      await this.sendMessage(chatId, result, true);
-    } else {
-      await this.sendMessage(chatId, '🤖 Perintah tidak dikenali. Gunakan /cekkuota <nomor>', true);
     }
   }
 }
