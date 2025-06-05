@@ -3,7 +3,7 @@ import { TelegramBotku as _β } from './randomip/bot2.js';
 import { TelegramProxyCekBot as _γ } from './proxyip/botCek.js';
 import { TelegramProxyBot as _δ } from './proxyip/bot3.js';
 import { TelegramWildcardBot as _ε, KonstantaGlobalbot as _Ω } from './wildcard/botwild.js';
-import { TelegramProxyBot as Bot6 } from './wildcard/cekxl.js';
+import { TelegramCekkuota as Bot6 } from './wildcard/cekxl.js';
 
 const Ξ = (() => {
   const φ = (...x) => atob(x.join(''));
