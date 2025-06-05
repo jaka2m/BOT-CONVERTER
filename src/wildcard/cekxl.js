@@ -8,114 +8,132 @@ export class TelegramCekkuota {
     this.apiUrl = apiUrl;
   }
 
-  // Ubah awalan "0" menjadi "62"
   normalizeNumber(number) {
     let num = number.trim();
-    if (num.startsWith('0')) num = '62' + num.slice(1);
+    if (num.startsWith('0')) {
+      num = '62' + num.slice(1);
+    }
     return num;
+  }
+
+  async cekKuota(number) {
+    const url = 'https://dompul.free-accounts.workers.dev/cek_kuota';
+
+    const headers = {
+      'Authorization': 'Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw',
+      'X-API-Key': '60ef29aa-a648-4668-90ae-20951ef90c55',
+      'X-App-Version': '4.0.0',
+      'Content-Type': 'application/x-www-form-urlencoded'
+    };
+
+    const normalizedNumber = this.normalizeNumber(number);
+
+    try {
+      const body = new URLSearchParams({ msisdn: normalizedNumber });
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: body.toString()
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const dataSp = data?.data?.data_sp;
+
+      if (!dataSp) {
+        return `❌ Gagal mendapatkan data untuk *${normalizedNumber}*.`;
+      }
+
+      let infoPelanggan = `
+📌 *Info Pelanggan:*
+🔢 *Nomor:* ${normalizedNumber}
+🏷️ *Provider:* ${dataSp.prefix?.value || '-'}
+⌛️ *Umur Kartu:* ${dataSp.active_card?.value || '-'}
+📶 *Status Simcard:* ${dataSp.status_4g?.value || '-'}
+📋 *Status Dukcapil:* ${dataSp.dukcapil?.value || '-'}
+⏳ *Masa Aktif:* ${dataSp.active_period?.value || '-'}
+⚠️ *Masa Tenggang:* ${dataSp.grace_period?.value || '-'}`;
+
+      let infoPaket = `\n\n📦 *Paket Aktif:*\n`;
+
+      if (Array.isArray(dataSp.quotas?.value) && dataSp.quotas.value.length > 0) {
+        for (const paketGroup of dataSp.quotas.value) {
+          for (const paket of paketGroup) {
+            const pkg = paket.packages;
+            const benefits = paket.benefits;
+
+            infoPaket += `
+🎁 *Nama Paket:* ${pkg.name}
+📅 *Masa Aktif:* ${pkg.expDate}`;
+
+            if (benefits && benefits.length > 0) {
+              for (const benefit of benefits) {
+                infoPaket += `
+  ─ 📌 *Benefit:* ${benefit.bname}
+     🧧 *Tipe:* ${benefit.type}
+     💾 *Kuota:* ${benefit.quota}
+     ✅ *Sisa:* ${benefit.remaining}`;
+              }
+            } else {
+              infoPaket += `
+  🚫 Tidak ada detail benefit.`;
+            }
+
+            infoPaket += `\n-----------------------------\n`;
+          }
+        }
+      } else {
+        infoPaket += `❌ Tidak ada paket aktif.`;
+      }
+
+      return infoPelanggan + infoPaket;
+
+    } catch (error) {
+      console.error('Error cek kuota:', error);
+      return `❌ Gagal cek kuota untuk *${normalizedNumber}*.`;
+    }
+  }
+
+  async sendMessage(chatId, text, markdown = false) {
+    const payload = {
+      chat_id: chatId,
+      text,
+      ...(markdown ? { parse_mode: 'Markdown' } : {})
+    };
+
+    try {
+      await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.error('Gagal mengirim pesan:', err);
+    }
   }
 
   async handleUpdate(update) {
     const message = update.message;
     const chatId = message?.chat?.id;
     const text = message?.text?.trim() || '';
+
     if (!chatId || !text) return;
 
+    // Cari semua nomor HP 10–13 digit dalam pesan
     const numbers = text.match(/\d{10,13}/g);
-    if (!numbers || numbers.length === 0) return;
+    if (numbers && numbers.length > 0) {
+      const replies = [];
 
-    const replies = await Promise.all(numbers.map(async (orig) => {
-      const msisdn = this.normalizeNumber(orig);
-      try {
-        const res = await fetch(
-          `https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${msisdn}`,
-          {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; Bot/1.0)',
-              'Accept': 'application/json',
-              'Referer': 'https://dompul.free-accounts.workers.dev/',
-              'Origin': 'https://dompul.free-accounts.workers.dev'
-            }
-          }
-        );
-
-        console.log(`📡 [${msisdn}] Status:`, res.status);
-        const bodyText = await res.text();
-        console.log(`🔍 [${msisdn}] Respons:\n`, bodyText);
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = JSON.parse(bodyText);
-        return this.formatQuotaResponse(msisdn, data);
-      } catch (err) {
-        console.error(`❌ Gagal cek kuota ${msisdn}:`, err);
-        return `❌ Gagal cek kuota untuk ${msisdn}`;
+      for (const num of numbers) {
+        const resText = await this.cekKuota(num);
+        replies.push(resText);
       }
-    }));
 
-    await this.sendMessage(chatId, replies.join('\n\n'), true);
-  }
-
-  formatQuotaResponse(number, data) {
-    if (!data?.status || !data.data?.data_sp) {
-      return `⚠️ Nomor ${number} tidak ditemukan atau terjadi kesalahan.`;
+      const finalMessage = replies.join('\n\n');
+      await this.sendMessage(chatId, finalMessage, true);
     }
-
-    const info = data.data.data_sp;
-    const {
-      prefix, active_card, dukcapil,
-      status_4g, active_period, grace_period, quotas
-    } = info;
-
-    let msg = `📱 *Nomor:* ${number}\n` +
-              `• Tipe Kartu: ${prefix?.value || '-'}\n` +
-              `• Umur Kartu: ${active_card?.value || '-'}\n` +
-              `• Status Dukcapil: ${dukcapil?.value || '-'}\n` +
-              `• Status 4G: ${status_4g?.value || '-'}\n` +
-              `• Masa Aktif: ${active_period?.value || '-'}\n` +
-              `• Masa Tenggang: ${grace_period?.value || '-'}\n\n`;
-
-    if (quotas?.success && Array.isArray(quotas.value) && quotas.value.length) {
-      msg += `📦 *Detail Paket Kuota:*\n`;
-      quotas.value.forEach(group => {
-        const pkg = group[0]?.packages;
-        msg += `\n🎁 Paket: ${pkg?.name || '-'}\n` +
-               `📅 Aktif Hingga: ${this.formatDate(pkg?.expDate)}\n` +
-               `-----------------------------\n`;
-      });
-    } else {
-      // Ambil teks dari data.hasil dan bersihkan tag HTML
-      const raw = data.data.hasil || '';
-      const clean = raw
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<[^>]+>/g, '')
-        .trim();
-      msg += `❗ Info:\n${clean}`;
-    }
-
-    return msg.trim();
-  }
-
-  formatDate(str) {
-    if (!str) return '-';
-    const d = new Date(str);
-    if (isNaN(d)) return str;
-    return [
-      d.getFullYear(),
-      this.pad(d.getMonth()+1),
-      this.pad(d.getDate())
-    ].join('-') + ' ' +
-    [ this.pad(d.getHours()), this.pad(d.getMinutes()), this.pad(d.getSeconds()) ].join(':');
-  }
-
-  pad(n) { return n < 10 ? '0'+n : ''+n; }
-
-  async sendMessage(chatId, text, markdown = false) {
-    const payload = { chat_id: chatId, text };
-    if (markdown) payload.parse_mode = 'Markdown';
-    await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
   }
 }
