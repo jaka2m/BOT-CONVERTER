@@ -20,7 +20,8 @@ export class TelegramCekkuota {
     if (numbers && numbers.length > 0) {
       const replies = await Promise.all(numbers.map(async (num) => {
         try {
-          const res = await fetch(`https://xnxx.zerostore.web.id/cek_kuota?msisdn=${num}`);
+          const res = await fetch(`https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${num}`);
+          
           const data = await res.json();
           return this.formatQuotaResponse(num, data);
         } catch (err) {
