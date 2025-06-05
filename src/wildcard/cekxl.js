@@ -1,8 +1,11 @@
+// worker.js
+
 // ===============================
 // 1. Stub fungsi Cekkuota(link) — hanya logging
 // ===============================
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
+  // (Anda bisa menambahkan logika lain di sini jika diperlukan)
 }
 
 // ===============================
@@ -18,12 +21,14 @@ async function _cekkuota(number) {
       }
     });
 
+    // Clone response agar body dapat dibaca dua kali
+    const clonedRes = res.clone();
+
     let data;
     try {
-      const cloned = res.clone();      // Clone response agar body bisa dibaca dua kali
-      data = await res.json();         // Coba parse JSON dari response utama
+      data = await res.json();
     } catch (err) {
-      const text = await res.text();   // Jika JSON gagal, baca body sebagai teks
+      const text = await clonedRes.text();
       return `❌ Gagal cek *${number}*:\n\`\`\`\n${text}\n\`\`\``;
     }
 
@@ -31,6 +36,7 @@ async function _cekkuota(number) {
       return `❌ Gagal mendapatkan data untuk *${number}*.`;
     }
 
+    // Rangkuman Info Pelanggan
     let out = [
       `📲 *Cek Nomor:* ${data.nomor}`,
       `🏷️ *Provider:* ${data.provider || '-'}`,
@@ -41,6 +47,7 @@ async function _cekkuota(number) {
       `⏳ *Masa Tenggang:* ${data.masa_tenggang || '-'}`
     ].join('\n');
 
+    // Rangkuman Paket Aktif
     if (Array.isArray(data.paket_aktif) && data.paket_aktif.length > 0) {
       out += `\n\n📦 *Paket Aktif:*`;
       data.paket_aktif.forEach((paket, idx) => {
@@ -74,6 +81,7 @@ export class TelegramCekkuota {
     this.handleUpdate = this.handleUpdate.bind(this);
   }
 
+  // Kirim pesan ke Telegram
   async sendMessage(chatId, text, opts = {}) {
     const url  = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const body = { chat_id: chatId, text, ...opts };
@@ -84,6 +92,7 @@ export class TelegramCekkuota {
     });
   }
 
+  // Handler setiap update Telegram
   async handleUpdate(update) {
     if (!update.message) {
       return new Response('OK', { status: 200 });
@@ -92,6 +101,7 @@ export class TelegramCekkuota {
     const chatId = update.message.chat.id;
     const text   = (update.message.text || '').trim();
 
+    // 1) Jika perintah /cekkuota
     if (text === '/cekkuota') {
       await this.sendMessage(
         chatId,
@@ -101,6 +111,7 @@ export class TelegramCekkuota {
       return new Response('OK', { status: 200 });
     }
 
+    // 2) Jika pesan bukan perintah, anggap daftar nomor
     if (!text.startsWith('/')) {
       const lines = text
         .split('\n')
@@ -129,16 +140,19 @@ export class TelegramCekkuota {
         return new Response('OK', { status: 200 });
       }
 
+      // Kirim loading
       await this.sendMessage(
         chatId,
         `⏳ Memproses ${lines.length} nomor, mohon tunggu...`
       );
 
+      // Proses cek kuota
       let reply = '';
       for (const num of lines) {
         reply += await _cekkuota(num) + '\n\n';
       }
 
+      // Kirim hasil
       await this.sendMessage(
         chatId,
         reply.trim(),
@@ -147,6 +161,8 @@ export class TelegramCekkuota {
       return new Response('OK', { status: 200 });
     }
 
+    // Abaikan perintah lain
     return new Response('OK', { status: 200 });
   }
 }
+
