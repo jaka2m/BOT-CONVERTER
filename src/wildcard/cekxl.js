@@ -8,9 +8,12 @@ export class TelegramCekkuota {
     this.apiUrl = apiUrl;
   }
 
-  normalizeNumber(num) {
-    // Ubah nomor awalan 0 jadi 62 (kode negara Indonesia)
-    if (num.startsWith('0')) return '62' + num.slice(1);
+  // Normalisasi nomor HP: ganti awalan 0 dengan 62 (Indonesia)
+  normalizeNumber(number) {
+    let num = number.trim();
+    if (num.startsWith('0')) {
+      num = '62' + num.slice(1);
+    }
     return num;
   }
 
@@ -25,52 +28,98 @@ export class TelegramCekkuota {
     const numbers = text.match(/\d{10,13}/g);
     if (numbers && numbers.length > 0) {
       const replies = await Promise.all(numbers.map(async (num) => {
+        const normalizedNum = this.normalizeNumber(num);
         try {
-          const normalizedNum = this.normalizeNumber(num);
-          const res = await fetch(`https://cors.geo-project.workers.dev/?url=https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${normalizedNum}`);
+          const res = await fetch(`https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${normalizedNum}`, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; Bot/1.0)',
+              'Accept': 'application/json'
+            }
+          });
+
           if (!res.ok) {
+            // Tangani error HTTP, termasuk 403
             throw new Error(`HTTP error! status: ${res.status}`);
           }
+
           const data = await res.json();
-          return this.formatQuotaResponse(num, data);
+          return this.formatQuotaResponse(normalizedNum, data);
         } catch (err) {
-          console.error(`Error fetching kuota untuk ${num}:`, err);
-          return `❌ Gagal cek kuota untuk ${num}\nError: ${err.message}`;
+          console.error(`Error fetching kuota untuk ${normalizedNum}:`, err);
+          return `❌ Gagal cek kuota untuk ${normalizedNum}`;
         }
       }));
 
       return this.sendMessage(chatId, replies.join('\n\n'), true);
     }
-
-    // Jika tidak ada nomor valid, tidak merespon
   }
 
   formatQuotaResponse(number, data) {
     const info = data?.data?.data_sp;
-    const hasilRaw = data?.data?.hasil || '';
 
-    if (!data?.status || !info) {
+    if (!data || !data.status || !info) {
       return `⚠️ Nomor ${number} tidak ditemukan atau terjadi kesalahan.`;
     }
 
-    let msg = `📱 *Nomor:* ${number}\n`;
-    msg += `• Tipe Kartu: ${info.prefix?.value || '-'}\n`;
-    msg += `• Umur Kartu: ${info.active_card?.value || '-'}\n`;
-    msg += `• Status Dukcapil: ${info.dukcapil?.value || '-'}\n`;
-    msg += `• Status 4G: ${info.status_4g?.value || '-'}\n`;
-    msg += `• Masa Aktif: ${info.active_period?.value || '-'}\n`;
-    msg += `• Masa Tenggang: ${info.grace_period?.value || '-'}\n\n`;
+    const {
+      quotas,
+      status_4g,
+      dukcapil,
+      grace_period,
+      active_period,
+      active_card,
+      prefix
+    } = info;
 
-    if (!Array.isArray(info.quotas?.value) || info.quotas.value.length === 0) {
+    let msg = `📱 *Nomor:* ${number}\n`;
+    msg += `• Tipe Kartu: ${prefix?.value || '-'}\n`;
+    msg += `• Umur Kartu: ${active_card?.value || '-'}\n`;
+    msg += `• Status Dukcapil: ${dukcapil?.value || '-'}\n`;
+    msg += `• Status 4G: ${status_4g?.value || '-'}\n`;
+    msg += `• Masa Aktif: ${active_period?.value || '-'}\n`;
+    msg += `• Masa Tenggang: ${grace_period?.value || '-'}\n\n`;
+
+    if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
+      msg += `📦 *Detail Paket Kuota:*\n`;
+      quotas.value.forEach((quotaGroup) => {
+        if (!quotaGroup || quotaGroup.length === 0) return;
+        const packageInfo = quotaGroup[0].packages;
+        msg += `\n🎁 Paket: ${packageInfo?.name || '-'}\n`;
+        msg += `📅 Aktif Hingga: ${this.formatDate(packageInfo?.expDate) || '-'}\n`;
+
+        if (quotaGroup[0].benefits && quotaGroup[0].benefits.length > 0) {
+          quotaGroup[0].benefits.forEach(benefit => {
+            msg += `• Benefit: ${benefit.bname}\n`;
+            msg += `  Tipe Kuota: ${benefit.type}\n`;
+            msg += `  Kuota: ${benefit.quota}\n`;
+            msg += `  Sisa Kuota: ${benefit.remaining}\n`;
+          });
+        }
+        msg += `-----------------------------\n`;
+      });
+    } else {
+      // Jika tidak ada quota detail, tampilkan hasil raw dari API (hapus tag html)
+      const hasilRaw = data?.data?.hasil || '';
       const hasilText = hasilRaw
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
         .trim();
-
-      msg += `❗ Info Tambahan:\n${hasilText}`;
+      msg += `❗ Info:\n${hasilText}\n`;
     }
 
     return msg.trim();
+  }
+
+  formatDate(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (isNaN(d)) return dateStr;
+    return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())} ` +
+           `${this.pad(d.getHours())}:${this.pad(d.getMinutes())}:${this.pad(d.getSeconds())}`;
+  }
+
+  pad(n) {
+    return n < 10 ? '0' + n : n;
   }
 
   async sendMessage(chatId, text, markdown = false) {
