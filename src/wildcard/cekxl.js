@@ -1,3 +1,6 @@
+// File: telegramCekkuota.js
+
+// Export fungsi sederhana (sesuai permintaan Anda)
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
 }
@@ -5,10 +8,12 @@ export async function Cekkuota(link) {
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
-    this.apiUrl = `${apiUrl}/bot${token}`;
+    this.apiUrl = apiUrl;
   }
 
-  // Fungsi untuk mengecek kuota
+  // -----------------------------
+  // Metode untuk mengecek kuota
+  // -----------------------------
   async cekKuota(msisdn) {
     const url = `https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${msisdn}`;
 
@@ -65,12 +70,14 @@ export class TelegramCekkuota {
       return infoPelanggan + infoPaket;
 
     } catch (err) {
-      console.error('❌ Error:', err);
+      console.error('❌ Error saat cekKuota:', err);
       return `❌ Terjadi kesalahan: ${err.message}`;
     }
   }
 
-  // Fungsi untuk mengirim pesan ke Telegram
+  // -----------------------------------
+  // Metode untuk mengirim pesan Telegram
+  // -----------------------------------
   async sendMessage(chatId, text, markdown = false) {
     const payload = {
       chat_id: chatId,
@@ -78,8 +85,10 @@ export class TelegramCekkuota {
       ...(markdown ? { parse_mode: "Markdown" } : {})
     };
 
+    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+
     try {
-      await fetch(`${this.apiUrl}/sendMessage`, {
+      await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -89,7 +98,9 @@ export class TelegramCekkuota {
     }
   }
 
-  // Fungsi untuk menangani update dari webhook Telegram
+  // ---------------------------------------------
+  // Metode untuk menangani update dari webhook
+  // ---------------------------------------------
   async handleUpdate(update) {
     const message = update.message;
     if (!message || !message.text) return;
@@ -97,10 +108,15 @@ export class TelegramCekkuota {
     const chatId = message.chat.id;
     const text = message.text.trim();
 
+    // Cek perintah /cekkuota
     if (text.startsWith('/cekkuota')) {
       const parts = text.split(' ');
       if (parts.length < 2) {
-        await this.sendMessage(chatId, '❗ Format salah. Contoh penggunaan:\n`/cekkuota 081234567890`', true);
+        await this.sendMessage(
+          chatId,
+          '❗ Format salah. Contoh penggunaan:\n`/cekkuota 081234567890`',
+          true
+        );
         return;
       }
 
@@ -109,7 +125,11 @@ export class TelegramCekkuota {
       const result = await this.cekKuota(msisdn);
       await this.sendMessage(chatId, result, true);
     } else {
-      await this.sendMessage(chatId, '🤖 Perintah tidak dikenali. Gunakan /cekkuota <nomor>', true);
+      await this.sendMessage(
+        chatId,
+        '🤖 Perintah tidak dikenali. Gunakan /cekkuota <nomor>',
+        true
+      );
     }
   }
 }
