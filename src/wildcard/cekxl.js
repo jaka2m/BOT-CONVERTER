@@ -8,6 +8,12 @@ export class TelegramCekkuota {
     this.apiUrl = apiUrl;
   }
 
+  normalizeNumber(num) {
+    // Ubah nomor awalan 0 jadi 62 (kode negara Indonesia)
+    if (num.startsWith('0')) return '62' + num.slice(1);
+    return num;
+  }
+
   async handleUpdate(update) {
     const message = update.message;
     const chatId = message?.chat?.id;
@@ -20,19 +26,23 @@ export class TelegramCekkuota {
     if (numbers && numbers.length > 0) {
       const replies = await Promise.all(numbers.map(async (num) => {
         try {
-          const res = await fetch(`https://cors.geo-project.workers.dev/?url=https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${num}`);
+          const normalizedNum = this.normalizeNumber(num);
+          const res = await fetch(`https://cors.geo-project.workers.dev/?url=https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${normalizedNum}`);
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
           const data = await res.json();
           return this.formatQuotaResponse(num, data);
         } catch (err) {
           console.error(`Error fetching kuota untuk ${num}:`, err);
-          return `❌ Gagal cek kuota untuk ${num}`;
+          return `❌ Gagal cek kuota untuk ${num}\nError: ${err.message}`;
         }
       }));
 
       return this.sendMessage(chatId, replies.join('\n\n'), true);
     }
 
-    // Jika tidak ada nomor valid, tidak mengirim apapun (tidak merespon)
+    // Jika tidak ada nomor valid, tidak merespon
   }
 
   formatQuotaResponse(number, data) {
