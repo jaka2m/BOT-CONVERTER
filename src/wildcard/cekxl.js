@@ -27,6 +27,8 @@ async function _cekkuota(number) {
     let data;
     try {
       data = await res.json();
+      // Debug: uncomment untuk cek data di logs
+      // console.log('Data:', data);
     } catch (err) {
       const text = await clonedRes.text();
       return `❌ Gagal cek *${number}*:\n\`\`\`\n${text}\n\`\`\``;
@@ -69,5 +71,100 @@ async function _cekkuota(number) {
 
   } catch (e) {
     return `❌ Error cek *${number}*: ${e.message}`;
+  }
+}
+
+// ===============================
+// 3. Kelas TelegramCekkuota (stateless)
+// ===============================
+export class TelegramCekkuota {
+  constructor(token, apiUrl = 'https://api.telegram.org') {
+    this.token  = token;
+    this.apiUrl = apiUrl;
+    this.handleUpdate = this.handleUpdate.bind(this);
+  }
+
+  // Kirim pesan ke Telegram
+  async sendMessage(chatId, text, opts = {}) {
+    const url  = `${this.apiUrl}/bot${this.token}/sendMessage`;
+    const body = { chat_id: chatId, text, ...opts };
+    await fetch(url, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(body)
+    });
+  }
+
+  // Handler setiap update Telegram
+  async handleUpdate(update) {
+    if (!update.message) {
+      return new Response('OK', { status: 200 });
+    }
+
+    const chatId = update.message.chat.id;
+    const text   = (update.message.text || '').trim();
+
+    // 1) Jika perintah /cekkuota
+    if (text === '/cekkuota') {
+      await this.sendMessage(
+        chatId,
+        '📌 *Masukkan nomor HP, 1 nomor per baris.*\nMaksimal *20* nomor.\n\nKirim nomor sekarang.',
+        { parse_mode: 'Markdown' }
+      );
+      return new Response('OK', { status: 200 });
+    }
+
+    // 2) Jika pesan bukan perintah, anggap daftar nomor
+    if (!text.startsWith('/')) {
+      const lines = text
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l);
+
+      if (lines.length === 0) {
+        return new Response('OK', { status: 200 });
+      }
+      if (lines.length > 20) {
+        await this.sendMessage(
+          chatId,
+          '⚠️ Maksimal 20 nomor saja. Silakan kirim ulang daftar nomor HP.',
+          { parse_mode: 'Markdown' }
+        );
+        return new Response('OK', { status: 200 });
+      }
+
+      const invalid = lines.filter(n => !/^0\d{6,15}$/.test(n));
+      if (invalid.length) {
+        await this.sendMessage(
+          chatId,
+          `⚠️ Nomor tidak valid:\n${invalid.join('\n')}\n\nSilakan kirim ulang dengan format benar.`,
+          { parse_mode: 'Markdown' }
+        );
+        return new Response('OK', { status: 200 });
+      }
+
+      // Kirim loading
+      await this.sendMessage(
+        chatId,
+        `⏳ Memproses ${lines.length} nomor, mohon tunggu...`
+      );
+
+      // Proses cek kuota per nomor secara berurutan
+      let reply = '';
+      for (const num of lines) {
+        reply += await _cekkuota(num) + '\n\n';
+      }
+
+      // Kirim hasil
+      await this.sendMessage(
+        chatId,
+        reply.trim(),
+        { parse_mode: 'Markdown' }
+      );
+      return new Response('OK', { status: 200 });
+    }
+
+    // Default response
+    return new Response('OK', { status: 200 });
   }
 }
