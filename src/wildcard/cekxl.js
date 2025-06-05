@@ -1,54 +1,48 @@
-// Fungsi utama untuk ambil info kuota
-export async function Cekkuota(link) {
-  const url = `https://dompul.free-accounts.workers.dev/?number=${link}`;
-
+export async function Cekkuota(nomor) {
   try {
+    const url = `https://dompul.free-accounts.workers.dev/?number=${nomor}`;
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/114.0 Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json',
       }
     });
 
     const text = await response.text();
 
-    if (!response.ok || text.includes('error code') || text.includes('1042')) {
-      return '❌ Nomor tidak ditemukan atau diblokir.';
-    }
+    // Cek dulu isi respons, kalau bukan JSON valid, return error
+    try {
+      const data = JSON.parse(text);
 
-    const data = JSON.parse(text);
+      if (!data || !data.nomor) {
+        return '❌ Nomor tidak ditemukan atau diblokir.';
+      }
 
-    if (!data.nomor) {
-      return '❌ Data tidak ditemukan atau nomor tidak valid.';
-    }
-
-    let pesan = `📱 *Nomor:* ${data.nomor}\n`;
-    pesan += `📡 *Provider:* ${data.provider}\n`;
-    pesan += `📅 *Umur Kartu:* ${data.umur_kartu}\n`;
-    pesan += `📶 *Status SIM:* ${data.status_simcard}\n`;
-    pesan += `📇 *Dukcapil:* ${data.status_dukcapil}\n`;
-    pesan += `📆 *Masa Aktif:* ${data.masa_aktif}\n`;
-    pesan += `⏳ *Masa Tenggang:* ${data.masa_tenggang}\n\n`;
-
-    if (data.paket_aktif && data.paket_aktif.length > 0) {
+      let pesan = `📱 *Nomor:* ${data.nomor}\n`;
+      pesan += `📡 *Provider:* ${data.provider}\n`;
+      pesan += `📅 *Umur Kartu:* ${data.umur_kartu}\n`;
+      pesan += `📶 *Status SIM:* ${data.status_simcard}\n`;
+      pesan += `📇 *Dukcapil:* ${data.status_dukcapil}\n`;
+      pesan += `📆 *Masa Aktif:* ${data.masa_aktif}\n`;
+      pesan += `⏳ *Masa Tenggang:* ${data.masa_tenggang}\n\n`;
       pesan += `📦 *Paket Aktif:*\n`;
+
       data.paket_aktif.forEach((paket, i) => {
         pesan += ` ${i + 1}. ${paket.nama_paket}\n    Aktif sampai: ${paket.masa_aktif}\n`;
       });
-    } else {
-      pesan += `📦 Tidak ada paket aktif.\n`;
+
+      return pesan;
+
+    } catch (e) {
+      // Kalau parse JSON error, kirim error raw response biar tau apa masalahnya
+      return `❌ Response bukan JSON valid:\n${text}`;
     }
 
-    return pesan;
-
-  } catch (e) {
-    console.error('Cekkuota error:', e);
-    return '❌ Gagal menghubungi server atau mengurai data.';
+  } catch (err) {
+    return `❌ Gagal fetch API: ${err.message}`;
   }
 }
 
-// Kelas bot Telegram
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
@@ -76,8 +70,8 @@ export class TelegramCekkuota {
         await this.sendMessage(chatId, '📌 Kirim perintah: /cek <nomor>\nContoh: /cek 087756116610');
       }
     } catch (error) {
-      console.error('Error processing request:', error);
-      await this.sendMessage(chatId, `❌ Terjadi kesalahan:\n${error.message}`);
+      console.error('Error:', error);
+      await this.sendMessage(chatId, `❌ Error: ${error.message}`);
     }
 
     return new Response('OK', { status: 200 });
