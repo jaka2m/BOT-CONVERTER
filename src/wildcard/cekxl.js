@@ -8,15 +8,6 @@ export class TelegramCekkuota {
     this.apiUrl = apiUrl;
   }
 
-  // Normalisasi nomor HP: ganti awalan 0 dengan 62 (Indonesia)
-  normalizeNumber(number) {
-    let num = number.trim();
-    if (num.startsWith('0')) {
-      num = '62' + num.slice(1);
-    }
-    return num;
-  }
-
   async handleUpdate(update) {
     const message = update.message;
     const chatId = message?.chat?.id;
@@ -28,19 +19,19 @@ export class TelegramCekkuota {
     const numbers = text.match(/\d{10,13}/g);
     if (numbers && numbers.length > 0) {
       const replies = await Promise.all(numbers.map(async (num) => {
-        const normalizedNum = this.normalizeNumber(num);
+        // Pastikan nomor format internasional (ganti 0 diawal dengan 62)
+        const normalizedNum = num.startsWith('0') ? '62' + num.slice(1) : num;
+
         try {
           const res = await fetch(`https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${normalizedNum}`, {
             headers: {
-              'User-Agent': 'Mozilla/5.0 (compatible; Bot/1.0)',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+                            '(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
               'Accept': 'application/json'
             }
           });
 
-          if (!res.ok) {
-            // Tangani error HTTP, termasuk 403
-            throw new Error(`HTTP error! status: ${res.status}`);
-          }
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
 
           const data = await res.json();
           return this.formatQuotaResponse(normalizedNum, data);
@@ -52,23 +43,29 @@ export class TelegramCekkuota {
 
       return this.sendMessage(chatId, replies.join('\n\n'), true);
     }
+
+    // Jika tidak ada nomor valid, tidak merespon
   }
 
   formatQuotaResponse(number, data) {
-    const info = data?.data?.data_sp;
-
-    if (!data || !data.status || !info) {
+    if (!data || !data.status || !data.data) {
       return `⚠️ Nomor ${number} tidak ditemukan atau terjadi kesalahan.`;
     }
 
+    const info = data.data.data_sp;
+
+    if (!info) {
+      return `⚠️ Data detail untuk nomor ${number} tidak tersedia.`;
+    }
+
     const {
-      quotas,
-      status_4g,
+      prefix,
       dukcapil,
-      grace_period,
-      active_period,
+      status_4g,
       active_card,
-      prefix
+      active_period,
+      grace_period,
+      quotas
     } = info;
 
     let msg = `📱 *Nomor:* ${number}\n`;
@@ -79,10 +76,11 @@ export class TelegramCekkuota {
     msg += `• Masa Aktif: ${active_period?.value || '-'}\n`;
     msg += `• Masa Tenggang: ${grace_period?.value || '-'}\n\n`;
 
-    if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
+    if (quotas?.success && Array.isArray(quotas.value) && quotas.value.length > 0) {
       msg += `📦 *Detail Paket Kuota:*\n`;
       quotas.value.forEach((quotaGroup) => {
         if (!quotaGroup || quotaGroup.length === 0) return;
+
         const packageInfo = quotaGroup[0].packages;
         msg += `\n🎁 Paket: ${packageInfo?.name || '-'}\n`;
         msg += `📅 Aktif Hingga: ${this.formatDate(packageInfo?.expDate) || '-'}\n`;
@@ -98,8 +96,8 @@ export class TelegramCekkuota {
         msg += `-----------------------------\n`;
       });
     } else {
-      // Jika tidak ada quota detail, tampilkan hasil raw dari API (hapus tag html)
-      const hasilRaw = data?.data?.hasil || '';
+      // Jika paket kosong, ambil hasil teks dari 'hasil' dan bersihkan tag HTML
+      const hasilRaw = data.data.hasil || '';
       const hasilText = hasilRaw
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
