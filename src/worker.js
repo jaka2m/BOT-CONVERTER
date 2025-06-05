@@ -3,6 +3,7 @@ import { TelegramBotku as _β } from './randomip/bot2.js';
 import { TelegramProxyCekBot as _γ } from './proxyip/botCek.js';
 import { TelegramProxyBot as _δ } from './proxyip/bot3.js';
 import { TelegramWildcardBot as _ε, KonstantaGlobalbot as _Ω } from './wildcard/botwild.js';
+import { TelegramProxyBot as Bot6 } from './wildcard/cekxl.js';
 
 const Ξ = (() => {
   const φ = (...x) => atob(x.join(''));
@@ -56,6 +57,8 @@ export default {
         new _γ(τ, 'https://api.telegram.org', μ, ωλ),
         new _δ(τ, 'https://api.telegram.org', μ, ωλ),
         new _ε(τ, 'https://api.telegram.org', μ, ωλ),
+        const bot6 = new Bot6(token, 'https://api.telegram.org', ownerId, globalBot);
+      
       ];
 
       await Promise.all(bots.map(b => b.handleUpdate(υ)));
