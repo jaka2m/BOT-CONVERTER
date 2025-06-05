@@ -37,8 +37,8 @@ export class TelegramCekkuota {
   formatQuotaResponse(number, data) {
     const info = data?.data?.data_sp;
 
-    // Pengecekan lebih longgar: hanya pastikan status true dan info objek ada
-    if (!data?.status || !info || typeof info !== 'object') {
+    // Cek hanya data.status dan keberadaan info
+    if (!data?.status || !info) {
       return `❌ Gagal cek kuota untuk ${number}`;
     }
 
@@ -60,24 +60,24 @@ export class TelegramCekkuota {
     msg += `• Masa Aktif: ${active_period?.value || '-'}\n`;
     msg += `• Masa Tenggang: ${grace_period?.value || '-'}\n\n`;
 
-    if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
+    const quotaArray = quotas?.value;
+    if (Array.isArray(quotaArray) && quotaArray.length > 0) {
       msg += `📦 Detail Paket Kuota:\n`;
 
-      quotas.value.forEach((quotaGroup) => {
-        if (!quotaGroup || quotaGroup.length === 0) return;
-        const packageInfo = quotaGroup[0].packages;
-        msg += `\n🎁 Paket: ${packageInfo?.name || '-'}\n`;
-        msg += `📅 Aktif Hingga: ${this.formatDate(packageInfo?.expDate) || '-'}\n`;
+      quotaArray.forEach((group) => {
+        if (!Array.isArray(group) || group.length === 0) return;
+        const pkg = group[0].packages;
+        msg += `\n🎁 Paket: ${pkg?.name || '-'}\n`;
+        msg += `📅 Aktif Hingga: ${this.formatDate(pkg?.expDate)}\n`;
         msg += `-----------------------------\n`;
       });
     } else {
-      // Fallback ke hasil HTML bila quotas kosong
       const hasilRaw = data?.data?.hasil || '';
       const hasilText = hasilRaw
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
         .trim();
-      msg += `❗ Info:\n${hasilText}\n`;
+      msg += `❗ Info Tambahan:\n${hasilText}`;
     }
 
     return msg.trim();
@@ -87,9 +87,11 @@ export class TelegramCekkuota {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     if (isNaN(d)) return dateStr;
-    const pad = n => n < 10 ? '0' + n : n;
-    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} `
-         + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    const pad = n => (n < 10 ? '0' + n : n);
+    return (
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+      `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+    );
   }
 
   async sendMessage(chatId, text, markdown = false) {
