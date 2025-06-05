@@ -1,9 +1,24 @@
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
-  const response = await fetch(`https://dompul.free-accounts.workers.dev/?number=${link}`);
+  const url = `https://dompul.free-accounts.workers.dev/?number=${link}`;
+  const response = await fetch(url);
+
+  // Tangani HTTP error
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`HTTP ${response.status}: ${text}`);
+  }
+
+  // Pastikan JSON
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await response.text();
+    throw new Error(`Response bukan JSON: "${text}"`);
+  }
+
   const data = await response.json();
 
-  if (!data || !data.nomor) {
+  if (!data.nomor) {
     return '❌ Data tidak ditemukan atau nomor tidak valid.';
   }
 
@@ -34,11 +49,11 @@ export class TelegramCekkuota {
     if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
-    const text = update.message.text || '';
+    const text   = update.message.text?.trim() || '';
 
     try {
       if (text.startsWith('/cek')) {
-        const parts = text.split(' ');
+        const parts = text.split(/\s+/);
         const nomor = parts[1];
 
         if (!nomor) {
@@ -48,11 +63,14 @@ export class TelegramCekkuota {
           await this.sendMessage(chatId, hasil, { parse_mode: 'Markdown' });
         }
       } else {
-        await this.sendMessage(chatId, '📌 Kirim perintah: /cek <nomor>\nContoh: /cek 087756116610');
+        await this.sendMessage(chatId,
+          '📌 Kirim perintah: /cek <nomor>\nContoh: /cek 087756116610'
+        );
       }
     } catch (error) {
-      console.error('Error processing links:', error);
-      await this.sendMessage(chatId, `❌ Error: ${error.message}`);
+      console.error('Error processing request:', error);
+      // Kirim pesan error yang user-friendly
+      await this.sendMessage(chatId, `❌ Terjadi kesalahan:\n${error.message}`);
     }
 
     return new Response('OK', { status: 200 });
@@ -62,7 +80,7 @@ export class TelegramCekkuota {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const body = {
       chat_id: chatId,
-      text: text,
+      text,
       ...options
     };
 
