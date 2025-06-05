@@ -8,7 +8,7 @@ export class TelegramCekkuota {
     this.apiUrl = apiUrl;
   }
 
-  // Class method without 'function' keyword
+  // Correct method declaration (no 'function' keyword inside class)
   async cekKuota(msisdn) {
     const url = `https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${msisdn}`;
 
@@ -72,3 +72,4 @@ export class TelegramCekkuota {
     }
   }
 }
+
