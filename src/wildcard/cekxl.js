@@ -1,7 +1,7 @@
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
-
   const url = `https://dompul.free-accounts.workers.dev/?number=${link}`;
+
   const headers = {
     'Authorization': 'Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw',
     'X-API-Key': '60ef29aa-a648-4668-90ae-20951ef90c55',
@@ -14,22 +14,21 @@ export async function Cekkuota(link) {
 
   const response = await fetch(url, { headers });
 
-  const text = await response.text();
-  const contentType = response.headers.get('content-type') || '';
-
   if (!response.ok) {
-    // Tangani error khusus
+    const text = await response.text();
     if (text.includes('1042')) {
       return '❌ Nomor tidak ditemukan atau diblokir.';
     }
     throw new Error(`HTTP ${response.status}: ${text}`);
   }
 
+  const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
-    throw new Error(`❌ Server mengembalikan format tidak dikenal:\n${text}`);
+    const text = await response.text();
+    throw new Error(`❌ Server mengembalikan format tidak dikenal: ${text}`);
   }
 
-  const data = JSON.parse(text);
+  const data = await response.json();
 
   if (!data.nomor) {
     return '❌ Data tidak ditemukan atau nomor tidak valid.';
@@ -50,62 +49,4 @@ export async function Cekkuota(link) {
 
   return pesan;
 }
-
-
-export class TelegramCekkuota {
-  constructor(token, apiUrl = 'https://api.telegram.org') {
-    this.token  = token;
-    this.apiUrl = apiUrl;
-  }
-
-  async handleUpdate(update) {
-    if (!update.message) {
-      return new Response('OK', { status: 200 });
-    }
-
-    const chatId = update.message.chat.id;
-    const text   = (update.message.text || '').trim();
-
-    try {
-      if (text.startsWith('/cek')) {
-        const parts = text.split(/\s+/);
-        const nomor = parts[1];
-
-        // Validasi nomor: hanya digit, panjang 10-15
-        if (!nomor || !/^\d{10,15}$/.test(nomor)) {
-          await this.sendMessage(chatId,
-            '❗ Format salah.\nGunakan: /cek <nomor>\nContoh: /cek 087756116610'
-          );
-        } else {
-          const hasil = await Cekkuota(nomor);
-          await this.sendMessage(chatId, hasil, { parse_mode: 'Markdown' });
-        }
-      } else {
-        await this.sendMessage(chatId,
-          '📌 Kirim perintah: /cek <nomor>\nContoh: /cek 087756116610'
-        );
-      }
-    } catch (error) {
-      console.error('Error processing request:', error);
-      await this.sendMessage(chatId, `❌ Terjadi kesalahan:\n${error.message}`);
-    }
-
-    return new Response('OK', { status: 200 });
-  }
-
-  async sendMessage(chatId, text, options = {}) {
-    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-    const body = {
-      chat_id: chatId,
-      text,
-      ...options
-    };
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return res.json();
-  }
 }
