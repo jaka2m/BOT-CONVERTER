@@ -16,6 +16,23 @@ export class TelegramCekkuota {
     return num;
   }
 
+  async handleUpdate(update) {
+    const message = update.message;
+    const chatId = message?.chat?.id;
+    const text = message?.text?.trim() || '';
+
+    if (!chatId || !text) return;
+
+    const numbers = text.match(/\d{10,13}/g);
+    if (numbers && numbers.length > 0) {
+      const replies = await Promise.all(numbers.map(async (num) => {
+        return await this.cekKuota(num);
+      }));
+
+      return this.sendMessage(chatId, replies.join('\n\n'), true);
+    }
+  }
+
   async cekKuota(number) {
     const url = 'https://dompul.free-accounts.workers.dev/cek_kuota';
 
@@ -37,10 +54,15 @@ export class TelegramCekkuota {
       });
 
       if (!response.ok) {
+        const text = await response.text();
+        console.error('Response error:', response.status, text);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      const dataText = await response.text();
+      console.log('Response text:', dataText);
+
+      const data = JSON.parse(dataText);
       const dataSp = data?.data?.data_sp;
 
       if (!dataSp) {
@@ -59,7 +81,7 @@ export class TelegramCekkuota {
 
       let infoPaket = `\n\n📦 *Paket Aktif:*\n`;
 
-      if (Array.isArray(dataSp.quotas?.value) && dataSp.quotas.value.length > 0) {
+      if (dataSp.quotas?.success && Array.isArray(dataSp.quotas.value)) {
         for (const paketGroup of dataSp.quotas.value) {
           for (const paket of paketGroup) {
             const pkg = paket.packages;
@@ -89,7 +111,7 @@ export class TelegramCekkuota {
         infoPaket += `❌ Tidak ada paket aktif.`;
       }
 
-      return infoPelanggan + infoPaket;
+      return (infoPelanggan + infoPaket).trim();
 
     } catch (error) {
       console.error('Error cek kuota:', error);
@@ -101,7 +123,7 @@ export class TelegramCekkuota {
     const payload = {
       chat_id: chatId,
       text,
-      ...(markdown ? { parse_mode: 'Markdown' } : {})
+      ...(markdown ? { parse_mode: "Markdown" } : {})
     };
 
     try {
@@ -112,28 +134,6 @@ export class TelegramCekkuota {
       });
     } catch (err) {
       console.error('Gagal mengirim pesan:', err);
-    }
-  }
-
-  async handleUpdate(update) {
-    const message = update.message;
-    const chatId = message?.chat?.id;
-    const text = message?.text?.trim() || '';
-
-    if (!chatId || !text) return;
-
-    // Cari semua nomor HP 10–13 digit dalam pesan
-    const numbers = text.match(/\d{10,13}/g);
-    if (numbers && numbers.length > 0) {
-      const replies = [];
-
-      for (const num of numbers) {
-        const resText = await this.cekKuota(num);
-        replies.push(resText);
-      }
-
-      const finalMessage = replies.join('\n\n');
-      await this.sendMessage(chatId, finalMessage, true);
     }
   }
 }
