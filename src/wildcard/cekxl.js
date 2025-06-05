@@ -1,24 +1,25 @@
+
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
-  // Bisa ditambahkan logic lain kalau perlu
 }
 
+/**
+ * Kelas TelegramCekkuota: menangani webhook Telegram dalam stateless Cloudflare Worker
+ */
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
-    this.waitingForNumbers = new Set();
+    this.sendMessage = this.sendMessage.bind(this);
+    this.handleUpdate = this.handleUpdate.bind(this);
   }
 
-  async sendMessage(chatId, text, parseMode = 'Markdown') {
+  /**
+   * Kirim pesan ke chatId tertentu
+   */
+  async sendMessage(chatId, text, opts = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
-
-    const body = {
-      chat_id: chatId,
-      text: text,
-      parse_mode: parseMode
-    };
-
+    const body = { chat_id: chatId, text, ...opts };
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -26,157 +27,125 @@ export class TelegramCekkuota {
     });
   }
 
+  /**
+   * Handler untuk setiap update Telegram
+   */
   async handleUpdate(update) {
-    console.log("Received update:", JSON.stringify(update));  // DEBUG
-
-    if (!update.message) {
+    // Hanya tangani jika ada pesan teks
+    if (!update.message || !update.message.text) {
       return new Response('OK', { status: 200 });
     }
 
     const chatId = update.message.chat.id;
-    const text = (update.message.text || '').trim();
+    const text   = update.message.text.trim();
 
-    console.log(`ChatId: ${chatId} | Text: "${text}"`);  // DEBUG
-
+    // 1) Jika user kirim perintah /cekkuota → kirim prompt
     if (text === '/cekkuota') {
-      this.waitingForNumbers.add(chatId);
-      console.log(`Added chatId ${chatId} to waitingForNumbers`); // DEBUG
-
       await this.sendMessage(
         chatId,
-        '📌 *Masukkan nomor HP, 1 nomor per baris.*\nMaksimal *20* nomor.',
-        'Markdown'
+        '📌 *Masukkan nomor HP, 1 nomor per baris.*\nMaksimal *20* nomor.\n\nKirim nomor sekarang.',
+        { parse_mode: 'Markdown' }
       );
-
       return new Response('OK', { status: 200 });
     }
 
-    if (this.waitingForNumbers.has(chatId)) {
-      console.log(`ChatId ${chatId} is in waitingForNumbers, processing input...`); // DEBUG
-
-      if (text === '/cekkuota') {
-        // Jika user kirim /cekkuota lagi tanpa input nomor, abaikan saja.
-        console.log(`ChatId ${chatId} sent /cekkuota again while waiting, ignoring.`);
-        return new Response('OK', { status: 200 });
-      }
-
-      // Hapus chatId dari waiting state sebelum proses agar tidak terjebak
-      this.waitingForNumbers.delete(chatId);
-      console.log(`Removed chatId ${chatId} from waitingForNumbers`); // DEBUG
-
-      // Proses input nomor
-      const inputLines = text
-        .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
-
-      if (inputLines.length > 20) {
+    // 2) Jika text bukan perintah (tidak diawali slash), anggap daftar nomor
+    if (!text.startsWith('/')) {
+      // Pecah per baris, buang yang kosong
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+      // Validasi jumlah
+      if (lines.length > 20) {
         await this.sendMessage(
           chatId,
           '⚠️ Maksimal 20 nomor saja. Silakan kirim ulang daftar nomor HP.',
-          'Markdown'
+          { parse_mode: 'Markdown' }
         );
         return new Response('OK', { status: 200 });
       }
-
-      // Validasi format nomor (harus diawali 0 dan 7-16 digit)
-      const invalidNumbers = inputLines.filter(num => !/^0\d{6,15}$/.test(num));
-      if (invalidNumbers.length > 0) {
+      // Validasi format tiap nomor
+      const invalid = lines.filter(n => !/^0\d{6,15}$/.test(n));
+      if (invalid.length) {
         await this.sendMessage(
           chatId,
-          `⚠️ Ada nomor tidak valid:\n${invalidNumbers.join('\n')}\n\nSilakan kirim ulang dengan format benar.`,
-          'Markdown'
+          `⚠️ Nomor tidak valid:\n${invalid.join('\n')}\n\nSilakan kirim ulang dengan format benar.`,
+          { parse_mode: 'Markdown' }
         );
         return new Response('OK', { status: 200 });
       }
 
-      await this.sendMessage(
-        chatId,
-        `⏳ Memproses ${inputLines.length} nomor, mohon tunggu...`,
-        'Markdown'
-      );
+      // Loading
+      await this.sendMessage(chatId, `⏳ Memproses ${lines.length} nomor, mohon tunggu...`);
 
-      let hasilAkhir = '';
-      for (const number of inputLines) {
-        const cek = await _cekkuota(number);
-        hasilAkhir += `\n${cek}\n`;
+      // Proses tiap nomor
+      let result = '';
+      for (const num of lines) {
+        result += await _cekkuota(num) + '\n\n';
       }
 
-      await this.sendMessage(chatId, hasilAkhir, 'Markdown');
-
+      // Kirim hasil
+      await this.sendMessage(
+        chatId,
+        result.trim(),
+        { parse_mode: 'Markdown' }
+      );
       return new Response('OK', { status: 200 });
     }
 
-    // Kalau tidak ada command yang cocok, tetap balas OK supaya bot tidak error
+    // 3) Abaikan perintah lain
     return new Response('OK', { status: 200 });
   }
 }
 
-// Fungsi cek kuota dummy, sesuaikan sesuai kebutuhan
+/**
+ * Helper: fetch data kuota dan format ke string Markdown
+ */
 async function _cekkuota(number) {
   try {
-    // Contoh request ke API eksternal
     const url = `https://dompul.free-accounts.workers.dev/?number=${number}`;
-    const headers = {
-      'User-Agent': 'Mozilla/5.0',
-      'Accept': 'application/json'
-    };
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }
+    });
+    const json = await res.json();
+    const sp = json.data?.data_sp;
+    if (!sp) return `❌ Gagal mendapatkan data untuk *${number}*.`;
 
-    const response = await fetch(url, { headers });
-    const data = await response.json();
+    let out = [
+      `📌 *Info Pelanggan:*`,
+      `🔢 Nomor: ${number}`,
+      `⌛️ Umur Kartu: ${sp.active_card?.value || '-'}`,
+      `📶 Status Simcard: ${sp.status_4g?.value || '-'}`,
+      `📋 Status Dukcapil: ${sp.dukcapil?.value || '-'}`,
+      `⏳ Masa Aktif: ${sp.active_period?.value || '-'}`
+    ].join('\n');
 
-    if (!data.data?.data_sp) {
-      return `❌ Gagal mendapatkan data untuk *${number}*.`;
-    }
-
-    const dataSp = data.data.data_sp;
-
-    let infoPelanggan = `
-📌 *Info Pelanggan:*
-🔢 *Nomor:* ${number}
-⌛️ *Umur Kartu:* ${dataSp.active_card?.value || '-'}
-📶 *Status Simcard:* ${dataSp.status_4g?.value || '-'}
-📋 *Status Dukcapil:* ${dataSp.dukcapil?.value || '-'}
-⏳ *Masa Aktif:* ${dataSp.active_period?.value || '-'}`;
-
-    let infoPaket = `\n📦 *Paket Aktif:*\n`;
-
-    if (dataSp.quotas?.success && Array.isArray(dataSp.quotas.value)) {
-      for (const paketGroup of dataSp.quotas.value) {
-        for (const paket of paketGroup) {
-          const namaPaket = paket.packages?.name || paket.name || '-';
-          const masaAktif = paket.packages?.expDate || paket.date_end || '-';
-
-          infoPaket += `
-🎁 *Nama Paket:* ${namaPaket}
-📅 *Masa Aktif:* ${masaAktif}`;
-
-          const details = paket.detail_quota || paket.benefits || [];
-          if (Array.isArray(details) && details.length > 0) {
-            for (const detail of details) {
-              const benefitName = detail.name || detail.bname || '-';
-              const tipe = detail.type || '-';
-              const kuota = detail.total_text || detail.quota || '-';
-              const sisa = detail.remaining_text || detail.remaining || '-';
-
-              infoPaket += `
-  ─ 📌 *Benefit:* ${benefitName}
-     🧧 *Tipe:* ${tipe}
-     💾 *Kuota:* ${kuota}
-     ✅ *Sisa:* ${sisa}`;
+    out += `\n\n📦 *Paket Aktif:*`;
+    if (sp.quotas?.success && Array.isArray(sp.quotas.value)) {
+      for (const grp of sp.quotas.value) {
+        for (const pkg of grp) {
+          const name = pkg.packages?.name || pkg.name || '-';
+          const exp  = pkg.packages?.expDate || pkg.date_end || '-';
+          out += `\n\n🎁 *Nama Paket:* ${name}\n📅 Masa Aktif: ${exp}`;
+          const details = pkg.detail_quota || pkg.benefits || [];
+          if (details.length) {
+            for (const d of details) {
+              const bname = d.name || d.bname || '-';
+              const tipe  = d.type || '-';
+              const q     = d.total_text || d.quota || '-';
+              const rem   = d.remaining_text || d.remaining || '-';
+              out += `\n  ─ 📌 *Benefit:* ${bname}\n     🧧 Tipe: ${tipe}\n     💾 Kuota: ${q}\n     ✅ Sisa: ${rem}`;
             }
           } else {
-            infoPaket += `\n  🚫 Tidak ada detail benefit.`;
+            out += `\n  🚫 Tidak ada detail benefit.`;
           }
-          infoPaket += `\n-----------------------------`;
         }
       }
     } else {
-      infoPaket += `Tidak ada paket aktif.`;
+      out += `\n\n🚫 Tidak ada paket aktif.`;
     }
 
-    return infoPelanggan + infoPaket;
-  } catch (err) {
-    return `❌ Terjadi kesalahan saat memeriksa nomor *${number}*.\nError: ${err.message}`;
+    return out;
+  } catch (e) {
+    return `❌ Error cek *${number}*: ${e.message}`;
   }
 }
+
