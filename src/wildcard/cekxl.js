@@ -15,7 +15,6 @@ export class TelegramCekkuota {
 
     if (!chatId || !text) return;
 
-    // Cari semua nomor HP 10–13 digit dalam pesan
     const numbers = text.match(/\d{10,13}/g);
     if (numbers && numbers.length > 0) {
       const replies = await Promise.all(numbers.map(async (num) => {
@@ -31,15 +30,13 @@ export class TelegramCekkuota {
 
       return this.sendMessage(chatId, replies.join('\n\n'), true);
     }
-
-    // Jika tidak ada nomor valid, tidak mengirim apapun (tidak merespon)
   }
 
   formatQuotaResponse(number, data) {
     const info = data?.data?.data_sp;
 
     if (!data || !data.status || !info) {
-      return `⚠️ Nomor ${number} tidak ditemukan atau terjadi kesalahan.`;
+      return `❌ Gagal cek kuota untuk ${number}`;
     }
 
     const {
@@ -52,7 +49,7 @@ export class TelegramCekkuota {
       prefix
     } = info;
 
-    let msg = `📱 *Nomor:* ${number}\n`;
+    let msg = `📱 Nomor: ${number}\n`;
     msg += `• Tipe Kartu: ${prefix?.value || '-'}\n`;
     msg += `• Umur Kartu: ${active_card?.value || '-'}\n`;
     msg += `• Status Dukcapil: ${dukcapil?.value || '-'}\n`;
@@ -61,21 +58,14 @@ export class TelegramCekkuota {
     msg += `• Masa Tenggang: ${grace_period?.value || '-'}\n\n`;
 
     if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
-      msg += `📦 *Detail Paket Kuota:*\n`;
-      quotas.value.forEach((quotaGroup) => {
-        if (!quotaGroup || quotaGroup.length === 0) return;
-        const packageInfo = quotaGroup[0].packages;
-        msg += `\n🎁 Paket: ${packageInfo?.name || '-'}\n`;
-        msg += `📅 Aktif Hingga: ${this.formatDate(packageInfo?.expDate) || '-'}\n`;
+      msg += `📦 Detail Paket Kuota:\n`;
 
-        if (quotaGroup[0].benefits && quotaGroup[0].benefits.length > 0) {
-          quotaGroup[0].benefits.forEach(benefit => {
-            msg += `• Benefit: ${benefit.bname}\n`;
-            msg += `  Tipe Kuota: ${benefit.type}\n`;
-            msg += `  Kuota: ${benefit.quota}\n`;
-            msg += `  Sisa Kuota: ${benefit.remaining}\n`;
-          });
-        }
+      quotas.value.forEach((quotaGroup) => {
+        const paket = quotaGroup?.[0]?.packages || quotaGroup?.packages;
+        if (!paket) return;
+
+        msg += `\n🎁 Paket: ${paket.name || '-'}\n`;
+        msg += `📅 Aktif Hingga: ${this.formatDate(paket.expDate) || '-'}\n`;
         msg += `-----------------------------\n`;
       });
     } else {
@@ -84,7 +74,7 @@ export class TelegramCekkuota {
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
         .trim();
-      msg += `❗ Info:\n${hasilText}\n`;
+      msg += hasilText ? `📦 Info Tambahan:\n${hasilText}\n` : `📦 Tidak ada detail paket kuota.`;
     }
 
     return msg.trim();
