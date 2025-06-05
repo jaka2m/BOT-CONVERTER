@@ -1,45 +1,106 @@
+// worker.js
 
+// ===============================
+// 1. Stub fungsi Cekkuota(link) — hanya logging
+// ===============================
 export async function Cekkuota(link) {
   console.log("Bot link:", link);
+  // (Anda bisa menambahkan logika lain di sini jika diperlukan)
 }
 
-/**
- * Kelas TelegramCekkuota: menangani webhook Telegram dalam stateless Cloudflare Worker
- */
+// ===============================
+// 2. Helper function untuk cek kuota tiap nomor (sesuai format JSON terbaru)
+// ===============================
+async function _cekkuota(number) {
+  try {
+    const url = `https://dompul.free-accounts.workers.dev/?number=${number}`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json'
+      }
+    });
+
+    // Tangani respons non-JSON
+    let data;
+    try {
+      data = await res.json();
+    } catch (err) {
+      const text = await res.text();
+      return `❌ Gagal cek *${number}*:\n\`\`\`\n${text}\n\`\`\``;
+    }
+
+    // Validasi struktur
+    if (!data || !data.nomor) {
+      return `❌ Gagal mendapatkan data untuk *${number}*.`;
+    }
+
+    // Rangkuman Info Pelanggan
+    let out = [
+      `📲 *Cek Nomor:* ${data.nomor}`,
+      `🏷️ *Provider:* ${data.provider || '-'}`,
+      `📅 *Umur Kartu:* ${data.umur_kartu || '-'}`,
+      `📶 *Status SIM:* ${data.status_simcard || '-'}`,
+      `🆔 *Status Dukcapil:* ${data.status_dukcapil || '-'}`,
+      `🗓️ *Masa Aktif:* ${data.masa_aktif || '-'}`,
+      `⏳ *Masa Tenggang:* ${data.masa_tenggang || '-'}`
+    ].join('\n');
+
+    // Rangkuman Paket Aktif
+    if (Array.isArray(data.paket_aktif) && data.paket_aktif.length > 0) {
+      out += `\n\n📦 *Paket Aktif:*`;
+      data.paket_aktif.forEach((paket, idx) => {
+        out += `\n\n${idx + 1}. 🎁 *${paket.nama_paket}*`;
+        out += `\n   📆 *Masa Aktif:* ${paket.masa_aktif || '-'}`;
+        if (Array.isArray(paket.benefits) && paket.benefits.length > 0) {
+          paket.benefits.forEach(b => {
+            out += `\n     ▫️ ${b}`;
+          });
+        } else {
+          out += `\n     🚫 Tidak ada benefit detail.`;
+        }
+      });
+    } else {
+      out += `\n\n🚫 Tidak ada paket aktif.`;
+    }
+
+    return out;
+  } catch (e) {
+    return `❌ Error cek *${number}*: ${e.message}`;
+  }
+}
+
+// ===============================
+// 3. Kelas TelegramCekkuota (stateless)
+// ===============================
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
-    this.token = token;
+    this.token  = token;
     this.apiUrl = apiUrl;
-    this.sendMessage = this.sendMessage.bind(this);
     this.handleUpdate = this.handleUpdate.bind(this);
   }
 
-  /**
-   * Kirim pesan ke chatId tertentu
-   */
+  // Kirim pesan ke Telegram
   async sendMessage(chatId, text, opts = {}) {
-    const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
+    const url  = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const body = { chat_id: chatId, text, ...opts };
     await fetch(url, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body:    JSON.stringify(body)
     });
   }
 
-  /**
-   * Handler untuk setiap update Telegram
-   */
+  // Handler setiap update Telegram
   async handleUpdate(update) {
-    // Hanya tangani jika ada pesan teks
-    if (!update.message || !update.message.text) {
+    if (!update.message) {
       return new Response('OK', { status: 200 });
     }
 
     const chatId = update.message.chat.id;
-    const text   = update.message.text.trim();
+    const text   = (update.message.text || '').trim();
 
-    // 1) Jika user kirim perintah /cekkuota → kirim prompt
+    // Jika perintah /cekkuota
     if (text === '/cekkuota') {
       await this.sendMessage(
         chatId,
@@ -49,11 +110,16 @@ export class TelegramCekkuota {
       return new Response('OK', { status: 200 });
     }
 
-    // 2) Jika text bukan perintah (tidak diawali slash), anggap daftar nomor
+    // Jika bukan perintah (tidak diawali "/"), anggap daftar nomor
     if (!text.startsWith('/')) {
-      // Pecah per baris, buang yang kosong
-      const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-      // Validasi jumlah
+      const lines = text
+        .split('\n')
+        .map(l => l.trim())
+        .filter(l => l);
+
+      if (lines.length === 0) {
+        return new Response('OK', { status: 200 });
+      }
       if (lines.length > 20) {
         await this.sendMessage(
           chatId,
@@ -62,7 +128,7 @@ export class TelegramCekkuota {
         );
         return new Response('OK', { status: 200 });
       }
-      // Validasi format tiap nomor
+
       const invalid = lines.filter(n => !/^0\d{6,15}$/.test(n));
       if (invalid.length) {
         await this.sendMessage(
@@ -73,79 +139,29 @@ export class TelegramCekkuota {
         return new Response('OK', { status: 200 });
       }
 
-      // Loading
-      await this.sendMessage(chatId, `⏳ Memproses ${lines.length} nomor, mohon tunggu...`);
+      // Kirim loading
+      await this.sendMessage(
+        chatId,
+        `⏳ Memproses ${lines.length} nomor, mohon tunggu...`
+      );
 
-      // Proses tiap nomor
-      let result = '';
+      // Proses cek kuota
+      let reply = '';
       for (const num of lines) {
-        result += await _cekkuota(num) + '\n\n';
+        reply += await _cekkuota(num) + '\n\n';
       }
 
       // Kirim hasil
       await this.sendMessage(
         chatId,
-        result.trim(),
+        reply.trim(),
         { parse_mode: 'Markdown' }
       );
       return new Response('OK', { status: 200 });
     }
 
-    // 3) Abaikan perintah lain
+    // Abaikan perintah lain
     return new Response('OK', { status: 200 });
-  }
-}
-
-/**
- * Helper: fetch data kuota dan format ke string Markdown
- */
-async function _cekkuota(number) {
-  try {
-    const url = `https://dompul.free-accounts.workers.dev/?number=${number}`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }
-    });
-    const json = await res.json();
-    const sp = json.data?.data_sp;
-    if (!sp) return `❌ Gagal mendapatkan data untuk *${number}*.`;
-
-    let out = [
-      `📌 *Info Pelanggan:*`,
-      `🔢 Nomor: ${number}`,
-      `⌛️ Umur Kartu: ${sp.active_card?.value || '-'}`,
-      `📶 Status Simcard: ${sp.status_4g?.value || '-'}`,
-      `📋 Status Dukcapil: ${sp.dukcapil?.value || '-'}`,
-      `⏳ Masa Aktif: ${sp.active_period?.value || '-'}`
-    ].join('\n');
-
-    out += `\n\n📦 *Paket Aktif:*`;
-    if (sp.quotas?.success && Array.isArray(sp.quotas.value)) {
-      for (const grp of sp.quotas.value) {
-        for (const pkg of grp) {
-          const name = pkg.packages?.name || pkg.name || '-';
-          const exp  = pkg.packages?.expDate || pkg.date_end || '-';
-          out += `\n\n🎁 *Nama Paket:* ${name}\n📅 Masa Aktif: ${exp}`;
-          const details = pkg.detail_quota || pkg.benefits || [];
-          if (details.length) {
-            for (const d of details) {
-              const bname = d.name || d.bname || '-';
-              const tipe  = d.type || '-';
-              const q     = d.total_text || d.quota || '-';
-              const rem   = d.remaining_text || d.remaining || '-';
-              out += `\n  ─ 📌 *Benefit:* ${bname}\n     🧧 Tipe: ${tipe}\n     💾 Kuota: ${q}\n     ✅ Sisa: ${rem}`;
-            }
-          } else {
-            out += `\n  🚫 Tidak ada detail benefit.`;
-          }
-        }
-      }
-    } else {
-      out += `\n\n🚫 Tidak ada paket aktif.`;
-    }
-
-    return out;
-  } catch (e) {
-    return `❌ Error cek *${number}*: ${e.message}`;
   }
 }
 
