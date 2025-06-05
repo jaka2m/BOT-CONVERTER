@@ -15,6 +15,7 @@ export class TelegramCekkuota {
 
     if (!chatId || !text) return;
 
+    // Cari semua nomor HP 10–13 digit dalam pesan
     const numbers = text.match(/\d{10,13}/g);
     if (numbers && numbers.length > 0) {
       const replies = await Promise.all(numbers.map(async (num) => {
@@ -28,6 +29,7 @@ export class TelegramCekkuota {
         }
       }));
 
+      // Gabungkan balasan untuk tiap nomor, pisahkan dengan baris kosong
       return this.sendMessage(chatId, replies.join('\n\n'), true);
     }
   }
@@ -35,7 +37,8 @@ export class TelegramCekkuota {
   formatQuotaResponse(number, data) {
     const info = data?.data?.data_sp;
 
-    if (!data || !data.status || !info) {
+    // Pengecekan lebih longgar: hanya pastikan status true dan info objek ada
+    if (!data?.status || !info || typeof info !== 'object') {
       return `❌ Gagal cek kuota untuk ${number}`;
     }
 
@@ -61,20 +64,20 @@ export class TelegramCekkuota {
       msg += `📦 Detail Paket Kuota:\n`;
 
       quotas.value.forEach((quotaGroup) => {
-        const paket = quotaGroup?.[0]?.packages || quotaGroup?.packages;
-        if (!paket) return;
-
-        msg += `\n🎁 Paket: ${paket.name || '-'}\n`;
-        msg += `📅 Aktif Hingga: ${this.formatDate(paket.expDate) || '-'}\n`;
+        if (!quotaGroup || quotaGroup.length === 0) return;
+        const packageInfo = quotaGroup[0].packages;
+        msg += `\n🎁 Paket: ${packageInfo?.name || '-'}\n`;
+        msg += `📅 Aktif Hingga: ${this.formatDate(packageInfo?.expDate) || '-'}\n`;
         msg += `-----------------------------\n`;
       });
     } else {
+      // Fallback ke hasil HTML bila quotas kosong
       const hasilRaw = data?.data?.hasil || '';
       const hasilText = hasilRaw
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
         .trim();
-      msg += hasilText ? `📦 Info Tambahan:\n${hasilText}\n` : `📦 Tidak ada detail paket kuota.`;
+      msg += `❗ Info:\n${hasilText}\n`;
     }
 
     return msg.trim();
@@ -84,12 +87,9 @@ export class TelegramCekkuota {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     if (isNaN(d)) return dateStr;
-    return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())} ` +
-           `${this.pad(d.getHours())}:${this.pad(d.getMinutes())}:${this.pad(d.getSeconds())}`;
-  }
-
-  pad(n) {
-    return n < 10 ? '0' + n : n;
+    const pad = n => n < 10 ? '0' + n : n;
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} `
+         + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   }
 
   async sendMessage(chatId, text, markdown = false) {
