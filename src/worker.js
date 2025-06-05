@@ -51,14 +51,15 @@ export default {
         rootDomain: ζκ,
       });
 
+      const bot6 = new Bot6(τ, 'https://api.telegram.org', μ, ωλ); // ✅ dipindahkan ke luar array
+
       const bots = [
         new _α(τ, 'https://api.telegram.org', μ, ωλ),
         new _β(τ, 'https://api.telegram.org', μ, ωλ),
         new _γ(τ, 'https://api.telegram.org', μ, ωλ),
         new _δ(τ, 'https://api.telegram.org', μ, ωλ),
         new _ε(τ, 'https://api.telegram.org', μ, ωλ),
-        const bot6 = new Bot6(token, 'https://api.telegram.org', ownerId, globalBot);
-      
+        bot6
       ];
 
       await Promise.all(bots.map(b => b.handleUpdate(υ)));
