@@ -21,7 +21,23 @@ export class TelegramCekkuota {
       const response = await fetch(url);
       const text = await response.text();
 
-      // Coba parse JSON, fallback kalau bukan JSON valid
+      // Jika respons berformat plain text "error code: XXXX"
+      if (/^error code:\s*\d+/i.test(text.trim())) {
+        const code = text.trim().split(':')[1].trim();
+        // Map kode ke pesan user-friendly
+        let pesan;
+        switch (code) {
+          case '1042':
+            pesan = '❌ Nomor tidak valid atau belum terdaftar.';
+            break;
+          // Tambahkan case lain jika perlu
+          default:
+            pesan = `❌ Server mengembalikan error code ${code}.`;
+        }
+        return pesan;
+      }
+
+      // Coba parse JSON
       let data;
       try {
         data = JSON.parse(text);
@@ -35,6 +51,7 @@ export class TelegramCekkuota {
         return `❌ Gagal mendapatkan data untuk *${msisdn}*.`;
       }
 
+      // Bangun pesan info pelanggan
       let infoPelanggan = `
 📌 *Info Pelanggan:*
 🔢 *Nomor:* ${msisdn}
@@ -45,30 +62,27 @@ export class TelegramCekkuota {
 ⏳ *Masa Aktif:* ${dataSp.active_period?.value || '-'}
 ⚠️ *Masa Tenggang:* ${dataSp.grace_period?.value || '-'}`;
 
+      // Bangun pesan info paket
       let infoPaket = `\n\n📦 *Paket Aktif:*\n`;
-
       if (dataSp.quotas?.success && Array.isArray(dataSp.quotas.value)) {
         for (const paketGroup of dataSp.quotas.value) {
           for (const paket of paketGroup) {
             const pkg = paket.packages;
             const benefits = paket.benefits;
-
             infoPaket += `
 🎁 *Nama Paket:* ${pkg.name}
 📅 *Masa Aktif:* ${pkg.expDate}`;
-
-            if (benefits && benefits.length > 0) {
-              for (const benefit of benefits) {
+            if (benefits?.length) {
+              for (const b of benefits) {
                 infoPaket += `
-  ─ 📌 *Benefit:* ${benefit.bname}
-     🧧 *Tipe:* ${benefit.type}
-     💾 *Kuota:* ${benefit.quota}
-     ✅ *Sisa:* ${benefit.remaining}`;
+  ─ 📌 *Benefit:* ${b.bname}
+     🧧 *Tipe:* ${b.type}
+     💾 *Kuota:* ${b.quota}
+     ✅ *Sisa:* ${b.remaining}`;
               }
             } else {
               infoPaket += `\n  🚫 Tidak ada detail benefit.`;
             }
-
             infoPaket += `\n-----------------------------\n`;
           }
         }
@@ -111,7 +125,7 @@ export class TelegramCekkuota {
   // ---------------------------------------------
   async handleUpdate(update) {
     const message = update.message;
-    if (!message || !message.text) return;
+    if (!message?.text) return;
 
     const chatId = message.chat.id;
     const text = message.text.trim();
@@ -127,7 +141,7 @@ export class TelegramCekkuota {
         return;
       }
 
-      const msisdn = parts[1].trim();
+      const msisdn = parts[1];
       await this.sendMessage(chatId, `⏳ Mengecek kuota untuk: ${msisdn}...`);
       const result = await this.cekKuota(msisdn);
       await this.sendMessage(chatId, result, true);
