@@ -22,7 +22,15 @@ export class TelegramCekkuota {
         try {
           const res = await fetch(`https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${num}`);
           const data = await res.json();
-          return this.formatQuotaResponse(num, data);
+
+          // Jika data_sp tidak ada, langsung tampilkan error
+          const info = data?.data?.data_sp;
+          if (!info) {
+            return `❌ Gagal cek kuota untuk ${num}`;
+          }
+
+          // Kalau info ada, lanjut format respon
+          return this.formatQuotaResponse(num, info, data?.data?.hasil);
         } catch (err) {
           console.error(`Error fetching kuota untuk ${num}:`, err);
           return `❌ Gagal cek kuota untuk ${num}`;
@@ -34,14 +42,11 @@ export class TelegramCekkuota {
     }
   }
 
-  formatQuotaResponse(number, data) {
-    const info = data?.data?.data_sp;
-
-    // Cek hanya data.status dan keberadaan info
-    if (!data?.status || !info) {
-      return `❌ Gagal cek kuota untuk ${number}`;
-    }
-
+  /**
+   * info: sudah berisi data_sp
+   * rawHasil: fallback HTML bila paket kosong
+   */
+  formatQuotaResponse(number, info, rawHasil) {
     const {
       quotas,
       status_4g,
@@ -72,7 +77,8 @@ export class TelegramCekkuota {
         msg += `-----------------------------\n`;
       });
     } else {
-      const hasilRaw = data?.data?.hasil || '';
+      // Jika tidak ada kuota, pakai rawHasil (HTML → teks)
+      const hasilRaw = rawHasil || '';
       const hasilText = hasilRaw
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
