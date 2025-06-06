@@ -1,3 +1,7 @@
+export async function Cekkuota(link) {
+  console.log("Bot link:", link);
+}
+
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
