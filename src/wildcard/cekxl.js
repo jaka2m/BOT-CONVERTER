@@ -58,8 +58,7 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
       return this.sendMessage(chatId, replies.join('\n\n'), true);
     }
 
-    return this.sendMessage(chatId, '❗ Mohon kirim nomor HP yang valid untuk dicek.', true);
-  }
+      }
 
   async sendMessage(chatId, text, markdown = false) {
     const payload = {
