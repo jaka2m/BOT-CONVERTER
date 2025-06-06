@@ -1,7 +1,3 @@
-export async function Cekkuota(link) {
-  console.log("Bot link:", link);
-}
-
 // File: telegramCekkuota.js
 
 export class TelegramCekkuota {
@@ -20,87 +16,74 @@ export class TelegramCekkuota {
     const numbers = text.match(/\d{10,13}/g);
     if (!numbers) return;
 
-    // Proses setiap nomor secara paralel
-    const replies = await Promise.all(
-      numbers.map((num) => this.checkOneNumber(num))
-    );
-
-    // Gabungkan balasan (dipisah satu baris kosong), lalu kirim sebagai satu pesan
+    const replies = await Promise.all(numbers.map((num) => this.checkOneNumber(num)));
     await this.sendMessage(chatId, replies.join('\n\n'), true);
   }
 
-  // Mengecek satu nomor dan mengembalikan string hasilnya
   async checkOneNumber(num) {
     try {
       const res = await fetch(
         `https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${num}`
       );
       if (!res.ok) {
-        // Kalau HTTP status bukan 200
+        console.error(`HTTP ERROR ${res.status} untuk nomor ${num}`);
         return `❌ Gagal cek kuota untuk ${num}`;
       }
 
       const data = await res.json();
-      console.log(`🔍 Respond API untuk ${num}:`, JSON.stringify(data));
+      // Cetak seluruh JSON yang diterima, supaya kita bisa cek struktur aslinya
+      console.log(`🔍 RESPOND API UNTUK ${num}: ${JSON.stringify(data)}`);
 
-      // Coba ambil objek data_sp (bila tersedia)
-      // Menurut contoh JSON yang kamu kirim:
-      //   {
-      //     "data": {
-      //       "data_sp": { … },
-      //       "hasil": "…",
-      //       "msisdn": "087756116610"
-      //     },
-      //     "message": "SUCCESS",
-      //     "status": true,
-      //     "statusCode": 200
-      //   }
-      //
-      // Jadi, path yang benar adalah data.data.data_sp
-      const info = data?.data?.data_sp ?? null;
+      // Coba ambil data_sp di jalur yang paling umum
+      // (→ sesuai contoh: data.data.data_sp)
+      let info = data?.data?.data_sp ?? null;
 
-      // Ambil fallback HTML (jika quotas kosong/nol)
-      const rawHasil = data?.data?.hasil ?? '';
+      // Jika belum dapat, coba juga data.data_sp langsung
+      if (!info && data?.data_sp) {
+        info = data.data_sp;
+      }
 
-      // Jika info masih null, kita tetap kirimkan balasan dengan teks fallback
+      // Ambil fallback HTML/teks dari field 'hasil' (bila ada)
+      let rawHasil = data?.data?.hasil ?? '';
+      if (!rawHasil && data?.hasil) {
+        rawHasil = data.hasil;
+      }
+
+      // Kalau info masih null, return seluruh JSON sebagai teks
       if (!info) {
-        // Konversi HTML → teks agar gampang dibaca
-        const teksSaja = rawHasil
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<[^>]+>/g, '')
+        const teksJSON = JSON.stringify(data, null, 2)
+          .replace(/\\n/g, '\n')
           .trim();
         return (
           `📱 Nomor: ${num}\n\n` +
-          `❗ Info:\n${teksSaja || 'Tidak ada detail paket kuota.'}`
+          `⚠️ field data_sp tidak ditemukan.\n` +
+          `Ini JSON lengkapnya:\n\n` +
+          '```\n' +
+          teksJSON +
+          '\n```'
         );
       }
 
-      // Kalau info ada, susun format lengkap
+      // Kalau info ada, susun respons normal
       return this.formatQuotaResponse(num, info, rawHasil);
     } catch (err) {
-      console.error(`Error fetching kuota untuk ${num}:`, err);
+      console.error(`ERROR FETCH untuk ${num}:`, err);
       return `❌ Gagal cek kuota untuk ${num}`;
     }
   }
 
-  /**
-   * number   = string, misal "087756116610"
-   * info     = objek data_sp (sesuai JSON)
-   * rawHasil = string HTML fallback (jika quotas kosong)
-   */
   formatQuotaResponse(number, info, rawHasil) {
-    // Ambil properti-properti yang kita butuhkan (bila ada)
+    // Ambil properti-properti yang kita butuhkan (jika ada)
     const {
-      prefix,        // { value: "XL" }
+      prefix,        // { value: "XL" } misalnya
       active_card,   // { value: "5 Tahun 11 Bulan" }
       dukcapil,      // { value: "Sudah" }
       status_4g,     // { value: "4G" }
       active_period, // { value: "2025-06-25" }
       grace_period,  // { value: "2025-07-25" }
-      quotas         // { value: [ [ { packages: {...}, benefits: [] } ], … ] }
+      quotas         // { value: [ [ { packages: {...}, benefits: [...] } ], ... ] }
     } = info;
 
-    // Mulai membangun pesan
     let msg = `📱 Nomor: ${number}\n`;
     msg += `• Tipe Kartu: ${prefix?.value || '-'}\n`;
     msg += `• Umur Kartu: ${active_card?.value || '-'}\n`;
@@ -109,7 +92,6 @@ export class TelegramCekkuota {
     msg += `• Masa Aktif: ${active_period?.value || '-'}\n`;
     msg += `• Masa Tenggang: ${grace_period?.value || '-'}\n\n`;
 
-    // Cek apakah ada detail paket kuota
     const arrQuota = quotas?.value;
     if (Array.isArray(arrQuota) && arrQuota.length > 0) {
       msg += `📦 Detail Paket Kuota:\n`;
@@ -123,8 +105,8 @@ export class TelegramCekkuota {
       return msg.trim();
     }
 
-    // Jika tidak ada arrQuota atau kosong, pakai rawHasil (HTML → teks)
-    const teksSaja = rawHasil
+    // Jika tidak ada arrQuota, tampilkan rawHasil (HTML → teks) atau pesan default
+    const teksSaja = (rawHasil || '')
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<[^>]+>/g, '')
       .trim();
