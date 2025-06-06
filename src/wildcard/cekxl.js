@@ -1,102 +1,129 @@
 // File: telegramCekkuota.js
 
 export class TelegramCekkuota {
-  constructor(token, apiUrl = 'https://api.telegram.org') {
+  constructor(token, apiUrlBase = 'https://api.telegram.org') {
     this.token = token;
-    this.apiUrl = apiUrl;
+    this.apiUrlBase = apiUrlBase;
   }
 
+  /**
+   * Panggil ketika ada update dari Telegram (misal via webhook).
+   * @param {object} update — objek update Telegram
+   */
   async handleUpdate(update) {
     const message = update.message;
     const chatId = message?.chat?.id;
     const text = message?.text?.trim() || '';
     if (!chatId || !text) return;
 
-    // Cari nomor HP (10–13 digit) di dalam teks
+    // Cari nomor HP 10–13 digit dalam teks
     const numbers = text.match(/\d{10,13}/g);
-    if (!numbers) return;
+    if (!numbers || numbers.length === 0) return;
 
     // Proses setiap nomor secara paralel
     const replies = await Promise.all(
       numbers.map((num) => this.checkOneNumber(num))
     );
 
-    // Gabungkan balasan (dipisah satu baris kosong), lalu kirim sebagai satu pesan
-    await this.sendMessage(chatId, replies.join('\n\n'), true);
+    // Gabungkan balasan, pisahkan dengan satu baris kosong
+    const finalText = replies.join('\n\n');
+    await this.sendMessage(chatId, finalText, true);
   }
 
-  // Mengecek satu nomor dan mengembalikan string hasilnya
-  async checkOneNumber(num) {
+  /**
+   * Cek kuota satu nomor, kembalikan string hasilnya.
+   * @param {string} msisdn — nomor HP, misal "087756116610"
+   * @returns {Promise<string>}
+   */
+  async checkOneNumber(msisdn) {
+    // Bentuk URL dengan query string isJSON=true
+    const apiUrl = `https://apigw.kmsp-store.com/sidompul/v4/cek_kuota?msisdn=${msisdn}&isJSON=true`;
+
+    // Header sesuai contoh
+    const headers = {
+      Authorization: 'Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw',
+      'X-API-Key': '60ef29aa-a648-4668-90ae-20951ef90c55',
+      'X-App-Version': '4.0.0',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': 'Mozilla/5.0',
+    };
+
     try {
-      const res = await fetch(
-        `https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${num}`
-      );
-      if (!res.ok) {
-        // Kalau HTTP status bukan 200
-        return `❌ Gagal cek kuota untuk ${num}`;
+      const apiResponse = await fetch(apiUrl, { headers });
+      if (!apiResponse.ok) {
+        // Bila HTTP status bukan 200, ambil error JSON (jika ada) untuk debug
+        let debugData = {};
+        try {
+          debugData = await apiResponse.json();
+        } catch {
+          debugData = { message: 'Tidak dapat mengurai respons error.' };
+        }
+        console.error(
+          `HTTP ${apiResponse.status} saat cek kuota untuk ${msisdn}:`,
+          debugData
+        );
+
+        return `❌ Gagal cek kuota untuk ${msisdn}`;
       }
 
-      const data = await res.json();
-      console.log(`🔍 Respond API untuk ${num}:`, JSON.stringify(data));
+      const data = await apiResponse.json();
+      console.log(`🔍 Respons API untuk ${msisdn}:`, JSON.stringify(data));
 
-      // Coba ambil objek data_sp (bila tersedia)
-      // Menurut contoh JSON yang kamu kirim:
-      //   {
-      //     "data": {
-      //       "data_sp": { … },
-      //       "hasil": "…",
-      //       "msisdn": "087756116610"
-      //     },
-      //     "message": "SUCCESS",
-      //     "status": true,
-      //     "statusCode": 200
+      // Dari contoh JSON:
+      // {
+      //   "status": true,
+      //   "message": "SUCCESS",
+      //   "statusCode": 200,
+      //   "data": {
+      //     "data_sp": { … },
+      //     "hasil": "…",
+      //     "msisdn": "087756116610"
       //   }
+      // }
       //
-      // Jadi, path yang benar adalah data.data.data_sp
+      // Jadi path yang benar adalah data.data.data_sp
       const info = data?.data?.data_sp ?? null;
-
-      // Ambil fallback HTML (jika quotas kosong/nol)
       const rawHasil = data?.data?.hasil ?? '';
 
-      // Jika info masih null, kita tetap kirimkan balasan dengan teks fallback
       if (!info) {
-        // Konversi HTML → teks agar gampang dibaca
+        // Kalau data_sp tidak ditemukan, kirim fallback menggunakan rawHasil
         const teksSaja = rawHasil
           .replace(/<br\s*\/?>/gi, '\n')
           .replace(/<[^>]+>/g, '')
           .trim();
         return (
-          `📱 Nomor: ${num}\n\n` +
+          `📱 Nomor: ${msisdn}\n\n` +
           `❗ Info:\n${teksSaja || 'Tidak ada detail paket kuota.'}`
         );
       }
 
-      // Kalau info ada, susun format lengkap
-      return this.formatQuotaResponse(num, info, rawHasil);
+      // Bila info tersedia, format lengkap
+      return this.formatQuotaResponse(msisdn, info, rawHasil);
     } catch (err) {
-      console.error(`Error fetching kuota untuk ${num}:`, err);
-      return `❌ Gagal cek kuota untuk ${num}`;
+      console.error(`ERROR fetch untuk ${msisdn}:`, err);
+      return `❌ Gagal cek kuota untuk ${msisdn}`;
     }
   }
 
   /**
-   * number   = string, misal "087756116610"
-   * info     = objek data_sp (sesuai JSON)
-   * rawHasil = string HTML fallback (jika quotas kosong)
+   * Format pesan kuota ketika data_sp ada.
+   * @param {string} number — nomor HP
+   * @param {object} info — objek data_sp
+   * @param {string} rawHasil — fallback HTML (hasil)
+   * @returns {string}
    */
   formatQuotaResponse(number, info, rawHasil) {
-    // Ambil properti-properti yang kita butuhkan (bila ada)
+    // Ambil fields yang diperlukan (value: ...)
     const {
-      prefix,        // { value: "XL" }
-      active_card,   // { value: "5 Tahun 11 Bulan" }
-      dukcapil,      // { value: "Sudah" }
-      status_4g,     // { value: "4G" }
-      active_period, // { value: "2025-06-25" }
-      grace_period,  // { value: "2025-07-25" }
-      quotas         // { value: [ [ { packages: {...}, benefits: [] } ], … ] }
+      prefix,
+      active_card,
+      dukcapil,
+      status_4g,
+      active_period,
+      grace_period,
+      quotas,
     } = info;
 
-    // Mulai membangun pesan
     let msg = `📱 Nomor: ${number}\n`;
     msg += `• Tipe Kartu: ${prefix?.value || '-'}\n`;
     msg += `• Umur Kartu: ${active_card?.value || '-'}\n`;
@@ -105,7 +132,6 @@ export class TelegramCekkuota {
     msg += `• Masa Aktif: ${active_period?.value || '-'}\n`;
     msg += `• Masa Tenggang: ${grace_period?.value || '-'}\n\n`;
 
-    // Cek apakah ada detail paket kuota
     const arrQuota = quotas?.value;
     if (Array.isArray(arrQuota) && arrQuota.length > 0) {
       msg += `📦 Detail Paket Kuota:\n`;
@@ -119,7 +145,7 @@ export class TelegramCekkuota {
       return msg.trim();
     }
 
-    // Jika tidak ada arrQuota atau kosong, pakai rawHasil (HTML → teks)
+    // Jika quotas kosong atau tidak ada, tampilkan rawHasil (HTML → teks)
     const teksSaja = rawHasil
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<[^>]+>/g, '')
@@ -128,6 +154,11 @@ export class TelegramCekkuota {
     return msg.trim();
   }
 
+  /**
+   * Format ISO date string ke "YYYY-MM-DD hh:mm:ss".
+   * @param {string} dateStr — misal "2025-06-11T23:59:59"
+   * @returns {string}
+   */
   formatDate(dateStr) {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
@@ -139,15 +170,20 @@ export class TelegramCekkuota {
     );
   }
 
+  /**
+   * Kirim pesan balasan ke chatId tertentu.
+   * @param {number|string} chatId
+   * @param {string} text — pesan (Markdown-enabled jika markdown=true)
+   * @param {boolean} markdown — set true agar parse_mode="Markdown"
+   */
   async sendMessage(chatId, text, markdown = false) {
     const payload = {
       chat_id: chatId,
       text,
       ...(markdown ? { parse_mode: 'Markdown' } : {}),
     };
-
     try {
-      await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
+      await fetch(`${this.apiUrlBase}/bot${this.token}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
