@@ -5,7 +5,7 @@ export async function Cekkuota(link) {
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
-    this.apiUrl = apiUrl;
+    this.apiUrl = `${apiUrl}/bot${token}`;
   }
 
   async handleUpdate(update) {
@@ -15,7 +15,33 @@ export class TelegramCekkuota {
 
     if (!chatId || !text) return;
 
-    // Cari semua nomor HP 10–13 digit dalam pesan
+    if (text.startsWith('/start')) {
+      return this.sendMessage(chatId, `
+👋 Halo! Selamat datang di *Bot Sidompul Regar Store*.
+
+Kirim nomor HP kamu dan pisahkan dengan spasi (misalnya: 087834567890 087865567890) untuk cek informasi kuota.
+
+Bot ini akan membalas otomatis dengan detail kuota Anda. 📶
+`, true);
+    }
+
+    if (text.startsWith('/help')) {
+      return this.sendMessage(chatId, `
+ℹ️ *Bantuan Bot*
+
+• Kirim nomor HP untuk cek kuota.  
+• Format: 08xxxxxx atau beberapa nomor dipisahkan dengan spasi.  
+• Contoh: 082112345678 085612345678
+
+Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
+`, true);
+    }
+
+    if (text.startsWith('/owner')) {
+      return this.sendMessage(chatId, `👑 *Owner Bot*: ${process.env.OWNER_USERNAME || 'Belum diset'}`, true);
+    }
+
+    // Ambil semua nomor HP
     const numbers = text.match(/\d{10,13}/g);
     if (numbers && numbers.length > 0) {
       const replies = await Promise.all(numbers.map(async (num) => {
@@ -32,7 +58,25 @@ export class TelegramCekkuota {
       return this.sendMessage(chatId, replies.join('\n\n'), true);
     }
 
-    // Jika tidak ada nomor valid, tidak mengirim apapun (tidak merespon)
+    return this.sendMessage(chatId, '❗ Mohon kirim nomor HP yang valid untuk dicek.', true);
+  }
+
+  async sendMessage(chatId, text, markdown = false) {
+    const payload = {
+      chat_id: chatId,
+      text,
+      ...(markdown ? { parse_mode: "Markdown" } : {})
+    };
+
+    try {
+      await fetch(`${this.apiUrl}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.error('Gagal mengirim pesan:', err);
+    }
   }
 
   formatQuotaResponse(number, data) {
@@ -63,7 +107,7 @@ export class TelegramCekkuota {
     if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
       msg += `📦 *Detail Paket Kuota:*\n`;
       quotas.value.forEach((quotaGroup) => {
-        if (!quotaGroup || quotaGroup.length === 0) return;
+        if (quotaGroup.length === 0) return;
         const packageInfo = quotaGroup[0].packages;
         msg += `\n🎁 Paket: ${packageInfo?.name || '-'}\n`;
         msg += `📅 Aktif Hingga: ${this.formatDate(packageInfo?.expDate) || '-'}\n`;
@@ -94,29 +138,10 @@ export class TelegramCekkuota {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     if (isNaN(d)) return dateStr;
-    return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())} ` +
-           `${this.pad(d.getHours())}:${this.pad(d.getMinutes())}:${this.pad(d.getSeconds())}`;
+    return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())} ${this.pad(d.getHours())}:${this.pad(d.getMinutes())}:${this.pad(d.getSeconds())}`;
   }
 
   pad(n) {
     return n < 10 ? '0' + n : n;
-  }
-
-  async sendMessage(chatId, text, markdown = false) {
-    const payload = {
-      chat_id: chatId,
-      text,
-      ...(markdown ? { parse_mode: "Markdown" } : {})
-    };
-
-    try {
-      await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {
-      console.error('Gagal mengirim pesan:', err);
-    }
   }
 }
