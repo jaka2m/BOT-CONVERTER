@@ -1,82 +1,48 @@
+export async function Cekkuota(link) {
+  console.log("Bot link:", link);
+}
+
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
   }
 
-  // Fungsi utama untuk menerima update Telegram
+  // Method utama untuk menangani update webhook Telegram
   async handleUpdate(update) {
-    if (!update.message || !update.message.text) {
-      return new Response('OK', { status: 200 });
-    }
+    if (!update.message) return new Response('OK', { status: 200 });
 
     const chatId = update.message.chat.id;
-    const text = update.message.text.trim();
+    const text = update.message.text || '';
 
-    // Cek apakah pesan dimulai dengan /cek diikuti nomor HP
-    if (text.toLowerCase().startsWith('/cek')) {
+    if (text.startsWith('/cek')) {
+      await this.sendMessage(chatId, 'baik dulu sebelum nanya.');
+
+      // Contoh parsing nomor msisdn setelah perintah /cek
       const parts = text.split(' ');
       if (parts.length < 2) {
-        return this.sendMessage(chatId, 'Format salah. Gunakan: /cek <nomor_hp>');
+        await this.sendMessage(chatId, 'Kirim nomor dengan format: /cek 6287765101308');
+        return new Response('OK', { status: 200 });
       }
-      
-      const msisdn = parts[1].replace(/[^0-9]/g, ''); // Ambil angka saja dari nomor
-
-      if (!msisdn) {
-        return this.sendMessage(chatId, 'Nomor HP tidak valid.');
-      }
+      const msisdn = parts[1];
 
       try {
-        // Panggil API cek kuota
-        const resultText = await this.cekKuota(msisdn);
-        await this.sendMessage(chatId, resultText);
-      } catch (error) {
-        await this.sendMessage(chatId, `Terjadi kesalahan saat cek kuota: ${error.message}`);
+        const data = await this.cekKuota(msisdn);
+        // Kirim hasil response ke Telegram
+        if (data.status && data.data && data.data.hasil) {
+          await this.sendMessage(chatId, `Hasil cek kuota:\n${data.data.hasil.replace(/<br>/g, '\n')}`);
+        } else {
+          await this.sendMessage(chatId, 'Gagal mendapatkan data kuota.');
+        }
+      } catch (err) {
+        await this.sendMessage(chatId, `Error saat cek kuota: ${err.message}`);
       }
-    } else {
-      // Bisa tangani command lain atau abaikan
-      return new Response('OK', { status: 200 });
     }
+
+    return new Response('OK', { status: 200 });
   }
 
-  // Fungsi untuk request cek kuota ke API eksternal
-  async cekKuota(msisdn) {
-    const apiUrl = `https://apigw.kmsp-store.com/sidompul/v4/cek_kuota?msisdn=${msisdn}&isJSON=true`;
-
-    const request = new Request(apiUrl, {
-      method: "GET",
-      headers: {
-        "Authorization": "Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw",
-        "X-API-Key": "60ef29aa-a648-4668-90ae-20951ef90c55",
-        "X-App-Version": "4.0.0",
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    });
-
-    const response = await fetch(request, {
-      cf: {
-        // Optional: Cloudflare options, misal cache atau lain
-      },
-      headers: {
-        "User-Agent": "Mozilla/5.0"
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const json = await response.json();
-
-    if (!json.status) {
-      throw new Error(json.message || "API gagal merespon");
-    }
-
-    // Return hasil yang sudah diformat dari API
-    return json.data.hasil || "Data kuota tidak tersedia.";
-  }
-
-  // Fungsi kirim pesan ke Telegram
+  // Method kirim pesan teks ke chat Telegram
   async sendMessage(chatId, text) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const response = await fetch(url, {
@@ -84,10 +50,47 @@ export class TelegramCekkuota {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: text,
-        parse_mode: 'HTML'
+        text: text
       })
     });
+    return response.json();
+  }
+
+  // Method cek kuota ke API eksternal
+  async cekKuota(msisdn) {
+    const apiUrl = `https://apigw.kmsp-store.com/sidompul/v4/cek_kuota?msisdn=${encodeURIComponent(msisdn)}&isJSON=true`;
+
+    const headers = {
+      Authorization: "Basic c2lkb21wdWxhcGk6YXBpZ3drbXNw",
+      "X-API-Key": "60ef29aa-a648-4668-90ae-20951ef90c55",
+      "X-App-Version": "4.0.0",
+      // Jangan sertakan content-type di GET request
+      "User-Agent": "Mozilla/5.0",
+    };
+
+    const response = await fetch(apiUrl, { headers });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // (Opsional) Method kirim dokumen ke Telegram (jika kamu ingin kirim file)
+  async sendDocument(chatId, content, filename, mimeType) {
+    const formData = new FormData();
+    const blob = new Blob([content], { type: mimeType });
+    formData.append('document', blob, filename);
+    formData.append('chat_id', chatId.toString());
+
+    const response = await fetch(
+      `${this.apiUrl}/bot${this.token}/sendDocument`, {
+        method: 'POST',
+        body: formData
+      }
+    );
+
     return response.json();
   }
 }
