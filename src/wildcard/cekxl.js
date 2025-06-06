@@ -1,11 +1,7 @@
-export async function Cekkuota(link) {
-  console.log("Bot link:", link);
-}
-
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
-    this.apiUrl = `${apiUrl}/bot${token}`;
+    this.apiUrl = apiUrl;
   }
 
   async handleUpdate(update) {
@@ -38,10 +34,10 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
     }
 
     if (text.startsWith('/owner')) {
-      return this.sendMessage(chatId, `👑 *Owner Bot*: ${process.env.OWNER_USERNAME || 'Belum diset'}`, true);
+      return this.sendMessage(chatId, `👑 *Owner Bot*: @YourUsername`, true); // Ganti @YourUsername sesuai kebutuhan
     }
 
-    // Ambil semua nomor HP
+    // Ambil semua nomor HP 10–13 digit
     const numbers = text.match(/\d{10,13}/g);
     if (numbers && numbers.length > 0) {
       const replies = await Promise.all(numbers.map(async (num) => {
@@ -59,24 +55,6 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
     }
 
     return this.sendMessage(chatId, '❗ Mohon kirim nomor HP yang valid untuk dicek.', true);
-  }
-
-  async sendMessage(chatId, text, markdown = false) {
-    const payload = {
-      chat_id: chatId,
-      text,
-      ...(markdown ? { parse_mode: "Markdown" } : {})
-    };
-
-    try {
-      await fetch(`${this.apiUrl}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {
-      console.error('Gagal mengirim pesan:', err);
-    }
   }
 
   formatQuotaResponse(number, data) {
@@ -143,5 +121,23 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
 
   pad(n) {
     return n < 10 ? '0' + n : n;
+  }
+
+  async sendMessage(chatId, text, markdown = false) {
+    const payload = {
+      chat_id: chatId,
+      text,
+      ...(markdown ? { parse_mode: "Markdown" } : {})
+    };
+
+    try {
+      await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.error('Gagal mengirim pesan:', err);
+    }
   }
 }
