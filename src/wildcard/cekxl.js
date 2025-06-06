@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
