@@ -5,7 +5,7 @@ export async function Cekkuota(link) {
 export class TelegramCekkuota {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
-    this.apiUrl = apiUrl;
+    this.apiUrl = `${apiUrl}/bot${token}`;
   }
 
   async handleUpdate(update) {
@@ -38,16 +38,15 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
     }
 
     if (text.startsWith('/owner')) {
-      return this.sendMessage(chatId, `👑 *Owner Bot*: @YourUsername`, true); // Ganti @YourUsername sesuai kebutuhan
+      return this.sendMessage(chatId, `👑 *Owner Bot*: ${process.env.OWNER_USERNAME || 'Belum diset'}`, true);
     }
 
-    // Ambil semua nomor HP 10–13 digit
+    // Ambil semua nomor HP
     const numbers = text.match(/\d{10,13}/g);
     if (numbers && numbers.length > 0) {
       const replies = await Promise.all(numbers.map(async (num) => {
         try {
-          const res = await fetch(`https://dom.checker-ip.web.id/cek_kuota?msisdn=${num}`);
-          if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+          const res = await fetch(`https://jav.zerostore.web.id/cek_kuota?msisdn=${num}`);
           const data = await res.json();
           return this.formatQuotaResponse(num, data);
         } catch (err) {
@@ -60,6 +59,24 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
     }
 
     return this.sendMessage(chatId, '❗ Mohon kirim nomor HP yang valid untuk dicek.', true);
+  }
+
+  async sendMessage(chatId, text, markdown = false) {
+    const payload = {
+      chat_id: chatId,
+      text,
+      ...(markdown ? { parse_mode: "Markdown" } : {})
+    };
+
+    try {
+      await fetch(`${this.apiUrl}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (err) {
+      console.error('Gagal mengirim pesan:', err);
+    }
   }
 
   formatQuotaResponse(number, data) {
@@ -79,28 +96,28 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
       prefix
     } = info;
 
-    let msg = `📱 *Nomor:* ${this.escapeMarkdown(number)}\n`;
-    msg += `• Tipe Kartu: ${this.escapeMarkdown(prefix?.value || '-')}\n`;
-    msg += `• Umur Kartu: ${this.escapeMarkdown(active_card?.value || '-')}\n`;
-    msg += `• Status Dukcapil: ${this.escapeMarkdown(dukcapil?.value || '-')}\n`;
-    msg += `• Status 4G: ${this.escapeMarkdown(status_4g?.value || '-')}\n`;
-    msg += `• Masa Aktif: ${this.escapeMarkdown(active_period?.value || '-')}\n`;
-    msg += `• Masa Tenggang: ${this.escapeMarkdown(grace_period?.value || '-')}\n\n`;
+    let msg = `📱 *Nomor:* ${number}\n`;
+    msg += `• Tipe Kartu: ${prefix?.value || '-'}\n`;
+    msg += `• Umur Kartu: ${active_card?.value || '-'}\n`;
+    msg += `• Status Dukcapil: ${dukcapil?.value || '-'}\n`;
+    msg += `• Status 4G: ${status_4g?.value || '-'}\n`;
+    msg += `• Masa Aktif: ${active_period?.value || '-'}\n`;
+    msg += `• Masa Tenggang: ${grace_period?.value || '-'}\n\n`;
 
     if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
       msg += `📦 *Detail Paket Kuota:*\n`;
       quotas.value.forEach((quotaGroup) => {
         if (quotaGroup.length === 0) return;
         const packageInfo = quotaGroup[0].packages;
-        msg += `\n🎁 Paket: ${this.escapeMarkdown(packageInfo?.name || '-')}\n`;
-        msg += `📅 Aktif Hingga: ${this.escapeMarkdown(this.formatDate(packageInfo?.expDate) || '-')}\n`;
+        msg += `\n🎁 Paket: ${packageInfo?.name || '-'}\n`;
+        msg += `📅 Aktif Hingga: ${this.formatDate(packageInfo?.expDate) || '-'}\n`;
 
         if (quotaGroup[0].benefits && quotaGroup[0].benefits.length > 0) {
           quotaGroup[0].benefits.forEach(benefit => {
-            msg += `• Benefit: ${this.escapeMarkdown(benefit.bname)}\n`;
-            msg += `  Tipe Kuota: ${this.escapeMarkdown(benefit.type)}\n`;
-            msg += `  Kuota: ${this.escapeMarkdown(benefit.quota)}\n`;
-            msg += `  Sisa Kuota: ${this.escapeMarkdown(benefit.remaining)}\n`;
+            msg += `• Benefit: ${benefit.bname}\n`;
+            msg += `  Tipe Kuota: ${benefit.type}\n`;
+            msg += `  Kuota: ${benefit.quota}\n`;
+            msg += `  Sisa Kuota: ${benefit.remaining}\n`;
           });
         }
         msg += `-----------------------------\n`;
@@ -111,7 +128,7 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
         .trim();
-      msg += `❗ Info:\n${this.escapeMarkdown(hasilText)}\n`;
+      msg += `❗ Info:\n${hasilText}\n`;
     }
 
     return msg.trim();
@@ -126,29 +143,5 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
 
   pad(n) {
     return n < 10 ? '0' + n : n;
-  }
-
-  // Escape hanya karakter khusus Markdown Telegram (Markdown v1)
-  escapeMarkdown(text) {
-    if (!text) return '';
-    return text.replace(/([_*[\]()~`>#+-=|{}.!])/g, '\\$1');
-  }
-
-  async sendMessage(chatId, text, markdown = false) {
-    const payload = {
-      chat_id: chatId,
-      text,
-      ...(markdown ? { parse_mode: "Markdown" } : {})
-    };
-
-    try {
-      await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } catch (err) {
-      console.error('Gagal mengirim pesan:', err);
-    }
   }
 }
