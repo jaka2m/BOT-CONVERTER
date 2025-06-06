@@ -14,30 +14,46 @@ export class TelegramCekkuota {
     const text = message?.text?.trim() || '';
     if (!chatId || !text) return;
 
+    // Ambil semua nomor HP 10–13 digit dalam teks
     const numbers = text.match(/\d{10,13}/g);
     if (!numbers) return;
 
-    const replies = await Promise.all(numbers.map(async num => {
+    const replies = await Promise.all(numbers.map(async (num) => {
       try {
+        // Panggil API
         const res = await fetch(
           `https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${num}`
         );
-        const data = await res.json();
 
-        // ➤ Ambil info dari data.data_sp atau data.data.data_sp
-        const info =
-          data?.data?.data_sp   // sesuai dokumentasi baru
-          || data?.data_sp      // fallback jika langsung
-          || null;
-
-        if (!info) {
+        if (!res.ok) {
+          console.error(`HTTP error ${res.status} saat cek kuota ${num}`);
           return `❌ Gagal cek kuota untuk ${num}`;
         }
 
-        // rawHasil untuk fallback HTML bila kuota kosong
-        const rawHasil = data?.data?.hasil
-                     || data?.hasil
-                     || '';
+        const data = await res.json();
+        console.log(`🔍 Response JSON untuk ${num}:`, JSON.stringify(data));
+
+        // === PENTING ===
+        // Sesuai contoh JSON:
+        // {
+        //   "data": {
+        //     "data_sp": { … },
+        //     "hasil": "…"
+        //   },
+        //   "status": true,
+        //   "message": "SUCCESS"
+        // }
+        //
+        // Jadi, data_sp benar-benar ada di data.data.data_sp
+
+        const info = data?.data?.data_sp ?? null;
+        if (!info) {
+          console.warn(`⚠️ data_sp tidak ditemukan untuk ${num}`);
+          return `❌ Gagal cek kuota untuk ${num}`;
+        }
+
+        // Ambil hasil HTML fallback: data.data.hasil
+        const rawHasil = data?.data?.hasil ?? '';
 
         return this.formatQuotaResponse(num, info, rawHasil);
       } catch (err) {
@@ -46,22 +62,23 @@ export class TelegramCekkuota {
       }
     }));
 
+    // Kirim satu pesan gabungan (pisah dengan satu baris kosong per nomor)
     await this.sendMessage(chatId, replies.join('\n\n'), true);
   }
 
   /**
-   * info     = objek data_sp
-   * rawHasil = string HTML fallback (data.hasil atau data.data.hasil)
+   * info     = objek data_sp (sudah pasti ada)
+   * rawHasil = string HTML fallback (data.data.hasil) kalau quotas kosong
    */
   formatQuotaResponse(number, info, rawHasil) {
     const {
-      prefix,           // { value: "XL" }
-      active_card,      // { value: "5 Tahun 11 Bulan" }
-      dukcapil,         // { value: "Sudah" }
-      status_4g,        // { value: "4G" }
-      active_period,    // { value: "2025-06-25" }
-      grace_period,     // { value: "2025-07-25" }
-      quotas            // { value: [ [ { packages: {...}, benefits: [] } ], ... ] }
+      prefix,        // { value: "XL" }
+      active_card,   // { value: "5 Tahun 11 Bulan" }
+      dukcapil,      // { value: "Sudah" }
+      status_4g,     // { value: "4G" }
+      active_period, // { value: "2025-06-25" }
+      grace_period,  // { value: "2025-07-25" }
+      quotas         // { value: [ [ { packages: {...}, benefits: [] } ], … ] }
     } = info;
 
     let msg = `📱 Nomor: ${number}\n`;
@@ -79,16 +96,16 @@ export class TelegramCekkuota {
         if (!Array.isArray(group) || group.length === 0) return;
         const pkg = group[0].packages;
         msg += `\n🎁 Paket: ${pkg?.name || '-'}\n`;
-        msg += `📅 Aktif Hingga: ${this.formatDate(pkg.expDate)}\n`;
+        msg += `📅 Aktif Hingga: ${this.formatDate(pkg?.expDate)}\n`;
         msg += `-----------------------------\n`;
       });
     } else {
-      // Fallback: konversi HTML ke teks
-      const text = rawHasil
+      // Fallback: konversi HTML → teks
+      const textOnly = rawHasil
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
         .trim();
-      msg += `❗ Info Tambahan:\n${text}`;
+      msg += `❗ Info Tambahan:\n${textOnly}`;
     }
 
     return msg.trim();
@@ -98,9 +115,9 @@ export class TelegramCekkuota {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
     if (isNaN(d)) return dateStr;
-    const pad = n => n < 10 ? '0' + n : n;
+    const pad = n => (n < 10 ? '0' + n : n);
     return (
-      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ` +
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
       `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
     );
   }
@@ -111,6 +128,7 @@ export class TelegramCekkuota {
       text,
       ...(markdown ? { parse_mode: 'Markdown' } : {})
     };
+
     try {
       await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
         method: 'POST',
