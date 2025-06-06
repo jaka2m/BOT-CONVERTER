@@ -17,43 +17,43 @@ export default {
       const ownerId = Number(env.OWNER_ID);
 
       const partsApiKey = [
-        'NWZhZTlm',
-        'Y2I5YzE5',
-        'M2NlNjVk',
-        'ZTRiNTc2',
-        'ODlhOTQ5',
-        'MzhiNzA4ZQ==',
+        'MDI4NDYy',
+        'ZTg1MTc3',
+        'MmYwNTI4',
+        'MzEwZjBi',
+        'YTkxZDg0',
+        'ODg1MDg4Ng==',
       ];
       const ngasalApiKey = partsApiKey.join('');
       const apiKey = atob(ngasalApiKey);
 
       const partsAccountID = [
-        'ZTk5MzBk',
-        'NWNhNjgz',
-        'YjA0NjFm',
-        'NzM0Nzcw',
-        'NTBmZWUw',
-        'Yzc=',
+        'ZDc2NjBh',
+        'YTJlMDZm',
+        'NGFmMWQ1',
+        'YmVjYjgw',
+        'YzAzNTg1',
+        'MjI=',
       ];
       const ngasalAccountID = partsAccountID.join('');
       const accountID = atob(ngasalAccountID);
 
       const partsZoneID = [
-        'ODA0MjNl',
-        'NzU0N2Qy',
-        'ZmE4NWUx',
-        'Mzc5NmEx',
-        'ZjQxZGVj',
-        'ZWQ=',
+        'ZDMzYTcx',
+        'YzI0YmY5',
+        'YzQ2ZDYz',
+        'NGY4NjFl',
+        'NTg4YWI4',
+        'ODc=',
       ];
       const ngasalZoneID = partsZoneID.join('');
       const zoneID = atob(ngasalZoneID);
 
       const partsApiEmail = [
-        'YW1iZWJh',
-        'bG9uZ0Bn',
-        'bWFpbC5j',
-        'b20=',
+        'ZGVzYWxl',
+        'a29uZzI0',
+        'QGdtYWls',
+        'LmNvbQ==',
       ];
       const ngasalApiEmail = partsApiEmail.join('');
       const apiEmail = atob(ngasalApiEmail);
@@ -63,10 +63,9 @@ export default {
       const serviceName = atob(ngasalServiceName);
 
       const partsRootDomain = [
-        'am9zcy5j',
-        'aGVja2Vy',
-        'LWlwLnh5',
-        'eg==',
+        'dnBuLmtp',
+        'aWtrcmlr',
+        'LnRlY2g=',
       ];
       const ngasalRootDomain = partsRootDomain.join('');
       const rootDomain = atob(ngasalRootDomain);
@@ -92,7 +91,6 @@ export default {
         bot3.handleUpdate(update),
         bot4.handleUpdate(update),
         bot5.handleUpdate(update),
-        
       ]);
 
       return new Response('OK', { status: 200 });
