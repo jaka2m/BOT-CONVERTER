@@ -20,11 +20,10 @@ export class TelegramCekkuota {
 
     const replies = await Promise.all(numbers.map(async (num) => {
       try {
-        // Panggil API
+        // Panggil API cek_kuota
         const res = await fetch(
           `https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${num}`
         );
-
         if (!res.ok) {
           console.error(`HTTP error ${res.status} saat cek kuota ${num}`);
           return `❌ Gagal cek kuota untuk ${num}`;
@@ -33,8 +32,8 @@ export class TelegramCekkuota {
         const data = await res.json();
         console.log(`🔍 Response JSON untuk ${num}:`, JSON.stringify(data));
 
-        // === PENTING ===
-        // Sesuai contoh JSON:
+        // === Path data_sp ===
+        // Sesuai JSON contoh:
         // {
         //   "data": {
         //     "data_sp": { … },
@@ -44,15 +43,14 @@ export class TelegramCekkuota {
         //   "message": "SUCCESS"
         // }
         //
-        // Jadi, data_sp benar-benar ada di data.data.data_sp
-
+        // Jadi kita akses: data.data.data_sp
         const info = data?.data?.data_sp ?? null;
         if (!info) {
           console.warn(`⚠️ data_sp tidak ditemukan untuk ${num}`);
           return `❌ Gagal cek kuota untuk ${num}`;
         }
 
-        // Ambil hasil HTML fallback: data.data.hasil
+        // Ambil fallback HTML (jika quotas.value kosong)
         const rawHasil = data?.data?.hasil ?? '';
 
         return this.formatQuotaResponse(num, info, rawHasil);
@@ -62,13 +60,13 @@ export class TelegramCekkuota {
       }
     }));
 
-    // Kirim satu pesan gabungan (pisah dengan satu baris kosong per nomor)
+    // Kirim balasan gabungan (dipisah dua baris kosong per nomor)
     await this.sendMessage(chatId, replies.join('\n\n'), true);
   }
 
   /**
    * info     = objek data_sp (sudah pasti ada)
-   * rawHasil = string HTML fallback (data.data.hasil) kalau quotas kosong
+   * rawHasil = string HTML fallback (data.data.hasil) kalau quotas.value kosong
    */
   formatQuotaResponse(number, info, rawHasil) {
     const {
@@ -100,7 +98,7 @@ export class TelegramCekkuota {
         msg += `-----------------------------\n`;
       });
     } else {
-      // Fallback: konversi HTML → teks
+      // Jika tidak ada quotas.value, pakai fallback HTML → teks
       const textOnly = rawHasil
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
@@ -117,7 +115,7 @@ export class TelegramCekkuota {
     if (isNaN(d)) return dateStr;
     const pad = n => (n < 10 ? '0' + n : n);
     return (
-      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ` +
       `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
     );
   }
@@ -128,7 +126,6 @@ export class TelegramCekkuota {
       text,
       ...(markdown ? { parse_mode: 'Markdown' } : {})
     };
-
     try {
       await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
         method: 'POST',
