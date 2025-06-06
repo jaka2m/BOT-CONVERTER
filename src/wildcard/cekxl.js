@@ -12,49 +12,56 @@ export class TelegramCekkuota {
     const message = update.message;
     const chatId = message?.chat?.id;
     const text = message?.text?.trim() || '';
-
     if (!chatId || !text) return;
 
-    // Cari semua nomor HP 10–13 digit dalam pesan
     const numbers = text.match(/\d{10,13}/g);
-    if (numbers && numbers.length > 0) {
-      const replies = await Promise.all(numbers.map(async (num) => {
-        try {
-          const res = await fetch(`https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${num}`);
-          const data = await res.json();
+    if (!numbers) return;
 
-          // Jika data_sp tidak ada, langsung tampilkan error
-          const info = data?.data?.data_sp;
-          if (!info) {
-            return `❌ Gagal cek kuota untuk ${num}`;
-          }
+    const replies = await Promise.all(numbers.map(async num => {
+      try {
+        const res = await fetch(
+          `https://dompul.free-accounts.workers.dev/cek_kuota?msisdn=${num}`
+        );
+        const data = await res.json();
 
-          // Kalau info ada, lanjut format respon
-          return this.formatQuotaResponse(num, info, data?.data?.hasil);
-        } catch (err) {
-          console.error(`Error fetching kuota untuk ${num}:`, err);
+        // ➤ Ambil info dari data.data_sp atau data.data.data_sp
+        const info =
+          data?.data?.data_sp   // sesuai dokumentasi baru
+          || data?.data_sp      // fallback jika langsung
+          || null;
+
+        if (!info) {
           return `❌ Gagal cek kuota untuk ${num}`;
         }
-      }));
 
-      // Gabungkan balasan untuk tiap nomor, pisahkan dengan baris kosong
-      return this.sendMessage(chatId, replies.join('\n\n'), true);
-    }
+        // rawHasil untuk fallback HTML bila kuota kosong
+        const rawHasil = data?.data?.hasil
+                     || data?.hasil
+                     || '';
+
+        return this.formatQuotaResponse(num, info, rawHasil);
+      } catch (err) {
+        console.error(`Error fetching kuota untuk ${num}:`, err);
+        return `❌ Gagal cek kuota untuk ${num}`;
+      }
+    }));
+
+    await this.sendMessage(chatId, replies.join('\n\n'), true);
   }
 
   /**
-   * info: sudah berisi data_sp
-   * rawHasil: fallback HTML bila paket kosong
+   * info     = objek data_sp
+   * rawHasil = string HTML fallback (data.hasil atau data.data.hasil)
    */
   formatQuotaResponse(number, info, rawHasil) {
     const {
-      quotas,
-      status_4g,
-      dukcapil,
-      grace_period,
-      active_period,
-      active_card,
-      prefix
+      prefix,           // { value: "XL" }
+      active_card,      // { value: "5 Tahun 11 Bulan" }
+      dukcapil,         // { value: "Sudah" }
+      status_4g,        // { value: "4G" }
+      active_period,    // { value: "2025-06-25" }
+      grace_period,     // { value: "2025-07-25" }
+      quotas            // { value: [ [ { packages: {...}, benefits: [] } ], ... ] }
     } = info;
 
     let msg = `📱 Nomor: ${number}\n`;
@@ -65,37 +72,35 @@ export class TelegramCekkuota {
     msg += `• Masa Aktif: ${active_period?.value || '-'}\n`;
     msg += `• Masa Tenggang: ${grace_period?.value || '-'}\n\n`;
 
-    const quotaArray = quotas?.value;
-    if (Array.isArray(quotaArray) && quotaArray.length > 0) {
+    const arr = quotas?.value;
+    if (Array.isArray(arr) && arr.length > 0) {
       msg += `📦 Detail Paket Kuota:\n`;
-
-      quotaArray.forEach((group) => {
+      arr.forEach(group => {
         if (!Array.isArray(group) || group.length === 0) return;
         const pkg = group[0].packages;
         msg += `\n🎁 Paket: ${pkg?.name || '-'}\n`;
-        msg += `📅 Aktif Hingga: ${this.formatDate(pkg?.expDate)}\n`;
+        msg += `📅 Aktif Hingga: ${this.formatDate(pkg.expDate)}\n`;
         msg += `-----------------------------\n`;
       });
     } else {
-      // Jika tidak ada kuota, pakai rawHasil (HTML → teks)
-      const hasilRaw = rawHasil || '';
-      const hasilText = hasilRaw
+      // Fallback: konversi HTML ke teks
+      const text = rawHasil
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, '')
         .trim();
-      msg += `❗ Info Tambahan:\n${hasilText}`;
+      msg += `❗ Info Tambahan:\n${text}`;
     }
 
     return msg.trim();
   }
 
   formatDate(dateStr) {
-    if (!dateStr) return null;
+    if (!dateStr) return '-';
     const d = new Date(dateStr);
     if (isNaN(d)) return dateStr;
-    const pad = n => (n < 10 ? '0' + n : n);
+    const pad = n => n < 10 ? '0' + n : n;
     return (
-      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ` +
       `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
     );
   }
@@ -104,9 +109,8 @@ export class TelegramCekkuota {
     const payload = {
       chat_id: chatId,
       text,
-      ...(markdown ? { parse_mode: "Markdown" } : {})
+      ...(markdown ? { parse_mode: 'Markdown' } : {})
     };
-
     try {
       await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
         method: 'POST',
