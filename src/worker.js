@@ -63,8 +63,7 @@ export default {
       const serviceName = atob(ngasalServiceName);
 
       const partsRootDomain = [
-        'dnBuLmtp',
-        'aWtrcmlr',
+        'a3Jpa2tyaWs=',
         'LnRlY2g=',
       ];
       const ngasalRootDomain = partsRootDomain.join('');
