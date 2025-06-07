@@ -1,5 +1,3 @@
-import fetch from 'node-fetch'; // Sesuaikan jika Anda menggunakan lingkungan lain (misal: Cloudflare Workers tidak perlu ini)
-
 export async function cekkuota(link) {
   console.log("Bot link:", link);
 }
