@@ -69,7 +69,7 @@ export async function rotateconfig(chatId, text) {
     const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
     
     // Ganti dengan hostname server kamu
-    const HOSTKU = "joss.checker-ip.xyz";
+    const HOSTKU = "krikkrik.tech";
 
     const flag = getFlagEmoji(countryCode);
     const path = `/Geo-Project/${ip}-${port}`;
