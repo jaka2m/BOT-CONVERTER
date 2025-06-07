@@ -20,7 +20,7 @@ const WILDCARD_OPTIONS = Object.entries(WILDCARD_MAP).map(
   ([value, text]) => ({ text, value })
 );
 
-const DEFAULT_HOST = "joss.checker-ip.xyz"; 
+const DEFAULT_HOST = "krikkrik.tech"; 
 const API_URL = "https://api.checker-ip.web.id/check?ip=";
 
 export async function fetchIPData(ip, port) {
