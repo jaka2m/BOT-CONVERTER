@@ -11,7 +11,7 @@ export class CekkuotaBotku {
   }
 
   // Fungsi escapeHTML untuk mencegah masalah parsing HTML di Telegram
-  function escapeHTML(str) {
+  escapeHTML(str) {
     if (typeof str !== 'string') return str;
     return str
       .replace(/&/g, '&amp;')
@@ -22,12 +22,12 @@ export class CekkuotaBotku {
   }
 
   // Fungsi untuk mengirim aksi chat (misal: mengetik)
-  async function sendChatAction(chatId, action) {
+  async sendChatAction(chatId, action) {
     try {
       await fetch(`${this.apiUrl}/sendChatAction`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, action: action })
+        body: JSON.stringify({ chat_id: chatId, action })
       });
     } catch (err) {
       console.error('Gagal mengirim chat action:', err);
@@ -35,7 +35,7 @@ export class CekkuotaBotku {
   }
 
   // Fungsi untuk menghapus pesan
-  async function deleteMessage(chatId, messageId) {
+  async deleteMessage(chatId, messageId) {
     try {
       await fetch(`${this.apiUrl}/deleteMessage`, {
         method: 'POST',
@@ -47,28 +47,29 @@ export class CekkuotaBotku {
     }
   }
 
-  async function handleUpdate(update) {
-    const message = update.message;
-    const chatId = message?.chat?.id;
-    const messageId = message?.message_id; // ID pesan yang diterima
-    const text = message?.text?.trim() || '';
-    const userId = message?.from?.id;
-    const username = message?.from?.username;
+  // Handler update Telegram
+  async handleUpdate(update) {
+    const message   = update.message;
+    const chatId    = message?.chat?.id;
+    const messageId = message?.message_id;
+    const text      = message?.text?.trim() || '';
+    const userId    = message?.from?.id;
+    const username  = message?.from?.username;
 
     if (!chatId || !text) return;
 
-    // Pesan /help tetap menggunakan Markdown
+    // /help dengan Markdown
     if (text.startsWith('/help')) {
-      return sendMessage(
+      return this.sendMessage(
         chatId,
         `
 ℹ️ *Bantuan Bot*
 
-• Kirim nomor HP untuk cek kuota.
-• Format: 08xxxxxx atau beberapa nomor dipisahkan dengan spasi.
-• Contoh: 082112345678 085612345678
+• Kirim nomor HP untuk cek kuota.  
+• Format: 08xxxxxx atau beberapa nomor dipisah spasi.  
+• Contoh: 082112345678 085612345678  
 
-Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
+Bot akan menampilkan info kuota cepat & mudah dibaca.
         `,
         'Markdown'
       );
@@ -78,261 +79,161 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
       .split(/\s+/)
       .filter(num => num.startsWith('08') && num.length >= 10 && num.length <= 14);
 
-    if (phoneNumbers.length > 0) {
-      // 1. Kirim indikator "mengetik"
-      await sendChatAction(chatId, 'typing');
-
-      let allResponses = [];
-      const currentTime = new Date();
-      const formattedCheckTime = formatDate(currentTime, 'full');
-
-      for (const number of phoneNumbers) {
-        const currentNumberResponse = [];
-        const sep = "============================";
-
-        currentNumberResponse.push(`🥷 <b>User</b> : ${escapeHTML(username || 'N/A')}`);
-        currentNumberResponse.push(`🆔 <b>User ID</b> : ${escapeHTML(userId)}`);
-        currentNumberResponse.push(`📆 <b>Waktu Pengecekan</b> : ${escapeHTML(formattedCheckTime)}`);
-        currentNumberResponse.push(`═══════════════════════════`);
-
-        try {
-          const apiResponse = await checkQuota(number);
-
-          if (
-            apiResponse &&
-            apiResponse.status === 'success' &&
-            apiResponse.data &&
-            apiResponse.data.data
-          ) {
-            const info = apiResponse.data.data;
-            const {
-              quotas,
-              status_4g,
-              dukcapil,
-              grace_period,
-              active_period,
-              active_card,
-              prefix
-            } = info.data_sp;
-
-            currentNumberResponse.push(`☎️ <b>Nomor</b> : ${escapeHTML(info.msisdn || '-')}`);
-            currentNumberResponse.push(
-              `📡 <b>Tipe Kartu</b> : ${escapeHTML(prefix?.value || '-')}`
-            );
-            currentNumberResponse.push(
-              `📶 <b>Status Kartu</b> : ${escapeHTML(status_4g?.value || '-')}`
-            );
-            currentNumberResponse.push(
-              `🪪 <b>Status Dukcapil</b> : ${escapeHTML(dukcapil?.value || '-')}`
-            );
-            currentNumberResponse.push(
-              `🗓️ <b>Umur Kartu</b> : ${escapeHTML(active_card?.value || '-')}`
-            );
-            currentNumberResponse.push(
-              `🚓 <b>Masa Aktif</b> : ${escapeHTML(
-                formatDate(active_period?.value, 'dateOnly') || '-'
-              )}`
-            );
-            currentNumberResponse.push(
-              `🆘 <b>Akhir Tenggang</b> : ${escapeHTML(
-                formatDate(grace_period?.value, 'dateOnly') || '-'
-              )}`
-            );
-
-            if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
-              quotas.value.forEach(group => {
-                if (!group.length) return;
-                const pkg = group[0].packages;
-                currentNumberResponse.push(sep);
-                currentNumberResponse.push(`📦 <b>${escapeHTML(pkg?.name || '-')}</b>`);
-                currentNumberResponse.push(
-                  `⏰ <b>Aktif Hingga</b> : ${escapeHTML(formatDate(pkg?.expDate, 'full'))}`
-                );
-                group[0].benefits?.forEach(b => {
-                  currentNumberResponse.push(`  🌀 <b>Benefit</b> : ${escapeHTML(b.bname || '-')}`);
-                  currentNumberResponse.push(`  🧢 <b>Tipe Kuota</b>: ${escapeHTML(b.type || '-')}`);
-                  currentNumberResponse.push(`  🎁 <b>Kuota</b> : ${escapeHTML(b.quota || '-')}`);
-                  currentNumberResponse.push(`  ⏳ <b>Sisa</b> : ${escapeHTML(b.remaining || '-')}`);
-                });
-              });
-            } else {
-              const rawHasilText = info.hasil || '';
-              const isErrorMessageInHasil = rawHasilText.includes(
-                "Maaf, saat ini terjadi kendala dalam menampilkan detail info paket"
-              );
-
-              if (!isErrorMessageInHasil) {
-                const cleanHasilText = rawHasilText
-                  .replace(/<br\s*\/?>/gi, '\n')
-                  .replace(/<[^>]+>/g, '')
-                  .replace(/=/g, '')
-                  .replace(/📃 RESULT: \s*\n\n/g, '')
-                  .trim();
-
-                if (cleanHasilText.includes("🎁 Quota:")) {
-                  const quotaSections = cleanHasilText.split('🎁 Quota:');
-                  for (let i = 1; i < quotaSections.length; i++) {
-                    const quotaDetail = quotaSections[i].trim();
-                    const lines = quotaDetail.split('\n').filter(line => line.trim() !== '');
-
-                    const packageName = lines[0]?.trim();
-                    const expDateLine = lines.find(line =>
-                      line.startsWith('🍂 Aktif Hingga:')
-                    );
-                    const expDate = expDateLine
-                      ? expDateLine.replace('🍂 Aktif Hingga:', '').trim()
-                      : null;
-
-                    if (packageName && expDate) {
-                      currentNumberResponse.push(sep);
-                      currentNumberResponse.push(`📦 <b>${escapeHTML(packageName)}</b>`);
-                      currentNumberResponse.push(
-                        `⏰ <b>Aktif Hingga</b> : ${escapeHTML(expDate)}`
-                      );
-                    }
-                  }
-                } else if (cleanHasilText) {
-                  currentNumberResponse.push(sep);
-                  currentNumberResponse.push(`❗ <b>Info</b>: ${escapeHTML(cleanHasilText)}`);
-                } else {
-                  currentNumberResponse.push(sep);
-                  currentNumberResponse.push(`❗ <b>Info</b>: `);
-                  currentNumberResponse.push(
-                    `Maaf, saat ini terjadi kendala dalam menampilkan detail info paket pada msisdn ini. Penyebabnya kemungkinan ini adalah sebagai berikut:`
-                  );
-                  currentNumberResponse.push(
-                    `1. Silakan periksa nomor yang diinputkan dan pastikan masih aktif/sudah terdaftar.`
-                  );
-                  currentNumberResponse.push(
-                    `2. Anda terlalu banyak melakukan pengecekan paket di fitur kami ini, coba lagi dalam 3 jam kedepan.`
-                  );
-                  currentNumberResponse.push(`3. Sidompul sedang ada pemeliharaan sistem.`);
-                  currentNumberResponse.push(`4. Coba kembali secara berkala.`);
-                }
-              } else {
-                currentNumberResponse.push(sep);
-                currentNumberResponse.push(`❗ <b>Info</b>: `);
-                currentNumberResponse.push(
-                  `Maaf, saat ini terjadi kendala dalam menampilkan detail info paket pada msisdn ini. Penyebabnya kemungkinan ini adalah sebagai berikut:`
-                );
-                currentNumberResponse.push(
-                  `1. Silakan periksa nomor yang diinputkan dan pastikan masih aktif/sudah terdaftar.`
-                );
-                currentNumberResponse.push(
-                  `2. Anda terlalu banyak melakukan pengecekan paket di fitur kami ini, coba lagi dalam 3 jam kedepan.`
-                );
-                currentNumberResponse.push(`3. Sidompul sedang ada pemeliharaan sistem.`);
-                currentNumberResponse.push(`4. Coba kembali secara berkala.`);
-              }
-            }
-          } else {
-            currentNumberResponse.push(`☎️ <b>Nomor</b> : ${escapeHTML(number)}`);
-            currentNumberResponse.push(sep);
-            currentNumberResponse.push(`❗ <b>Info</b>: `);
-            currentNumberResponse.push(
-              `Maaf, saat ini terjadi kendala dalam menampilkan detail info paket pada msisdn ini. Penyebabnya kemungkinan ini adalah sebagai berikut:`
-            );
-            currentNumberResponse.push(
-              `1. Silakan periksa nomor yang diinputkan dan pastikan masih aktif/sudah terdaftar.`
-            );
-            currentNumberResponse.push(
-              `2. Anda terlalu banyak melakukan pengecekan paket di fitur kami ini, coba lagi dalam 3 jam kedepan.`
-            );
-            currentNumberResponse.push(`3. Sidompul sedang ada pemeliharaan sistem.`);
-            currentNumberResponse.push(`4. Coba kembali secara berkala.`);
-          }
-
-          allResponses.push(`<blockquote>${currentNumberResponse.join('\n')}</blockquote>`);
-        } catch (error) {
-          console.error(`Error checking quota for ${number}:`, error);
-          currentNumberResponse.push(`☎️ <b>Nomor</b> : ${escapeHTML(number)}`);
-          currentNumberResponse.push(sep);
-          currentNumberResponse.push(
-            `Terjadi kesalahan internal saat mencoba mengambil data kuota. Silakan coba lagi nanti.`
-          );
-          allResponses.push(`<blockquote>${currentNumberResponse.join('\n')}</blockquote>`);
-        }
-      }
-
-      // 2. Kirim balasan utama
-      await sendMessage(chatId, allResponses.join('\n\n'), 'HTML');
-
-      // 3. Hapus pesan yang dikirim pengguna (opsional, jika ingin "auto delete proses selesai")
-      // Ini akan menghapus pesan yang dikirim pengguna setelah bot membalas.
-      await deleteMessage(chatId, messageId);
-    } else {
-      return sendMessage(
+    if (phoneNumbers.length === 0) {
+      return this.sendMessage(
         chatId,
-        'Maaf, saya tidak mengerti. Silakan kirim nomor HP yang ingin Anda cek kuotanya (contoh: `081234567890`) atau ketik `/help` untuk bantuan.',
+        'Maaf, saya tidak mengerti. Kirim nomor (contoh: `081234567890`) atau ketik `/help`.',
         'Markdown'
       );
     }
+
+    // Kirim typing…
+    await this.sendChatAction(chatId, 'typing');
+
+    const allResponses = [];
+    const now           = new Date();
+    const checkTimeText = formatDate(now, 'full');
+
+    for (const number of phoneNumbers) {
+      const respLines = [];
+      const sep       = '============================';
+
+      respLines.push(`🥷 <b>User</b> : ${this.escapeHTML(username || 'N/A')}`);
+      respLines.push(`🆔 <b>User ID</b> : ${this.escapeHTML(userId)}`);
+      respLines.push(`📆 <b>Waktu Pengecekan</b> : ${this.escapeHTML(checkTimeText)}`);
+      respLines.push('═══════════════════════════');
+
+      try {
+        const apiRes = await this.checkQuota(number);
+
+        if (apiRes?.status === 'success' && apiRes.data?.data) {
+          const info = apiRes.data.data;
+          const sp   = info.data_sp;
+          const {
+            quotas,
+            status_4g,
+            dukcapil,
+            grace_period,
+            active_period,
+            active_card,
+            prefix
+          } = sp;
+
+          respLines.push(`☎️ <b>Nomor</b> : ${this.escapeHTML(info.msisdn || '-')}`);
+          respLines.push(`📡 <b>Tipe Kartu</b> : ${this.escapeHTML(prefix?.value || '-')}`);
+          respLines.push(`📶 <b>Status Kartu</b> : ${this.escapeHTML(status_4g?.value || '-')}`);
+          respLines.push(`🪪 <b>Status Dukcapil</b> : ${this.escapeHTML(dukcapil?.value || '-')}`);
+          respLines.push(`🗓️ <b>Umur Kartu</b> : ${this.escapeHTML(active_card?.value || '-')}`);
+          respLines.push(
+            `🚓 <b>Masa Aktif</b> : ${this.escapeHTML(formatDate(active_period?.value, 'dateOnly') || '-')}`
+          );
+          respLines.push(
+            `🆘 <b>Akhir Tenggang</b> : ${this.escapeHTML(formatDate(grace_period?.value, 'dateOnly') || '-')}`
+          );
+
+          if (Array.isArray(quotas?.value) && quotas.value.length) {
+            quotas.value.forEach(group => {
+              if (!group.length) return;
+              const pkg = group[0].packages;
+              respLines.push(sep);
+              respLines.push(`📦 <b>${this.escapeHTML(pkg?.name || '-')}</b>`);
+              respLines.push(
+                `⏰ <b>Aktif Hingga</b> : ${this.escapeHTML(formatDate(pkg?.expDate, 'full'))}`
+              );
+              group[0].benefits?.forEach(b => {
+                respLines.push(`  🌀 <b>Benefit</b> : ${this.escapeHTML(b.bname || '-')}`);
+                respLines.push(`  🧢 <b>Tipe Kuota</b>: ${this.escapeHTML(b.type || '-')}`);
+                respLines.push(`  🎁 <b>Kuota</b> : ${this.escapeHTML(b.quota || '-')}`);
+                respLines.push(`  ⏳ <b>Sisa</b> : ${this.escapeHTML(b.remaining || '-')}`);
+              });
+            });
+          } else {
+            // fallback parsing hasil raw text…
+            const raw = info.hasil || '';
+            const isErr = raw.includes('Maaf, saat ini terjadi kendala');
+            if (!isErr) {
+              const clean = raw
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<[^>]+>/g, '')
+                .replace(/=/g, '')
+                .replace(/📃 RESULT: \s*\n\n/g, '')
+                .trim();
+
+              if (clean.includes('🎁 Quota:')) {
+                const sections = clean.split('🎁 Quota:');
+                for (let i = 1; i < sections.length; i++) {
+                  const lines = sections[i].trim().split('\n').filter(l => l);
+                  const pkgName = lines[0]?.trim();
+                  const expLine = lines.find(l => l.startsWith('🍂 Aktif Hingga:'));
+                  const expDate = expLine?.replace('🍂 Aktif Hingga:', '').trim() || null;
+                  if (pkgName && expDate) {
+                    respLines.push(sep);
+                    respLines.push(`📦 <b>${this.escapeHTML(pkgName)}</b>`);
+                    respLines.push(`⏰ <b>Aktif Hingga</b> : ${this.escapeHTML(expDate)}`);
+                  }
+                }
+              } else if (clean) {
+                respLines.push(sep);
+                respLines.push(`❗ <b>Info</b>: ${this.escapeHTML(clean)}`);
+              } else {
+                // default error info
+                respLines.push(sep);
+                respLines.push(`❗ <b>Info</b>:`);
+                respLines.push(
+                  `Maaf, saat ini terjadi kendala menampilkan detail paket. Coba lagi nanti.`
+                );
+              }
+            } else {
+              respLines.push(sep);
+              respLines.push(`❗ <b>Info</b>:`);
+              respLines.push(
+                `Maaf, saat ini terjadi kendala menampilkan detail paket. Coba lagi nanti.`
+              );
+            }
+          }
+        } else {
+          // jika API gagal/kosong
+          respLines.push(`☎️ <b>Nomor</b> : ${this.escapeHTML(number)}`);
+          respLines.push('============================');
+          respLines.push(`❗ <b>Info</b>: Maaf, terjadi kendala. Coba lagi nanti.`);
+        }
+
+      } catch (err) {
+        console.error(`Error checking quota for ${number}:`, err);
+        respLines.push(`☎️ <b>Nomor</b> : ${this.escapeHTML(number)}`);
+        respLines.push('============================');
+        respLines.push(`Terjadi kesalahan internal. Silakan coba lagi nanti.`);
+      }
+
+      allResponses.push(`<blockquote>${respLines.join('\n')}</blockquote>`);
+    }
+
+    // Kirim seluruh balasan
+    await this.sendMessage(chatId, allResponses.join('\n\n'), 'HTML');
+    // Hapus pesan user
+    await this.deleteMessage(chatId, messageId);
   }
 
-  async function checkQuota(msisdn) {
+  // Memanggil API quota
+  async checkQuota(msisdn) {
     try {
-      const response = await fetch(`${QUOTA_CHECK_API}${msisdn}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching quota:', error);
-      throw error;
+      const res = await fetch(`${QUOTA_CHECK_API}${msisdn}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.error('Error fetching quota:', err);
+      throw err;
     }
   }
 
-  function formatDate(dateInput, type = 'full') {
-    if (!dateInput) return '-';
-
-    let d;
-    if (dateInput instanceof Date) {
-      d = dateInput;
-    } else if (typeof dateInput === 'string') {
-      if (dateInput.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) {
-        if (type === 'dateOnly') {
-          return dateInput.substring(0, 10);
-        }
-        return dateInput;
-      }
-      if (dateInput.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        if (type === 'full') {
-          return `${dateInput} 00:00:00`;
-        }
-        return dateInput;
-      }
-      d = new Date(dateInput);
-    } else {
-      return dateInput;
-    }
-
-    if (isNaN(d.getTime())) return '-';
-
-    const year = d.getFullYear();
-    const month = pad(d.getMonth() + 1);
-    const day = pad(d.getDate());
-    const hours = pad(d.getHours());
-    const minutes = pad(d.getMinutes());
-    const seconds = pad(d.getSeconds());
-
-    if (type === 'dateOnly') {
-      return `${year}-${month}-${day}`;
-    }
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  }
-
-  function pad(n) {
-    return n < 10 ? '0' + n : n;
-  }
-
-  async function sendMessage(chatId, text, parseMode = false) {
+  // Kirim pesan ke Telegram
+  async sendMessage(chatId, text, parseMode = false) {
     const payload = {
       chat_id: chatId,
       text,
       ...(parseMode === 'Markdown' ? { parse_mode: "Markdown" } : {}),
-      ...(parseMode === 'HTML' ? { parse_mode: "HTML" } : {})
+      ...(parseMode === 'HTML'     ? { parse_mode: "HTML" }     : {})
     };
-
     try {
       await fetch(`${this.apiUrl}/sendMessage`, {
         method: 'POST',
@@ -343,4 +244,38 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
       console.error('Gagal mengirim pesan:', err);
     }
   }
+}
+
+// Utility di luar kelas
+function formatDate(dateInput, type = 'full') {
+  if (!dateInput) return '-';
+  let d;
+  if (dateInput instanceof Date) {
+    d = dateInput;
+  } else if (typeof dateInput === 'string') {
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateInput)) {
+      return type === 'dateOnly' ? dateInput.slice(0,10) : dateInput;
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+      return type === 'full' ? `${dateInput} 00:00:00` : dateInput;
+    }
+    d = new Date(dateInput);
+  } else {
+    return dateInput;
+  }
+  if (isNaN(d.getTime())) return '-';
+
+  const Y = d.getFullYear();
+  const M = pad(d.getMonth() + 1);
+  const D = pad(d.getDate());
+  const h = pad(d.getHours());
+  const m = pad(d.getMinutes());
+  const s = pad(d.getSeconds());
+
+  if (type === 'dateOnly') return `${Y}-${M}-${D}`;
+  return `${Y}-${M}-${D} ${h}:${m}:${s}`;
+}
+
+function pad(n) {
+  return n < 10 ? '0' + n : n;
 }
