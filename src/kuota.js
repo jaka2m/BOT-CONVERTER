@@ -30,7 +30,7 @@ export class CekkuotaBotku {
     } else if (typeof dateInput === 'string') {
       // string 'YYYY-MM-DD HH:mm:ss'
       if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateInput)) {
-        return type === 'dateOnly' ? dateInput.slice(0,10) : dateInput;
+        return type === 'dateOnly' ? dateInput.slice(0, 10) : dateInput;
       }
       // string 'YYYY-MM-DD'
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
@@ -46,10 +46,10 @@ export class CekkuotaBotku {
     if (isNaN(d.getTime())) return '-';
 
     const pad = n => n < 10 ? '0' + n : n;
-    const year   = d.getFullYear();
-    const month  = pad(d.getMonth() + 1);
-    const day    = pad(d.getDate());
-    const hour   = pad(d.getHours());
+    const year = d.getFullYear();
+    const month = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hour = pad(d.getHours());
     const minute = pad(d.getMinutes());
     const second = pad(d.getSeconds());
 
@@ -96,13 +96,35 @@ export class CekkuotaBotku {
       ...options
     };
     try {
+      const res = await fetch(url, { // Tambahkan 'res' untuk mendapatkan respons
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      return res.json(); // Mengembalikan JSON response
+    } catch (err) {
+      console.error('Gagal mengirim pesan:', err);
+      return null;
+    }
+  }
+
+  // Edit pesan yang sudah ada
+  async editMessageText(chatId, messageId, text, options = {}) {
+    const url = `${this.baseUrl}/editMessageText`;
+    const body = {
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      ...options
+    };
+    try {
       await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
     } catch (err) {
-      console.error('Gagal mengirim pesan:', err);
+      console.error('Gagal mengedit pesan:', err);
     }
   }
 
@@ -118,13 +140,13 @@ export class CekkuotaBotku {
 
   // Main handler untuk setiap update
   async handleUpdate(update) {
-    const msg       = update.message;
-    const chatId    = msg?.chat?.id;
+    const msg = update.message;
+    const chatId = msg?.chat?.id;
     const messageId = msg?.message_id;
-    const text      = msg?.text?.trim() || '';
-    const from      = msg?.from || {};
-    const username  = from.username || from.first_name || 'N/A';
-    const userId    = from.id || 'N/A';
+    const text = msg?.text?.trim() || '';
+    const from = msg?.from || {};
+    const username = from.username || from.first_name || 'N/A';
+    const userId = from.id || 'N/A';
 
     if (!chatId || !text) return;
 
@@ -146,13 +168,21 @@ export class CekkuotaBotku {
       .filter(num => num.startsWith('08') && num.length >= 10 && num.length <= 14);
 
     if (phoneNumbers.length === 0) {
-  // Jangan kirim pesan apapun
-  return;
-}
+      // Jangan kirim pesan apapun jika tidak ada nomor HP valid
+      return;
+    }
 
+    // --- Perubahan dimulai di sini ---
+
+    // 1. Kirim pesan "loading" awal
+    const loadingMessageText = `⌛ Sedang memproses ${phoneNumbers.length > 1 ? 'nomor-nomor' : 'nomor'} yang Anda berikan... Mohon tunggu sebentar.`;
+    const loadingMessageResponse = await this.sendMessage(chatId, loadingMessageText);
+    const loadingMessageId = loadingMessageResponse?.result?.message_id;
 
     // Tampilkan indikator mengetik
     await this.sendChatAction(chatId, 'typing');
+
+    // --- Perubahan berakhir di sini ---
 
     const allResponses = [];
     const now = new Date();
@@ -252,8 +282,17 @@ export class CekkuotaBotku {
       allResponses.push(`<blockquote>${parts.join('\n')}</blockquote>`);
     }
 
+    // --- Perubahan dimulai di sini ---
+
+    // Hapus pesan loading atau edit pesan loading dengan hasil akhir
+    if (loadingMessageId) {
+      await this.deleteMessage(chatId, loadingMessageId); // Hapus pesan loading
+    }
+
     // Kirim balasan gabungan
     await this.sendMessage(chatId, allResponses.join('\n\n'), { parse_mode: 'HTML' });
+
+    // --- Perubahan berakhir di sini ---
 
     // (Opsional) hapus pesan user
     if (messageId) {
