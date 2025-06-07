@@ -8,13 +8,48 @@ export class CekkuotaBotku {
     this.apiUrl = apiUrl;
   }
 
+  async sendMessage(chatId, text, options = {}) {
+    await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, ...options }),
+    });
+  }
+
+  async sendChatAction(chatId, action) {
+    try {
+      await fetch(`${this.apiUrl}/bot${this.token}/sendChatAction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, action }),
+      });
+    } catch (err) {
+      console.error('Gagal mengirim chat action:', err);
+    }
+  }
+
+  async deleteMessage(chatId, messageId) {
+    try {
+      await fetch(`${this.apiUrl}/bot${this.token}/deleteMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
+      });
+    } catch (err) {
+      console.error('Gagal menghapus pesan:', err);
+    }
+  }
+
   async handleUpdate(update) {
-    const msg    = update.message;
+    const msg = update.message;
     const chatId = msg?.chat?.id;
-    const text   = msg?.text?.trim() || '';
+    const text = msg?.text?.trim() || '';
+    const username = msg?.from?.username || 'N/A';
+    const userId = msg?.from?.id || 'N/A';
+    const messageId = msg?.message_id;
+
     if (!chatId || !text) return;
 
-    // 1) /help
     if (text.startsWith('/help')) {
       const helpText = `
 ℹ️ <b>Bantuan Bot</b>
@@ -26,120 +61,108 @@ export class CekkuotaBotku {
       return this.sendMessage(chatId, helpText, { parse_mode: "HTML" });
     }
 
-    // 2) ambil semua nomor 10–13 digit
-    const numbers = text.match(/\d{10,13}/g);
-    if (!numbers?.length) {
-      return this.sendMessage(
-        chatId,
-        "❗ Mohon kirim nomor HP yang valid untuk dicek.",
-        { parse_mode: "HTML" }
-      );
-    }
+    const phoneNumbers = text.split(/\s+/).filter(num => num.startsWith('08') && num.length >= 10 && num.length <= 14);
 
-    // 3) bikin header blockquote
-    const username = msg.from?.username ? '@' + msg.from.username : '-';
-    const userId   = msg.from?.id       || '-';
-    const waktu    = formatDate(new Date());
-    const header = `<blockquote>
-🥷 <b>User</b>             : ${escapeHTML(username)}
-🆔 <b>User ID</b>          : ${escapeHTML(userId)}
-📆 <b>Waktu Pengecekan</b> : ${escapeHTML(waktu)}
-═══════════════════════════
-`;
+    if (phoneNumbers.length > 0) {
+      await this.sendChatAction(chatId, 'typing');
 
-    // 4) fetch & format setiap nomor
-    const parts = [];
-    for (let no of numbers) {
-      try {
-        const res  = await fetch(`${QUOTA_CHECK_API}${no}`);
-        const data = await res.json();
-        parts.push(formatQuotaResponse(no, data));
-      } catch (e) {
-        console.error(e);
-        parts.push(`❌ Gagal cek kuota untuk ${escapeHTML(no)}`);
+      let allResponses = [];
+      const currentTime = new Date();
+      const formattedCheckTime = formatDate(currentTime, 'full');
+
+      for (const number of phoneNumbers) {
+        const currentNumberResponse = [];
+        const sep = "============================";
+
+        currentNumberResponse.push(`🥷 <b>User</b> : ${escapeHTML(username)}`);
+        currentNumberResponse.push(`🆔 <b>User ID</b> : ${escapeHTML(userId)}`);
+        currentNumberResponse.push(`📆 <b>Waktu Pengecekan</b> : ${escapeHTML(formattedCheckTime)}`);
+        currentNumberResponse.push(`═══════════════════════════`);
+
+        try {
+          const apiResponse = await checkQuota(number);
+
+          if (apiResponse?.status === 'success' && apiResponse.data?.data) {
+            const info = apiResponse.data.data;
+            const { quotas, status_4g, dukcapil, grace_period, active_period, active_card, prefix } = info.data_sp;
+
+            currentNumberResponse.push(`☎️ <b>Nomor</b> : ${escapeHTML(info.msisdn || '-')}`);
+            currentNumberResponse.push(`📡 <b>Tipe Kartu</b> : ${escapeHTML(prefix?.value || '-')}`);
+            currentNumberResponse.push(`📶 <b>Status Kartu</b> : ${escapeHTML(status_4g?.value || '-')}`);
+            currentNumberResponse.push(`🪪 <b>Status Dukcapil</b> : ${escapeHTML(dukcapil?.value || '-')}`);
+            currentNumberResponse.push(`🗓️ <b>Umur Kartu</b> : ${escapeHTML(active_card?.value || '-')}`);
+            currentNumberResponse.push(`🚓 <b>Masa Aktif</b> : ${escapeHTML(formatDate(active_period?.value, 'dateOnly') || '-')}`);
+            currentNumberResponse.push(`🆘 <b>Akhir Tenggang</b> : ${escapeHTML(formatDate(grace_period?.value, 'dateOnly') || '-')}`);
+
+            if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
+              quotas.value.forEach(group => {
+                if (!group.length) return;
+                const pkg = group[0].packages;
+                currentNumberResponse.push(sep);
+                currentNumberResponse.push(`📦 <b>${escapeHTML(pkg?.name || '-')}</b>`);
+                currentNumberResponse.push(`⏰ <b>Aktif Hingga</b> : ${escapeHTML(formatDate(pkg?.expDate, 'full'))}`);
+                group[0].benefits?.forEach(b => {
+                  currentNumberResponse.push(`  🌀 <b>Benefit</b> : ${escapeHTML(b.bname || '-')}`);
+                  currentNumberResponse.push(`  🧢 <b>Tipe Kuota</b>: ${escapeHTML(b.type || '-')}`);
+                  currentNumberResponse.push(`  🎁 <b>Kuota</b> : ${escapeHTML(b.quota || '-')}`);
+                  currentNumberResponse.push(`  ⏳ <b>Sisa</b> : ${escapeHTML(b.remaining || '-')}`);
+                });
+              });
+            } else {
+              const rawHasilText = info.hasil || '';
+              const cleanHasilText = rawHasilText.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').replace(/=/g, '').trim();
+
+              if (cleanHasilText.includes("🎁 Quota:")) {
+                const quotaSections = cleanHasilText.split('🎁 Quota:');
+                for (let i = 1; i < quotaSections.length; i++) {
+                  const lines = quotaSections[i].trim().split('\n').filter(Boolean);
+                  const packageName = lines[0]?.trim();
+                  const expDate = lines.find(line => line.startsWith('🍂 Aktif Hingga:'))?.split(':')[1]?.trim();
+                  if (packageName && expDate) {
+                    currentNumberResponse.push(sep);
+                    currentNumberResponse.push(`📦 <b>${escapeHTML(packageName)}</b>`);
+                    currentNumberResponse.push(`⏰ <b>Aktif Hingga</b> : ${escapeHTML(expDate)}`);
+                  }
+                }
+              } else {
+                currentNumberResponse.push(sep);
+                currentNumberResponse.push(`❗ <b>Info</b>: ${escapeHTML(cleanHasilText || this.defaultErrorInfo())}`);
+              }
+            }
+          } else {
+            currentNumberResponse.push(`☎️ <b>Nomor</b> : ${escapeHTML(number)}`);
+            currentNumberResponse.push(sep);
+            currentNumberResponse.push(this.defaultErrorInfo());
+          }
+
+          allResponses.push(`<blockquote>${currentNumberResponse.join('\n')}</blockquote>`);
+        } catch (error) {
+          console.error(`Error checking quota for ${number}:`, error);
+          currentNumberResponse.push(`☎️ <b>Nomor</b> : ${escapeHTML(number)}`);
+          currentNumberResponse.push(sep);
+          currentNumberResponse.push(`Terjadi kesalahan internal saat mencoba mengambil data kuota. Silakan coba lagi nanti.`);
+          allResponses.push(`<blockquote>${currentNumberResponse.join('\n')}</blockquote>`);
+        }
       }
-    }
 
-    // 5) kirim semua
-    const footer   = `</blockquote>`;
-    const fullHtml = header + parts.join("\n\n") + footer;
-    return this.sendMessage(chatId, fullHtml, { parse_mode: "HTML" });
-  }
+      await this.sendMessage(chatId, allResponses.join('\n\n'), { parse_mode: 'HTML' });
+      await this.deleteMessage(chatId, messageId);
 
-  async sendMessage(chatId, text, opts = {}) {
-    const payload = { chat_id: chatId, text, ...opts };
-    await fetch(`${this.apiUrl}/bot${this.token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-  }
-}
-
-// =================================================================================
-// URL endpoint untuk cek kuota
-const QUOTA_CHECK_API = 'https://api.geoproject.biz.id/cek_kuota?msisdn=';
-
-// Helper: escape hanya konten dinamis, biarkan tag HTML apa adanya
-function escapeHTML(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-}
-
-// Format kuota dengan HTML tags, selalu tampilkan info dasar & hasil jika quotas kosong
-function formatQuotaResponse(number, data) {
-  const info     = data?.data?.data_sp;
-  const rawHasil = data?.data?.hasil || '';
-  const cleanH  = rawHasil.replace(/<br\s*\/?>/gi, '\n')
-                          .replace(/<[^>]+>/g, '')
-                          .trim();
-
-  const out = [];
-  out.push(`☎️ <b>Nomor</b>             : ${escapeHTML(number)}`);
-
-  if (info) {
-    const { prefix, status_4g, dukcapil, active_card, active_period, grace_period, quotas } = info;
-    out.push(`📡 <b>Tipe Kartu</b>      : ${escapeHTML(prefix?.value || '-')}`);
-    out.push(`📶 <b>Status Kartu</b>    : ${escapeHTML(status_4g?.value || '-')}`);
-    out.push(`🪪 <b>Status Dukcapil</b> : ${escapeHTML(dukcapil?.value || '-')}`);
-    out.push(`🗓️ <b>Umur Kartu</b>     : ${escapeHTML(active_card?.value || '-')}`);
-    out.push(`🚓 <b>Masa Aktif</b>      : ${escapeHTML(active_period?.value || '-')}`);
-    out.push(`🆘 <b>Akhir Tenggang</b>  : ${escapeHTML(grace_period?.value || '-')}`);
-    out.push(`============================`);
-
-    if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
-      quotas.value.forEach(group => {
-        if (!group.length) return;
-        const pkg = group[0].packages;
-        out.push(`📦 <b>${escapeHTML(pkg?.name || '-')}</b>`);
-        out.push(`⏰ <b>Aktif Hingga</b>    : ${escapeHTML(formatDate(pkg?.expDate))}`);
-        group[0].benefits?.forEach(b => {
-          out.push(`  🌀 <b>Benefit</b>       : ${escapeHTML(b.bname)}`);
-          out.push(`  🧢 <b>Tipe Kuota</b>  : ${escapeHTML(b.type)}`);
-          out.push(`  🎁 <b>Kuota</b>       : ${escapeHTML(b.quota)}`);
-          out.push(`  ⏳ <b>Sisa</b>        : ${escapeHTML(b.remaining)}`);
-        });
-      });
     } else {
-      // quotas kosong → tampilkan pesan Info
-      out.push(`❗ <b>Info</b>:\n${escapeHTML(cleanH)}`);
+      return this.sendMessage(chatId,
+        'Maaf, saya tidak mengerti. Silakan kirim nomor HP yang ingin Anda cek kuotanya (contoh: `081234567890`) atau ketik `/help` untuk bantuan.',
+        { parse_mode: 'Markdown' });
     }
-
-  } else {
-    // info null → tampilkan hasil mentah
-    out.push(`❗ <b>Info</b>:\n${escapeHTML(cleanH)}`);
   }
 
-  return out.join('\n');
-}
-
-// Format Date ke "YYYY-MM-DD HH:mm:ss"
-function formatDate(input) {
-  const d = input instanceof Date ? input : new Date(input);
-  if (isNaN(d)) return String(input);
-  const pad = n => n < 10 ? '0' + n : n;
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} `
-       + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  defaultErrorInfo() {
+    return [
+      `❗ <b>Info</b>:`,
+      `Maaf, saat ini terjadi kendala dalam menampilkan detail info paket pada msisdn ini. Penyebabnya kemungkinan ini adalah sebagai berikut:`,
+      `1. Silakan periksa nomor yang diinputkan dan pastikan masih aktif/sudah terdaftar.`,
+      `2. Anda terlalu banyak melakukan pengecekan paket di fitur kami ini, coba lagi dalam 3 jam kedepan.`,
+      `3. Sidompul sedang ada pemeliharaan sistem.`,
+      `4. Coba kembali secara berkala.`
+    ].join('\n');
+  }
 }
