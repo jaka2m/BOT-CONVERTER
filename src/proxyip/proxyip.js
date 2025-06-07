@@ -1,5 +1,5 @@
 const APIKU = 'https://api.checker-ip.web.id/check?ip='; // Ganti dengan URL asli API status IP
-const DEFAULT_HOST = 'joss.checker-ip.xyz'; // Ganti dengan host default
+const DEFAULT_HOST = 'krikkrik.tech'; // Ganti dengan host default
 
 // Simpan pesan yang sudah dikirim ke user (chatId) supaya tidak spam
 const sentMessages = new Map();
