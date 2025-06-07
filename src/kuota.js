@@ -12,6 +12,8 @@ export class CekkuotaBotku {
     const message = update.message;
     const chatId = message?.chat?.id;
     const text = message?.text?.trim() || '';
+    const username = message?.from?.username || '-';
+    const userId = message?.from?.id || '-';
 
     if (!chatId || !text) return;
 
@@ -27,22 +29,12 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
 `, true);
     }
 
-    // Ambil semua nomor HP 10–13 digit
     const numbers = text.match(/\d{10,13}/g);
     if (numbers && numbers.length > 0) {
-      const username = message.from?.username ? '@' + message.from.username : '(tidak diketahui)';
-      const userId = message.from?.id || '(tidak diketahui)';
       const waktu = formatDate(new Date());
+      const userInfo = `🥷 User : @${username}\n🆔 User ID : ${userId}\n📆 Waktu Pengecekan :\n ${waktu}`;
+      const separatorHeavy = "══════════════════════";
 
-      // Informasi user di bagian paling atas
-      const userInfo = [
-        `🥷 User : ${username}`,
-        `🆔 User ID : ${userId}`,
-        `📆 Waktu Pengecekan :`,
-        `  ${waktu}`,
-      ].join('\n');
-
-      // Proses tiap nomor
       const replies = await Promise.all(numbers.map(async (num) => {
         try {
           const res = await fetch(`https://jav.zerostore.web.id/cek_kuota?msisdn=${num}`);
@@ -54,14 +46,11 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
         }
       }));
 
-      // Gabungkan userInfo + separator + masing-masing hasil
-      const separatorHeavy = "══════════════════════";
       const fullMessage = [userInfo, separatorHeavy, ...replies].join('\n\n');
-      return this.sendMessage(chatId, fullMessage, true);
-    }
+      const quoted = quoteText(fullMessage);
 
-    // Jika tidak ada nomor valid
-    return this.sendMessage(chatId, '❗ Mohon kirim nomor HP yang valid untuk dicek.', true);
+      return this.sendMessage(chatId, quoted, true);
+    }
   }
 
   async sendMessage(chatId, text, markdown = false) {
@@ -83,10 +72,9 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
   }
 }
 
-// Fungsi bantu di luar class
+// Format tampilan kuota
 function formatQuotaResponse(number, data) {
   const info = data?.data?.data_sp;
-  const separatorLight = "==========================";
 
   if (!data || !data.status || !info) {
     return `⚠️ Nomor ${number} tidak ditemukan atau terjadi kesalahan.`;
@@ -102,55 +90,54 @@ function formatQuotaResponse(number, data) {
     prefix
   } = info;
 
-  // Header informasi utama tentang kartu
-  const lines = [];
-  lines.push(`☎️ Nomor : ${number}`);
-  lines.push(`📡 Tipe Kartu : ${prefix?.value || '-'}`);
-  lines.push(`📶 Status Kartu : ${status_4g?.value || '-'}`);
-  lines.push(`🪪 Status Dukcapil : ${dukcapil?.value || '-'}`);
-  lines.push(`🗓️ Umur Kartu : ${active_card?.value || '-'}`);
-  lines.push(`🚓 Masa Aktif : ${active_period?.value || '-'}`);
-  lines.push(`🆘 Akhir Tenggang : ${grace_period?.value || '-'}`);
+  let msg = `☎️ Nomor : ${number}`;
+  msg += `\n📡 Tipe Kartu : ${prefix?.value || '-'}`;
+  msg += `\n📶 Status Kartu : ${status_4g?.value || '-'}`;
+  msg += `\n🪪 Status Dukcapil : ${dukcapil?.value || '-'}`;
+  msg += `\n🗓️ Umur Kartu : ${active_card?.value || '-'}`;
+  msg += `\n🚓 Masa Aktif : ${active_period?.value || '-'}`;
+  msg += `\n🆘 Akhir Tenggang : ${grace_period?.value || '-'}`;
 
-  // Jika ada detail paket kuota
   if (Array.isArray(quotas?.value) && quotas.value.length > 0) {
     quotas.value.forEach((quotaGroup) => {
       if (quotaGroup.length === 0) return;
 
-      const packageInfo = quotaGroup[0].packages;
-      // Judul paket
-      lines.push(separatorLight);
-      lines.push(`📦 ${packageInfo?.name || '-'}`);
-      lines.push(`⏰ Aktif Hingga : ${formatDate(packageInfo?.expDate) || '-'}`);
+      const pkg = quotaGroup[0].packages;
+      msg += `\n===========================`;
+      msg += `\n📦 ${pkg?.name || '-'}`;
+      msg += `\n⏰ Aktif Hingga : ${formatDate(pkg?.expDate) || '-'}`;
 
-      // Jika ada benefit di dalam paket
-      if (quotaGroup[0].benefits && quotaGroup[0].benefits.length > 0) {
-        lines.push(separatorLight);
-        quotaGroup[0].benefits.forEach((benefit) => {
-          lines.push(`  🌀 Benefit : ${benefit.bname}`);
-          lines.push(`  🧢 Tipe Kuota : ${benefit.type}`);
-          lines.push(`  🎁 Kuota : ${benefit.quota}`);
-          lines.push(`  ⏳ Sisa Kuota : ${benefit.remaining}`);
-        });
-      }
+      quotaGroup[0].benefits?.forEach((benefit) => {
+        msg += `\n  🌀 Benefit : ${benefit.bname}`;
+        msg += `\n  🧢 Tipe Kuota : ${benefit.type}`;
+        msg += `\n  🎁 Kuota : ${benefit.quota}`;
+        msg += `\n  ⏳ Sisa Kuota : ${benefit.remaining}`;
+      });
     });
   } else {
-    // Fallback: tampilkan hasil mentah tanpa HTML
     const hasilRaw = data?.data?.hasil || '';
     const hasilText = hasilRaw
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<[^>]+>/g, '')
       .trim();
-    lines.push(separatorLight);
-    lines.push(`❗ Info:\n${hasilText}`);
+    msg += `\n❗ Info:\n${hasilText}`;
   }
 
-  return lines.join('\n');
+  return msg.trim();
 }
 
-function formatDate(dateInput) {
-  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
-  if (isNaN(d)) return String(dateInput);
+// Format kutipan Telegram
+function quoteText(text) {
+  return text
+    .split('\n')
+    .map(line => `> ${line}`)
+    .join('\n');
+}
+
+// Format waktu
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  if (isNaN(d)) return dateStr;
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
