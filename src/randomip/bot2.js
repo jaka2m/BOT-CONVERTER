@@ -46,6 +46,8 @@ Pilih command sesuai kebutuhan !
 /proxy → Generate Proxy IPs! ! 
 /config → Generate config auto-rotate! 
 ══════════════════
+/help → Info format cek kuota XL 
+══════════════════
 ⚙️ Perintah Domain :
 /list→ Lihat daftar wildcard yang terdaftar
 /add + bug→ Tambah domain wildcard (admin only)
