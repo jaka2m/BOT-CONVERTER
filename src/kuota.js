@@ -6,7 +6,7 @@ export class CekkuotaBotku {
   constructor(token, apiUrl = 'https://api.telegram.org') {
     this.token = token;
     this.apiUrl = apiUrl;
-    this.apiUrl = `${this.apiUrl}/bot${this.token}`;
+    this.baseUrl = `${this.apiUrl}/bot${this.token}`;
   }
 
   // Utility: escape HTML untuk mencegah parsing error
@@ -61,7 +61,7 @@ export class CekkuotaBotku {
 
   // Kirim chat action (typing, upload_photo, etc.)
   async sendChatAction(chatId, action) {
-    const url = `${this.apiUrl}/sendChatAction`;
+    const url = `${this.baseUrl}/sendChatAction`;
     try {
       await fetch(url, {
         method: 'POST',
@@ -75,7 +75,7 @@ export class CekkuotaBotku {
 
   // Hapus pesan
   async deleteMessage(chatId, messageId) {
-    const url = `${this.apiUrl}/deleteMessage`;
+    const url = `${this.baseUrl}/deleteMessage`;
     try {
       await fetch(url, {
         method: 'POST',
@@ -89,7 +89,7 @@ export class CekkuotaBotku {
 
   // Kirim pesan (teks, parse_mode opsional)
   async sendMessage(chatId, text, options = {}) {
-    const url = `${this.apiUrl}/sendMessage`;
+    const url = `${this.baseUrl}/sendMessage`;
     const body = {
       chat_id: chatId,
       text,
@@ -146,12 +146,10 @@ export class CekkuotaBotku {
       .filter(num => num.startsWith('08') && num.length >= 10 && num.length <= 14);
 
     if (phoneNumbers.length === 0) {
-      return this.sendMessage(
-        chatId,
-        'Maaf, saya tidak mengerti. Silakan kirim nomor HP yang ingin Anda cek kuotanya (contoh: `081234567890`) atau ketik `/help` untuk bantuan.',
-        { parse_mode: 'Markdown' }
-      );
-    }
+  // Jangan kirim pesan apapun
+  return;
+}
+
 
     // Tampilkan indikator mengetik
     await this.sendChatAction(chatId, 'typing');
