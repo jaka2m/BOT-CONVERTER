@@ -16,58 +16,13 @@ export default {
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
-      const partsApiKey = [
-        'MDI4NDYy',
-        'ZTg1MTc3',
-        'MmYwNTI4',
-        'MzEwZjBi',
-        'YTkxZDg0',
-        'ODg1MDg4Ng==',
-      ];
-      const ngasalApiKey = partsApiKey.join('');
-      const apiKey = atob(ngasalApiKey);
-
-      const partsAccountID = [
-        'ZDc2NjBh',
-        'YTJlMDZm',
-        'NGFmMWQ1',
-        'YmVjYjgw',
-        'YzAzNTg1',
-        'MjI=',
-      ];
-      const ngasalAccountID = partsAccountID.join('');
-      const accountID = atob(ngasalAccountID);
-
-      const partsZoneID = [
-        'ZDMzYTcx',
-        'YzI0YmY5',
-        'YzQ2ZDYz',
-        'NGY4NjFl',
-        'NTg4YWI4',
-        'ODc=',
-      ];
-      const ngasalZoneID = partsZoneID.join('');
-      const zoneID = atob(ngasalZoneID);
-
-      const partsApiEmail = [
-        'ZGVzYWxl',
-        'a29uZzI0',
-        'QGdtYWls',
-        'LmNvbQ==',
-      ];
-      const ngasalApiEmail = partsApiEmail.join('');
-      const apiEmail = atob(ngasalApiEmail);
-
-      const partsServiceName = ['c2lyZW4='];
-      const ngasalServiceName = partsServiceName.join('');
-      const serviceName = atob(ngasalServiceName);
-
-      const partsRootDomain = [
-        'a3Jpa2tyaWs=',
-        'LnRlY2g=',
-      ];
-      const ngasalRootDomain = partsRootDomain.join('');
-      const rootDomain = atob(ngasalRootDomain);
+      // Tanpa encoding base64
+      const apiKey = '028462e851772f0528310f0ba91d848850886';
+      const accountID = 'd7660aa2e06f4af1d5becb80c0358522';
+      const zoneID = 'd33a71c24bf9c46d634f861e588ab887';
+      const apiEmail = 'desalekong24@gmail.com';
+      const serviceName = 'siren';
+      const rootDomain = 'krikkrik.tech';
 
       const globalBot = new KonstantaGlobalbot({
         apiKey,
