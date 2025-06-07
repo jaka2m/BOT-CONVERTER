@@ -172,17 +172,13 @@ export class CekkuotaBotku {
       return;
     }
 
-    // --- Perubahan dimulai di sini ---
-
-    // 1. Kirim pesan "loading" awal
+    // Kirim pesan "loading" awal dan simpan ID-nya
     const loadingMessageText = `⌛ Sedang memproses ${phoneNumbers.length > 1 ? 'nomor-nomor' : 'nomor'} yang Anda berikan... Mohon tunggu sebentar.`;
     const loadingMessageResponse = await this.sendMessage(chatId, loadingMessageText);
     const loadingMessageId = loadingMessageResponse?.result?.message_id;
 
     // Tampilkan indikator mengetik
     await this.sendChatAction(chatId, 'typing');
-
-    // --- Perubahan berakhir di sini ---
 
     const allResponses = [];
     const now = new Date();
@@ -282,17 +278,13 @@ export class CekkuotaBotku {
       allResponses.push(`<blockquote>${parts.join('\n')}</blockquote>`);
     }
 
-    // --- Perubahan dimulai di sini ---
-
-    // Hapus pesan loading atau edit pesan loading dengan hasil akhir
+    // Hapus pesan loading setelah semua proses selesai
     if (loadingMessageId) {
-      await this.deleteMessage(chatId, loadingMessageId); // Hapus pesan loading
+      await this.deleteMessage(chatId, loadingMessageId);
     }
 
-    // Kirim balasan gabungan
+    // Kirim balasan gabungan dengan hasil akhir
     await this.sendMessage(chatId, allResponses.join('\n\n'), { parse_mode: 'HTML' });
-
-    // --- Perubahan berakhir di sini ---
 
     // (Opsional) hapus pesan user
     if (messageId) {
