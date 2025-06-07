@@ -88,8 +88,16 @@ function escapeHTML(str) {
 // Format kuota dengan HTML tags
 function formatQuotaResponse(number, data) {
   const info = data?.data?.data_sp;
-  if (!data?.status || !info) {
-    return `⚠️ Nomor ${escapeHTML(number)} tidak ditemukan atau terjadi kesalahan.`;
+
+  if (!data?.status) {
+    return `⚠️ Nomor ${escapeHTML(number)} gagal dicek: ${escapeHTML(data?.message || 'Tidak diketahui')}`;
+  }
+
+  if (!info) {
+    // fallback kalau `data_sp` tidak tersedia, tapi `hasil` ada
+    const raw = data?.data?.hasil || '';
+    const txt = raw.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+    return `📃 <b>Nomor:</b> ${escapeHTML(number)}\n\n${escapeHTML(txt)}`;
   }
 
   const { quotas, status_4g, dukcapil, grace_period, active_period, active_card, prefix } = info;
