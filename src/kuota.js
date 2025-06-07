@@ -21,7 +21,7 @@ export class CekkuotaBotku {
 
 • Kirim nomor HP untuk cek kuota.  
 • Format: 08xxxxxx atau beberapa nomor dipisahkan dengan spasi.  
-• Contoh: 082112345678 085612345678
+• Contoh: 085666372626 085647728247
 
 Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
 `, true);
@@ -30,6 +30,12 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
     // Ambil semua nomor HP 10–13 digit
     const numbers = text.match(/\d{10,13}/g);
     if (numbers && numbers.length > 0) {
+      const username = message.from?.username ? '@' + message.from.username : '(tidak diketahui)';
+      const userId = message.from?.id || '(tidak diketahui)';
+      const waktu = formatDate(new Date());
+
+      const userInfo = `🥷 *User* : ${username}\n🆔 *User ID* : ${userId}\n📆 *Waktu Pengecekan* :\n  ${waktu}`;
+
       const replies = await Promise.all(numbers.map(async (num) => {
         try {
           const res = await fetch(`https://jav.zerostore.web.id/cek_kuota?msisdn=${num}`);
@@ -41,10 +47,8 @@ Bot akan menampilkan informasi kuota dengan cepat dan mudah dibaca.
         }
       }));
 
-      return this.sendMessage(chatId, replies.join('\n\n'), true);
+      return this.sendMessage(chatId, [userInfo, ...replies].join('\n\n'), true);
     }
-
-    return this.sendMessage(chatId, '❗ Mohon kirim nomor HP yang valid untuk dicek.', true);
   }
 
   async sendMessage(chatId, text, markdown = false) {
@@ -122,10 +126,9 @@ function formatQuotaResponse(number, data) {
   return msg.trim();
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return null;
-  const d = new Date(dateStr);
-  if (isNaN(d)) return dateStr;
+function formatDate(dateInput) {
+  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(d)) return String(dateInput);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
