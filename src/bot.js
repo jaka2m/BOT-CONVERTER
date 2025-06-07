@@ -6,7 +6,7 @@ import { ProxyCekBot, TelegramProxyCekBot } from './proxyip/botCek.js';
 import { proxyBot, TelegramProxyBot } from './proxyip/bot3.js';
 import { TelegramWildcardBot } from './wildcard/botwild.js';
 
-const HOSTKU = 'joss.checker-ip.xyz';
+const HOSTKU = 'krikkrik.tech';
 
 export class TelegramBot {
   constructor(token, apiUrl, ownerId) {
@@ -79,7 +79,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
       // /listwildcard command
       if (text.startsWith('/listwildcard')) {
         const wildcards = [
-          "ava.game.naver.com", "joss.checker-ip.xyz", "business.blibli.com", "graph.instagram.com",
+          "ava.game.naver.com", "krikkrik.tech", "business.blibli.com", "graph.instagram.com",
           "quiz.int.vidio.com", "live.iflix.com", "support.zoom.us", "blog.webex.com",
           "investors.spotify.com", "cache.netflix.com", "zaintest.vuclip.com", "io.ruangguru.com",
           "api.midtrans.com", "investor.fb.com", "bakrie.ac.id"
