@@ -173,7 +173,7 @@ export class CekkuotaBotku {
     }
 
     // Kirim pesan "loading" awal dan simpan ID-nya
-    const loadingMessageText = `⌛ Sedang memproses ${phoneNumbers.length > 1 ? 'nomor-nomor' : 'nomor'} yang Anda berikan... Mohon tunggu sebentar.`;
+    const loadingMessageText = `⌛ Sedang memproses ${phoneNumbers.length > 1 ? 'nomor-nomor' : 'nomor'}...`;
     const loadingMessageResponse = await this.sendMessage(chatId, loadingMessageText);
     const loadingMessageId = loadingMessageResponse?.result?.message_id;
 
