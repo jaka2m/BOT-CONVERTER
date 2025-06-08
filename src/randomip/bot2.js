@@ -32,11 +32,11 @@ export class TelegramBotku {
 
     if (text === '/menu') {
       const menuText = `
-══════════════════
+▭▭▰▰▭▭▰▰▭▭▰▰▭
 ≡   *MENU UTAMA BOT* ≡
-══════════════════
+▭▭▰▰▭▭▰▰▭▭▰▰▭
 Pilih command sesuai kebutuhan!
-══════════════════
+▭▭▰▰▭▭▰▰▭▭▰▰▭
 \` /start\`        → mulai bot!
 \` /proxyip\`      → Config random sesuai tombol Flag CC
 \` /traffic\`      → Daftar pemakaian akun Cloudflare!
@@ -45,17 +45,17 @@ Pilih command sesuai kebutuhan!
 \` /randomconfig\` → Config random mix protocol!
 \` /proxy\`        → Generate Proxy IPs!!
 \` /config\`       → Generate config auto-rotate!
-══════════════════
+▭▭▰▰▭▭▰▰▭▭▰▰▭
 \` /help\`         → Info format cek kuota XL
-══════════════════
+▭▭▰▰▭▭▰▰▭▭▰▰▭
 *⚙️ Perintah Domain :*
 \` /list\`         → Lihat daftar wildcard yang terdaftar
 \` /add\` + bug    → Tambah domain wildcard (admin only)
 \` /del\` + bug    → Hapus domain wildcard (admin only)
-══════════════════
+▭▭▰▰▭▭▰▰▭▭▰▰▭
 *SUPPORT*
 \` /donate\`       → Bantu admin 😘!
-══════════════════
+▭▭▰▰▭▭▰▰▭▭▰▰▭
 `;
       await this.sendMessage(chatId, menuText, { parse_mode: 'Markdown' }); // <--- DITAMBAHKAN DI SINI
       return new Response('OK', { status: 200 });
@@ -63,88 +63,88 @@ Pilih command sesuai kebutuhan!
     
 if (text === '/findproxy') {
       const menuText = `
-══════════════════
+▭▭▰▰▭▭▰▰▭▭▰▰▭
 🏷️ *TUTORIAL CARI PROXY* 🏷️
-══════════════════
-📌 **FOFA (fofa.info)**  
-🔗 Situs: [en.fofa.info](https://en.fofa.info)  
-🔍 Kueri pencarian:  
+▭▭▰▰▭▭▰▰▭▭▰▰▭
+📌 **FOFA (fofa.info)**
+🔗 Situs: [en.fofa.info](https://en.fofa.info)
+🔍 Kueri pencarian:
 \`\`\`query
 server=="cloudflare" && is_domain=false && banner="Content-Length: 155" && protocol="http" && org!="CLOUDFLARENET" && country="ID" && asn!="59134"
 \`\`\`
-💡 **Catatan:**  
-- Ubah \`asn="63949"\` untuk ISP tertentu  
-- Ubah \`country="ID"\` ke kode negara lain  
+💡 **Catatan:**
+- Ubah \`asn="63949"\` untuk ISP tertentu
+- Ubah \`country="ID"\` ke kode negara lain
 - Tambahkan filter port: \`&& port="443"\`
 
-══════════════════
-📌 **HUNTER.HOW**  
-🔗 Situs: [hunter.how](https://hunter.how)  
-🔍 Kueri pencarian:  
+▭▭▰▰▭▭▰▰▭▭▰▰▭
+📌 **HUNTER.HOW**
+🔗 Situs: [hunter.how](https://hunter.how)
+🔍 Kueri pencarian:
 \`\`\`query
 as.org!="Cloudflare London, LLC"&&product.name="CloudFlare"&&header.status_code=="400"&&protocol=="http"&&header.content_length=="655"&&ip.country=="ID"
 \`\`\`
-💡 **Catatan:**  
-- Tambah \`&&as.number="59134"\` untuk filter ASN  
-- Tambah \`&&ip.port="443"\` untuk fokus ke port 443  
-- Ubah negara dengan \`ip.country="SG"\`  
+💡 **Catatan:**
+- Tambah \`&&as.number="59134"\` untuk filter ASN
+- Tambah \`&&ip.port="443"\` untuk fokus ke port 443
+- Ubah negara dengan \`ip.country="SG"\`
 
-══════════════════
-📌 **SHODAN.IO**  
-🔗 Situs: [shodan.io](https://shodan.io)  
-🔍 Kueri pencarian:  
+▭▭▰▰▭▭▰▰▭▭▰▰▭
+📌 **SHODAN.IO**
+🔗 Situs: [shodan.io](https://shodan.io)
+🔍 Kueri pencarian:
 \`\`\`query
 product:"Cloudflare" country:"ID"
 \`\`\`
-💡 **Catatan:**  
-- Filter port: \`port:443\`  
-- Filter provider: \`org:"Akamai"\`  
+💡 **Catatan:**
+- Filter port: \`port:443\`
+- Filter provider: \`org:"Akamai"\`
 
-══════════════════
-📌 **ZOOMEYE.HK**  
-🔗 Situs: [zoomeye.hk](https://zoomeye.hk)  
-🔍 Kueri pencarian:  
+▭▭▰▰▭▭▰▰▭▭▰▰▭
+📌 **ZOOMEYE.HK**
+🔗 Situs: [zoomeye.hk](https://zoomeye.hk)
+🔍 Kueri pencarian:
 \`\`\`query
 +app:"Cloudflare" +service:"http" +title:"400 The plain HTTP request was sent to HTTPS port" +country:"Singapore"
 \`\`\`
-💡 **Catatan:**  
-- Tambah \`+asn:59134\` untuk filter ASN  
-- Spesifikkan port dengan \`+port:"443"\`  
-- Ubah negara dengan \`+country:"Indonesia"\`  
+💡 **Catatan:**
+- Tambah \`+asn:59134\` untuk filter ASN
+- Spesifikkan port dengan \`+port:"443"\`
+- Ubah negara dengan \`+country:"Indonesia"\`
 
-══════════════════
-📌 **BINARYEDGE.IO**  
-🔗 Situs: [app.binaryedge.io](https://app.binaryedge.io)  
-🔍 Kueri pencarian:  
+▭▭▰▰▭▭▰▰▭▭▰▰▭
+📌 **BINARYEDGE.IO**
+🔗 Situs: [app.binaryedge.io](https://app.binaryedge.io)
+🔍 Kueri pencarian:
 \`\`\`query
 country:ID title:"400 The plain HTTP request was sent to HTTPS port" product:nginx protocol:"tcp" name:http banner:"Server: cloudflare" banner:"CF-RAY: -" NOT asn:209242
 \`\`\`
-💡 **Catatan:**  
-- Hapus \`NOT\` untuk mencari ASN tertentu (\`asn:59134\`)  
-- Tambah filter port dengan \`port:443\`  
-- Filter provider: \`as_name:Digitalocean\`  
+💡 **Catatan:**
+- Hapus \`NOT\` untuk mencari ASN tertentu (\`asn:59134\`)
+- Tambah filter port dengan \`port:443\`
+- Filter provider: \`as_name:Digitalocean\`
 
-══════════════════
-📌 **CENSYS.IO**  
-🔗 Situs: [search.censys.io](https://search.censys.io)  
-🔍 Kueri pencarian dasar:  
+▭▭▰▰▭▭▰▰▭▭▰▰▭
+📌 **CENSYS.IO**
+🔗 Situs: [search.censys.io](https://search.censys.io)
+🔍 Kueri pencarian dasar:
 \`\`\`query
 not autonomous_system.name: "CLOUDFLARE*" and services: (software.product: "CloudFlare Load Balancer" and http.response.html_title: "400 The plain HTTP request was sent to HTTPS port") and location.country: "Indonesia"
 \`\`\`
-💡 **Catatan:**  
-- Tambahkan filter port dengan \`and services.port=443\`  
-- Filter provider: \`autonomous_system.name: "nama_provider"\`  
+💡 **Catatan:**
+- Tambahkan filter port dengan \`and services.port=443\`
+- Filter provider: \`autonomous_system.name: "nama_provider"\`
 
-══════════════════
-🔎 Untuk mengecek status proxy, kirim hasil pencarian langsung ke bot ini.  
+▭▭▰▰▭▭▰▰▭▭▰▰▭
+🔎 Untuk mengecek status proxy, kirim hasil pencarian langsung ke bot ini.
 
 👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)
 `;
 
-      await this.sendMessage(chatId, menuText);
+      await this.sendMessage(chatId, menuText, { parse_mode: 'Markdown' }); // <--- DITAMBAHKAN DI SINI
       return new Response('OK', { status: 200 });
     }
-
+    
     if (text === '/donate') {
       const imageUrl = "https://github.com/jaka1m/project/raw/main/BAYAR.jpg"; // Ganti dengan URL QRIS yang valid
       try {
@@ -161,8 +161,7 @@ Bantu kami terus berkembang dengan scan QRIS di atas!
 
 Terima kasih atas dukungannya! 🙏
 
-👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)
-            `.trim(),
+`.trim(),
             parse_mode: "Markdown",
             reply_markup: {
               inline_keyboard: [
