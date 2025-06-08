@@ -1,6 +1,6 @@
 import { TelegramBot as Bot1 } from './bot.js';
 import { TelegramBotku as Bot2 } from './randomip/bot2.js';
-import { TelegramProxyCekBot as Bot3 } from './proxyip/botCek.js';
+import { TelegramProxyCekBot as Bot3 } from './checkip/botCek.js';
 import { TelegramProxyBot as Bot4 } from './proxyip/bot3.js';
 import { TelegramWildcardBot as Bot5, KonstantaGlobalbot } from './wildcard/botwild.js';
 import { CekkuotaBotku as Bot6 } from './kuota.js';
