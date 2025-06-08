@@ -1,5 +1,9 @@
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
 
+export async function Conver(link) {
+  console.log("Bot link:", link);
+}
+
 export class Converterbot {
   constructor(token, apiUrl, ownerId) {
     this.token = token;
