@@ -33,31 +33,31 @@ export class TelegramBotku {
     if (text === '/menu') {
       const menuText = `
 ══════════════════
-≡     MENU UTAMA BOT      ≡
+≡   *MENU UTAMA BOT* ≡
 ══════════════════
-Pilih command sesuai kebutuhan !
+Pilih command sesuai kebutuhan!
 ══════════════════
-\`/start\`        → mulai bot !
-\`/proxyip\`      → Config random sesuai tombol Flag CC
-\`/traffic\`      → Daftar pemakaian akun Cloudflare !
-\`/findproxy\`    → Cara Cari Proxy !
-\`/converter\`    → Converter Akun V2ray !
-\`/randomconfig\` → Config random mix protocol!
-\`/proxy\`        → Generate Proxy IPs! !
-\`/config\`       → Generate config auto-rotate!
+\` /start\`        → mulai bot!
+\` /proxyip\`      → Config random sesuai tombol Flag CC
+\` /traffic\`      → Daftar pemakaian akun Cloudflare!
+\` /findproxy\`    → Cara Cari Proxy!
+\` /converter\`    → Converter Akun V2ray!
+\` /randomconfig\` → Config random mix protocol!
+\` /proxy\`        → Generate Proxy IPs!!
+\` /config\`       → Generate config auto-rotate!
 ══════════════════
-\`/help\`         → Info format cek kuota XL
+\` /help\`         → Info format cek kuota XL
 ══════════════════
-⚙️ Perintah Domain :
-\`/list\`         → Lihat daftar wildcard yang terdaftar
-\`/add\` + bug    → Tambah domain wildcard (admin only)
-\`/del\` + bug    → Hapus domain wildcard (admin only)
+*⚙️ Perintah Domain :*
+\` /list\`         → Lihat daftar wildcard yang terdaftar
+\` /add\` + bug    → Tambah domain wildcard (admin only)
+\` /del\` + bug    → Hapus domain wildcard (admin only)
 ══════════════════
-SUPPORT
-\`/donate\`       → Bantu admin 😘 !
+*SUPPORT*
+\` /donate\`       → Bantu admin 😘!
 ══════════════════
 `;
-      await this.sendMessage(chatId, menuText);
+      await this.sendMessage(chatId, menuText, { parse_mode: 'Markdown' }); // <--- DITAMBAHKAN DI SINI
       return new Response('OK', { status: 200 });
     }
     
