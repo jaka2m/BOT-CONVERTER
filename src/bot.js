@@ -14,53 +14,49 @@ export class TelegramBot {
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
   }
-  
+
   async handleUpdate(update) {
     if (!update.message && !update.callback_query) {
       return new Response('OK', { status: 200 });
     }
 
     if (update.callback_query) {
-      const callback = update.callback_query;
-      const chatId = callback.message.chat.id;
-      const messageId = callback.message.message_id;
-      const data = callback.data;
-      // TODO: Tambahkan logika handle callback jika diperlukan
+      const { message, data } = update.callback_query;
+      const chatId = message.chat.id;
+      const messageId = message.message_id;
       return new Response('OK', { status: 200 });
     }
 
     if (update.message) {
-      const chatId = update.message.chat.id;
-      const text = update.message.text?.trim() || '';
-      
-      // /config command
+      const { chat, text: messageText } = update.message;
+      const chatId = chat.id;
+      const text = messageText?.trim() || '';
+
       if (text.startsWith('/config')) {
         const helpMsg = `🌟 *PANDUAN CONFIG ROTATE* 🌟
 
 Ketik perintah berikut untuk mendapatkan config rotate berdasarkan negara:
 
-\`/rotate + kode_negara\`
+\`\/rotate + kode_negara\`
 
 Negara tersedia:
 id, sg, my, us, ca, in, gb, ir, ae, fi, tr, md, tw, ch, se, nl, es, ru, ro, pl, al, nz, mx, it, de, fr, am, cy, dk, br, kr, vn, th, hk, cn, jp.
 
 Contoh:
-\`/rotate id\`
-\`/rotate sg\`
-\`/rotate my\`
+\`\/rotate id\`
+\`\/rotate sg\`
+\`\/rotate my\`
 
 Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.`;
         await this.sendMessage(chatId, helpMsg, { parse_mode: 'Markdown' });
         return new Response('OK', { status: 200 });
       }
 
-      // /rotate command
       if (text.startsWith('/rotate ')) {
         await rotateconfig.call(this, chatId, text);
         return new Response('OK', { status: 200 });
       }
 
-      // /randomconfig command
       if (text.startsWith('/randomconfig')) {
         const loadingMsg = await this.sendMessageWithDelete(chatId, '⏳ Membuat konfigurasi acak...');
         try {
@@ -76,7 +72,6 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      // /listwildcard command
       if (text.startsWith('/listwildcard')) {
         const wildcards = [
           "ava.game.naver.com", "krikkrik.tech", "business.blibli.com", "graph.instagram.com",
@@ -94,52 +89,16 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         await this.sendMessage(chatId, configText, { parse_mode: "Markdown" });
         return new Response('OK', { status: 200 });
       }
-
-      if (text.startsWith('/converter')) {
-        await this.sendMessage(
-          chatId,
-          `🤖 *Geo Project Bot*\n\nKirimkan link konfigurasi V2Ray dan saya *SPIDERMAN* akan mengubahnya ke format *Singbox*, *Nekobox*, dan *Clash*.\n\nContoh:\n\`vless://...\`\n\`vmess://...\`\n\`trojan://...\`\n\`ss://...\`\n\nCatatan:\n- Maksimal 10 link per permintaan.\n- Disarankan menggunakan *Singbox versi 1.10.3* atau *1.11.8*.`,
-        );
-        return new Response('OK', { status: 200 });
-      }
-
-      if (text.includes('://')) {
-        try {
-          const links = text
-            .split('\n')
-            .map(line => line.trim())
-            .filter(line => line.includes('://'))
-            .slice(0, 10);
-
-          if (links.length === 0) {
-            await this.sendMessage(chatId, '❌ Tidak ada link valid yang ditemukan. Kirimkan link VMess, VLESS, Trojan, atau Shadowsocks.');
-            return new Response('OK', { status: 200 });
-          }
-
-          const clashConfig = generateClashConfig(links, true);
-          const nekoboxConfig = generateNekoboxConfig(links, true);
-          const singboxConfig = generateSingboxConfig(links, true);
-
-          await this.sendDocument(chatId, clashConfig, 'clash.yaml', 'text/yaml');
-          await this.sendDocument(chatId, nekoboxConfig, 'nekobox.json', 'application/json');
-          await this.sendDocument(chatId, singboxConfig, 'singbox.bpf', 'application/json');
-        } catch (error) {
-          console.error('Error processing links:', error);
-          await this.sendMessage(chatId, `⚠️ Error: ${error.message}`);
-        }
-        return new Response('OK', { status: 200 });
-      }
     }
-
-    return new Response('OK', { status: 200 });
   }
 
-  async sendMessage(chatId, text) {
+  async sendMessage(chatId, text, options = {}) {
     const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
     const body = {
       chat_id: chatId,
       text,
       parse_mode: 'Markdown',
+      ...options,
     };
 
     const response = await fetch(url, {
@@ -168,21 +127,6 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    });
-
-    return response.json();
-  }
-
-  async sendDocument(chatId, content, filename, mimeType) {
-    const formData = new FormData();
-    const blob = new Blob([content], { type: mimeType });
-
-    formData.append('document', blob, filename);
-    formData.append('chat_id', chatId.toString());
-
-    const response = await fetch(`${this.apiUrl}/bot${this.token}/sendDocument`, {
-      method: 'POST',
-      body: formData,
     });
 
     return response.json();
