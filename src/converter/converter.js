@@ -1,8 +1,8 @@
 import { generateClashConfig, generateNekoboxConfig, generateSingboxConfig } from './configGenerators.js';
 
-// --- Bagian Baru: Untuk menyimpan daftar chatId user ---
-let userChatIds = new Set(); // Menggunakan Set untuk menghindari duplikasi chatId
-// --- Akhir Bagian Baru ---
+// Set untuk menyimpan semua chatId pengguna secara unik
+// CATATAN: Untuk penggunaan produksi, Anda harus menggunakan database persisten.
+const userChats = new Set();
 
 export async function Conver(link) {
   console.log("Bot link:", link);
@@ -12,7 +12,7 @@ export class Converterbot {
   constructor(token, apiUrl, ownerId) {
     this.token = token;
     this.apiUrl = apiUrl || 'https://api.telegram.org';
-    this.ownerId = ownerId; // Pastikan ownerId diinisialisasi
+    this.ownerId = ownerId;
   }
 
   async handleUpdate(update) {
@@ -21,32 +21,21 @@ export class Converterbot {
     const chatId = update.message.chat.id;
     const text = update.message.text || '';
     const messageId = update.message.message_id;
-    const fromId = update.message.from.id; // Mendapatkan ID pengirim pesan
 
-    // --- Bagian Baru: Tambahkan chatId user ke Set saat ada interaksi ---
-    userChatIds.add(chatId);
-    console.log(`User ${chatId} added to broadcast list. Total users: ${userChatIds.size}`);
-    // --- Akhir Bagian Baru ---
+    // Tambahkan chatId pengguna ke daftar setiap kali ada interaksi
+    userChats.add(chatId);
+    console.log(`User ${chatId} added. Total users: ${userChats.size}`);
 
-    // --- Bagian Baru: Perintah broadcast khusus untuk owner ---
-    if (text.startsWith('/broadcast')) {
-      if (fromId.toString() !== this.ownerId.toString()) { // Pastikan ownerId adalah string/number yang sesuai
-        await this.sendMessage(chatId, '❌ Maaf, perintah ini hanya bisa digunakan oleh owner bot.');
-        return new Response('OK', { status: 200 });
+    // Perintah untuk broadcast (hanya bisa oleh ownerId)
+    if (text.startsWith('/broadcast') && chatId.toString() === this.ownerId.toString()) {
+      const broadcastMessage = text.substring('/broadcast '.length).trim();
+      if (broadcastMessage) {
+        await this.sendBroadcastMessage(broadcastMessage);
+      } else {
+        await this.sendMessage(chatId, 'Contoh penggunaan: `/broadcast Pesan yang ingin Anda siarkan.`');
       }
-
-      const broadcastMessage = text.substring('/broadcast'.length).trim();
-      if (!broadcastMessage) {
-        await this.sendMessage(chatId, 'Format: `/broadcast [pesan broadcast]`');
-        return new Response('OK', { status: 200 });
-      }
-
-      await this.sendMessage(chatId, `🚀 Memulai broadcast ke ${userChatIds.size} pengguna...`);
-      await this.sendBroadcastMessage(broadcastMessage);
-      await this.sendMessage(chatId, '✅ Broadcast selesai.');
       return new Response('OK', { status: 200 });
     }
-    // --- Akhir Bagian Baru ---
 
     if (text.startsWith('/converter')) {
       await this.sendMessage(
@@ -83,8 +72,6 @@ export class Converterbot {
         await this.sendMessage(chatId, `Error: ${error.message}`, { reply_to_message_id: messageId });
       }
     } else {
-        // Jika tidak ada perintah atau link, bot bisa diam atau memberikan pesan default.
-        // Anda bisa menambahkan pesan default di sini jika perlu.
     }
 
     return new Response('OK', { status: 200 });
@@ -96,25 +83,15 @@ export class Converterbot {
       chat_id: chatId,
       text: text,
       parse_mode: 'Markdown',
-      disable_web_page_preview: true, // Opsional: mencegah preview link otomatis
       ...options
     };
 
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        console.error(`Failed to send message to ${chatId}:`, data);
-      }
-      return data;
-    } catch (error) {
-      console.error(`Error sending message to ${chatId}:`, error);
-      return { ok: false, description: error.message };
-    }
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return response.json();
   }
 
   async sendDocument(chatId, content, filename, mimeType, options = {}) {
@@ -127,55 +104,40 @@ export class Converterbot {
       formData.append('reply_to_message_id', options.reply_to_message_id.toString());
     }
 
-    try {
-      const response = await fetch(
-        `${this.apiUrl}/bot${this.token}/sendDocument`, {
-        method: 'POST',
-        body: formData
-      }
-      );
-      const data = await response.json();
-      if (!response.ok) {
-        console.error(`Failed to send document to ${chatId}:`, data);
-      }
-      return data;
-    } catch (error) {
-      console.error(`Error sending document to ${chatId}:`, error);
-      return { ok: false, description: error.message };
+    const response = await fetch(
+      `${this.apiUrl}/bot${this.token}/sendDocument`, {
+      method: 'POST',
+      body: formData
     }
+    );
+
+    return response.json();
   }
 
-  // --- Bagian Baru: Fungsi untuk mengirim broadcast message ---
+  // Fungsi baru untuk broadcast pesan
   async sendBroadcastMessage(message) {
-    for (const chatId of userChatIds) {
-      console.log(`Sending broadcast to: ${chatId}`);
-      // Memberi jeda kecil antar pesan agar tidak terlalu cepat dan menghindari limit rate
-      await new Promise(resolve => setTimeout(resolve, 50)); // Jeda 50ms
-      const result = await this.sendMessage(chatId, message);
-      if (!result.ok) {
-        console.warn(`Could not send broadcast to ${chatId}. Reason: ${result.description}`);
-        // Anda bisa menambahkan logika untuk menghapus chatId yang tidak valid (misal, bot diblokir user)
-        // if (result.description.includes('bot was blocked by the user')) {
-        //   userChatIds.delete(chatId);
-        //   console.log(`Removed blocked user: ${chatId}`);
-        // }
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const chatId of userChats) {
+      try {
+        await this.sendMessage(chatId, message);
+        successCount++;
+        // Tambahkan delay kecil antar pesan untuk menghindari batasan rate Telegram
+        await new Promise(resolve => setTimeout(resolve, 50));
+      } catch (error) {
+        console.error(`Gagal mengirim pesan ke ${chatId}:`, error);
+        failCount++;
+        // Opsional: Hapus chatId jika user telah memblokir bot
+        if (error.description && (error.description.includes('bot was blocked by the user') || error.description.includes('chat not found'))) {
+          userChats.delete(chatId);
+        }
       }
     }
+
+    // Kirim laporan broadcast ke owner
+    const totalUsers = userChats.size; // Jumlah user yang masih terdaftar
+    const broadcastReport = `Pesan broadcast telah dikirimkan.\n\nTotal user terdaftar: *${totalUsers}*\nBerhasil dikirim: *${successCount}*\nGagal dikirim: *${failCount}*`;
+    await this.sendMessage(this.ownerId, broadcastReport);
   }
-  // --- Akhir Bagian Baru ---
 }
-
-// --- Bagian Baru: Penting! Cara inisialisasi bot Anda ---
-// Pastikan Anda menginisialisasi Converterbot dengan token dan ownerId Anda.
-// Contoh:
-// const BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'; // Ganti dengan token bot Anda
-// const OWNER_ID = 'YOUR_TELEGRAM_USER_ID'; // Ganti dengan ID user Telegram Anda (ini akan menjadi admin broadcast)
-// const bot = new Converterbot(BOT_TOKEN, 'https://api.telegram.org', OWNER_ID);
-
-// Cara Anda menjalankan bot (misalnya di Cloudflare Workers atau Node.js)
-// akan menentukan bagaimana Anda mengekspos `handleUpdate` method.
-// Misalnya untuk Cloudflare Workers:
-// addEventListener('fetch', event => {
-//   event.respondWith(bot.handleUpdate(JSON.parse(await event.request.text())));
-// });
-// --- Akhir Bagian Baru ---
