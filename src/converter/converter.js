@@ -53,7 +53,6 @@ export class Converterbot {
         await this.sendMessage(chatId, `Error: ${error.message}`, { reply_to_message_id: messageId });
       }
     } else {
-      await this.sendMessage(chatId, 'Please send VMess, VLESS, Trojan, or Shadowsocks links for conversion.', { reply_to_message_id: messageId });
     }
 
     return new Response('OK', { status: 200 });
