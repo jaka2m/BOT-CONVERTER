@@ -86,6 +86,7 @@ export default {
       const bot4 = new Bot4(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot5 = new Bot5(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot6 = new Bot6(token, 'https://api.telegram.org', ownerId, globalBot);
+      const bot7 = new Bot7(token, 'https://api.telegram.org', ownerId, globalBot);
       
       await Promise.all([
         bot1.handleUpdate(update),
@@ -94,6 +95,7 @@ export default {
         bot4.handleUpdate(update),
         bot5.handleUpdate(update),
         bot6.handleUpdate(update),
+        bot7.handleUpdate(update),
       ]);
 
       return new Response('OK', { status: 200 });
