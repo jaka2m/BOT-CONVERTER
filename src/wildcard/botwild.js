@@ -315,7 +315,7 @@ support.zoom.us
           `${i+1}\\. ${this.escapeMarkdownV2(d)}`
         ).join('\n');
         await this.sendMessage(chatId,
-          `\`\`\`List-Wildcard\n${listText}\`\`\`\n\nTotal: *${domains.length}* subdomain${domains.length>1?'s':''}`,
+          `\`\`\`List Wildcard\n${listText}\`\`\`\n\n📊 Total: *${domains.length}* subdomain${domains.length>1?'s':''}`,
           { parse_mode: 'MarkdownV2' }
         );
         const fileContent = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
