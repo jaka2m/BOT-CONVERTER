@@ -22,7 +22,6 @@ export async function rotateconfig(chatId, text) {
     return;
   }
 
-  // Kirim pesan loading
   const loadingMessage = await this.sendMessage(chatId, "⏳ Sedang memproses config...");
 
   try {
@@ -58,7 +57,6 @@ export async function rotateconfig(chatId, text) {
       return;
     }
 
-    // Helper functions
     const getFlagEmoji = (code) => code.toUpperCase().split("").map(c => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65)).join("");
     const generateUUID = () => "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
       const r = (Math.random() * 16) | 0;
@@ -66,9 +64,8 @@ export async function rotateconfig(chatId, text) {
       return v.toString(16);
     });
     
-    const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+    const toBase64 = (str) => typeof btoa === 'function' ? btoa(unescape(encodeURIComponent(str))) : Buffer.from(str, 'utf-8').toString('base64');
     
-    // Ganti dengan hostname server kamu
     const HOSTKU = "joss.krikkrik.tech";
     const path = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
 
@@ -77,28 +74,28 @@ export async function rotateconfig(chatId, text) {
 IP      : ${ip}
 PORT    : ${port}
 ISP     : ${provider}
-COUNTRY : ${data.country}
-STATUS  : ${data.status}
+COUNTRY : ${ipData.country}
+STATUS  : ${ipData.status}
 \`\`\`
 🌟 *ROTATE VLESS TLS* 🌟
 \`\`\`
-vless://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#ROTATE%20VLESS%20${countryCode.toUpperCase()}%20${flag}%20TLS
+vless://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#ROTATE%20VLESS%20${countryCode.toUpperCase()}%20${getFlagEmoji(ipData.country)}%20TLS
 \`\`\`
 🌟 *ROTATE VLESS NTLS* 🌟
 \`\`\`
-vless://${generateUUID()}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#ROTATE%20VLESS%20${countryCode.toUpperCase()}%20${flag}%20NTLS
+vless://${generateUUID()}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#ROTATE%20VLESS%20${countryCode.toUpperCase()}%20${getFlagEmoji(ipData.country)}%20NTLS
 \`\`\`
 🌟 *ROTATE TROJAN TLS* 🌟
 \`\`\`
-trojan://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#ROTATE%20TROJAN%20${countryCode.toUpperCase()}%20${flag}%20TLS
+trojan://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#ROTATE%20TROJAN%20${countryCode.toUpperCase()}%20${getFlagEmoji(ipData.country)}%20TLS
 \`\`\`
 🌟 *ROTATE SS TLS* 🌟
 \`\`\`
-ss://${toBase64(`none:${generateUUID()}`)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=tls&sni=${HOSTKU}#ROTATE%20SHADOWSOCKS%20${countryCode.toUpperCase()}%20${flag}%20TLS
+ss://${toBase64(`none:${generateUUID()}`)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=tls&sni=${HOSTKU}#ROTATE%20SHADOWSOCKS%20${countryCode.toUpperCase()}%20${getFlagEmoji(ipData.country)}%20TLS
 \`\`\`
 🌟 *ROTATE SS NTLS* 🌟
 \`\`\`
-ss://${toBase64(`none:${generateUUID()}`)}@${HOSTKU}:80?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=none&sni=${HOSTKU}#ROTATE%20SHADOWSOCKS%20${countryCode.toUpperCase()}%20${flag}%20NTLS
+ss://${toBase64(`none:${generateUUID()}`)}@${HOSTKU}:80?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=none&sni=${HOSTKU}#ROTATE%20SHADOWSOCKS%20${countryCode.toUpperCase()}%20${getFlagEmoji(ipData.country)}%20NTLS
 \`\`\`
 
 👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
