@@ -69,34 +69,10 @@ export async function rotateconfig(chatId, text) {
     const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
     
     // Ganti dengan hostname server kamu
-    const HOSTKU = "krikkrik.tech";
+    const HOSTKU = "joss.krikkrik.tech";
 
     const flag = getFlagEmoji(countryCode);
-    const path = `/Geo-Project/${ip}-${port}`;
-    const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1';
-
-    const vmessTLS = {
-      v: "2",
-      ps: `${countryCode.toUpperCase()} ${flag} [VMess-TLS]`,
-      add: HOSTKU,
-      port: "443",
-      id: uuid1,
-      aid: "0",
-      net: "ws",
-      type: "none",
-      host: HOSTKU,
-      path: path,
-      tls: "tls",
-      sni: HOSTKU,
-      scy: "zero"
-    };
-
-    const vmessNTLS = {
-      ...vmessTLS,
-      ps: `${countryCode.toUpperCase()} ${flag} [VMess-NTLS]`,
-      port: "80",
-      tls: "none"
-    };
+    const path = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
 
     const configText = `
 \`\`\`INFORMATION
@@ -105,14 +81,6 @@ PORT    : ${port}
 ISP     : ${provider}
 COUNTRY : ${countryCode.toUpperCase()} ${flag}
 STATUS  : ✅ ACTIVE
-\`\`\`
-🌟 *ROTATE VMESS TLS* 🌟
-\`\`\`
-vmess://${toBase64(JSON.stringify(vmessTLS))}
-\`\`\`
-🌟 *ROTATE VMESS NTLS* 🌟
-\`\`\`
-vmess://${toBase64(JSON.stringify(vmessNTLS))}
 \`\`\`
 🌟 *ROTATE VLESS TLS* 🌟
 \`\`\`
