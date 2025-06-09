@@ -317,7 +317,7 @@ support.zoom.us
     ).join('\n'); // Tetap pakai newline agar per baris
 
     await this.sendMessage(chatId,
-      `🌐 List Custom Domains :\n${listText}\n\n📊 Total: *${domains.length}* subdomain${domains.length>1?'s':''}`,
+      `🌐 LIST CUSTOM DOMAIN :\n\n${listText}\n\n📊 Total: *${domains.length}* subdomain${domains.length>1?'s':''}`,
       { parse_mode: 'MarkdownV2' }
     );
     const fileContent = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
