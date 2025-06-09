@@ -70,8 +70,6 @@ export async function rotateconfig(chatId, text) {
     
     // Ganti dengan hostname server kamu
     const HOSTKU = "joss.krikkrik.tech";
-
-    const flag = getFlagEmoji(countryCode);
     const path = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
 
     const configText = `
@@ -79,8 +77,8 @@ export async function rotateconfig(chatId, text) {
 IP      : ${ip}
 PORT    : ${port}
 ISP     : ${provider}
-COUNTRY : ${countryCode.toUpperCase()} ${flag}
-STATUS  : ✅ ACTIVE
+COUNTRY : ${data.country}
+STATUS  : ${data.status}
 \`\`\`
 🌟 *ROTATE VLESS TLS* 🌟
 \`\`\`
