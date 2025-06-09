@@ -1,4 +1,3 @@
-// Helper untuk konversi kode negara jadi emoji bendera
 function getFlagEmoji(countryCode) {
   if (!countryCode || countryCode.length !== 2) return '';
   return countryCode
@@ -8,7 +7,6 @@ function getFlagEmoji(countryCode) {
     .join('');
 }
 
-// Simple UUID v4 generator
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
@@ -17,19 +15,10 @@ function generateUUID() {
   });
 }
 
-// Base64 encoder yang support Node & Browser
-const toBase64 = (str) => {
-  if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
-  else if (typeof Buffer !== 'undefined') return Buffer.from(str, 'utf-8').toString('base64');
-  else throw new Error('Base64 encoding not supported in this environment.');
-};
-
-// Fungsi utama generate config proxy random
 export async function randomconfig() {
   try {
     const HOSTKU = 'joss.krikkrik.tech';
 
-    // Ambil list proxy dari file txt
     const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/main/cek/proxyList.txt');
     if (!response.ok) return '⚠️ Gagal mengambil daftar proxy.';
     const ipText = await response.text();
@@ -39,7 +28,6 @@ export async function randomconfig() {
 
     if (!ip || !port) return '⚠️ Data IP tidak lengkap.';
 
-    // Cek status IP dengan fetch API
     const checkResponse = await fetch(`https://api.checker-ip.web.id/check?ip=${ip}:${port}`);
     if (!checkResponse.ok) return `⚠️ Gagal cek status IP ${ip}:${port}.`;
     const data = await checkResponse.json();
@@ -49,79 +37,46 @@ export async function randomconfig() {
     }
 
     const flag = getFlagEmoji(data.country);
-    const status = "✅ ACTIVE";
+    const path = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
 
-    // UUID untuk VLess, Trojan, SS
-    const vlessUUID = generateUUID();
-    const trojanUUID = generateUUID();
-    const ssPassword = generateUUID();
+    const toBase64 = (str) => {
+      if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
+      else return Buffer.from(str, 'utf-8').toString('base64');
+    };
 
     const infoMessage = `
 IP      : ${data.ip}
 PORT    : ${data.port}
 ISP     : ${data.isp}
-COUNTRY : ${data.country} ${flag}
-STATUS  : ${status}
-DELAY   : ${data.delay} ms
-ASN     : ${data.asn}
-ORG     : ${data.org}
+COUNTRY : ${data.country}
+DELAY   : ${data.delay}
+STATUS  : ${data.status}
 `;
 
-    // --- Opsi Path 1: Berdasarkan IP dan Port ---
-    const path1 = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
-    const vlessTLSLink1 = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path1)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(IP-PORT)`;
-    const trojanTLSLink1 = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path1)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(IP-PORT)`;
-    const ssConfig1 = `none:${ssPassword}`;
-    const ssTLSLink1 = `ss://${toBase64(ssConfig1)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path1)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(IP-PORT)`;
+    const vlessUUID = generateUUID();
+    const trojanUUID = generateUUID();
+    const ssPassword = generateUUID();
 
-    // --- Opsi Path 2: Berdasarkan Country Code dengan Variasi Angka ---
-    // Pastikan menggunakan data.country untuk countryCode singkat, bukan variabel 'country' dari randomProxy
-    const countryCodeShort = data.country ? data.country.toUpperCase() : 'UNKNOWN'; 
-    const numCountryPathVariants = 3; // Ubah angka ini untuk jumlah varian path yang Anda inginkan
-    let countryPathConfigs = '';
+    const vlessTLSLink = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
-    for (let i = 1; i <= numCountryPathVariants; i++) {
-        // PERBAIKAN DI SINI: Gunakan countryCodeShort
-        const pathCountry = `/Free-VPN-CF-Geo-Project/${countryCodeShort}${i}`;
+    const trojanTLSLink = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
-        const vlessTLSLinkCountry = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCountry)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(Country-Code-${i})`;
-        const trojanTLSLinkCountry = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCountry)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(Country-Code-${i})`;
-        const ssConfigCountry = `none:${ssPassword}`;
-        const ssTLSLinkCountry = `ss://${toBase64(ssConfigCountry)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCountry)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(Country-Code-${i})`;
+    const ssConfig = `none:${ssPassword}`;
+    const ssTLSLink = `ss://${toBase64(ssConfig)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
-        countryPathConfigs += `
----
-### Opsi Path Country Code ${i}: (\`${pathCountry}\`)
-\`\`\`VLESS-TLS
-${vlessTLSLinkCountry}
-\`\`\`
-\`\`\`TROJAN-TLS
-${trojanTLSLinkCountry}
-\`\`\`
-\`\`\`SHADOWSOCKS-TLS
-${ssTLSLinkCountry}
-\`\`\`
-`;
-    }
-
-    // --- Format Output Akhir ---
     const configText = `
 \`\`\`INFORMATION
 ${infoMessage}
 \`\`\`
-
----
-### Opsi Path 1: IP-PORT (\`${path1}\`)
 \`\`\`VLESS-TLS
-${vlessTLSLink1}
+${vlessTLSLink}
 \`\`\`
 \`\`\`TROJAN-TLS
-${trojanTLSLink1}
+${trojanTLSLink}
 \`\`\`
 \`\`\`SHADOWSOCKS-TLS
-${ssTLSLink1}
+${ssTLSLink}
 \`\`\`
-${countryPathConfigs}
 
 👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
 `;
