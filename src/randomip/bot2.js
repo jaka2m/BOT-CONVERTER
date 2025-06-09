@@ -32,30 +32,30 @@ export class TelegramBotku {
 
     if (text === '/menu') {
       const menuText = `
-══════════════════
-≡   *MENU UTAMA BOT* ≡
-══════════════════
+━━━━━━━━━━━━━━━━━━━
+≡             𝗪𝗘𝗟𝗖𝗢𝗠𝗘                ≡
+━━━━━━━━━━━━━━━━━━━
 Pilih command sesuai kebutuhan!
-══════════════════
-• \` /start\`        → mulai bot!
-• \` /proxyip\`      → Config random sesuai tombol Flag CC
-• \` /traffic\`      → Daftar pemakaian akun Cloudflare!
-• \` /findproxy\`    → Cara Cari Proxy!
-• \` /converter\`    → Converter Akun V2ray!
-• \` /randomconfig\` → Config random mix protocol!
-• \` /proxy\`        → Generate Proxy IPs!!
-• \` /config\`       → Generate config auto-rotate!
-══════════════════
-• \` /help\`         → Info format cek kuota XL
-══════════════════
+━━━━━━━━━━━━━━━━━━━
+•\` /start\`        → mulai bot!
+•\` /proxyip\`      → Config random sesuai tombol Flag CC
+•\` /traffic\`      → Daftar pemakaian akun Cloudflare!
+•\` /findproxy\`    → Cara Cari Proxy!
+•\` /converter\`    → Converter Akun V2ray!
+•\` /randomconfig\` → Config random mix protocol!
+•\` /proxy\`        → Generate Proxy IPs!!
+•\` /config\`       → Generate config auto-rotate!
+━━━━━━━━━━━━━━━━━━━
+•\` /help\`         → Info format cek kuota XL
+━━━━━━━━━━━━━━━━━━━
 *⚙️ Perintah Domain :*
-• \` /list\`         → Lihat daftar wildcard yang terdaftar
-• \` /add\` + bug    → Tambah domain wildcard (admin only)
-• \` /del\` + bug    → Hapus domain wildcard (admin only)
-══════════════════
+•\` /list\`         → Lihat daftar wildcard yang terdaftar
+•\` /add\` + bug    → Tambah domain wildcard (admin only)
+•\` /del\` + bug    → Hapus domain wildcard (admin only)
+━━━━━━━━━━━━━━━━━━━
 *SUPPORT*
-• \` /donate\`       → Bantu admin 😘!
-══════════════════
+•\` /donate\`       → Bantu admin 😘!
+━━━━━━━━━━━━━━━━━━━
 `;
       await this.sendMessage(chatId, menuText, { parse_mode: 'Markdown' }); // <--- DITAMBAHKAN DI SINI
       return new Response('OK', { status: 200 });
@@ -63,9 +63,9 @@ Pilih command sesuai kebutuhan!
     
 if (text === '/findproxy') {
       const menuText = `
-══════════════════
+━━━━━━━━━━━━━━━━━━━
 🏷️ *TUTORIAL CARI PROXY* 🏷️
-══════════════════
+━━━━━━━━━━━━━━━━━━━
 📌 **FOFA (fofa.info)**
 🔗 Situs: [en.fofa.info](https://en.fofa.info)
 🔍 Kueri pencarian:
@@ -77,7 +77,7 @@ server=="cloudflare" && is_domain=false && banner="Content-Length: 155" && proto
 - Ubah \`country="ID"\` ke kode negara lain
 - Tambahkan filter port: \`&& port="443"\`
 
-══════════════════
+━━━━━━━━━━━━━━━━━━━
 📌 **HUNTER.HOW**
 🔗 Situs: [hunter.how](https://hunter.how)
 🔍 Kueri pencarian:
@@ -89,7 +89,7 @@ as.org!="Cloudflare London, LLC"&&product.name="CloudFlare"&&header.status_code=
 - Tambah \`&&ip.port="443"\` untuk fokus ke port 443
 - Ubah negara dengan \`ip.country="SG"\`
 
-══════════════════
+━━━━━━━━━━━━━━━━━━━
 📌 **SHODAN.IO**
 🔗 Situs: [shodan.io](https://shodan.io)
 🔍 Kueri pencarian:
@@ -100,7 +100,7 @@ product:"Cloudflare" country:"ID"
 - Filter port: \`port:443\`
 - Filter provider: \`org:"Akamai"\`
 
-══════════════════
+━━━━━━━━━━━━━━━━━━━
 📌 **ZOOMEYE.HK**
 🔗 Situs: [zoomeye.hk](https://zoomeye.hk)
 🔍 Kueri pencarian:
@@ -112,7 +112,7 @@ product:"Cloudflare" country:"ID"
 - Spesifikkan port dengan \`+port:"443"\`
 - Ubah negara dengan \`+country:"Indonesia"\`
 
-══════════════════
+━━━━━━━━━━━━━━━━━━━
 📌 **BINARYEDGE.IO**
 🔗 Situs: [app.binaryedge.io](https://app.binaryedge.io)
 🔍 Kueri pencarian:
@@ -124,7 +124,7 @@ country:ID title:"400 The plain HTTP request was sent to HTTPS port" product:ngi
 - Tambah filter port dengan \`port:443\`
 - Filter provider: \`as_name:Digitalocean\`
 
-══════════════════
+━━━━━━━━━━━━━━━━━━━
 📌 **CENSYS.IO**
 🔗 Situs: [search.censys.io](https://search.censys.io)
 🔍 Kueri pencarian dasar:
@@ -135,7 +135,7 @@ not autonomous_system.name: "CLOUDFLARE*" and services: (software.product: "Clou
 - Tambahkan filter port dengan \`and services.port=443\`
 - Filter provider: \`autonomous_system.name: "nama_provider"\`
 
-══════════════════
+━━━━━━━━━━━━━━━━━━━
 🔎 Untuk mengecek status proxy, kirim hasil pencarian langsung ke bot ini.
 
 👨‍💻 *Modded By:* [Geo Project](https://t.me/sampiiiiu)
@@ -177,8 +177,8 @@ Terima kasih atas dukungannya! 🙏
     }
 
     if (text === '/traffic') {
-      const CLOUDFLARE_API_TOKEN = "CXLOp42tNKXCCXw_8lbUJpcMRu8IXyInbtoaFkwT";
-      const CLOUDFLARE_ZONE_ID = "80423e7547d2fa85e13796a1f41deced";
+      const CLOUDFLARE_API_TOKEN = "VuPuXHFxJtIv_9WoBANLIAh4eQXpTnwbmmu4eQWS";
+      const CLOUDFLARE_ZONE_ID = "d33a71c24bf9c46d634f861e588ab887";
 
       const getTenDaysAgoDate = () => {
         const d = new Date();
@@ -266,8 +266,8 @@ Terima kasih atas dukungannya! 🙏
 💡KETIK /menu UNTUK MELIHAT COMMAND
 
 💡 *Format IP yang Diterima:*
-• \`176.97.78.80\`
-• \`176.97.78.80:2053\`
+•\`176.97.78.80\`
+•\`176.97.78.80:2053\`
 
 ⚠️ *Catatan:*
 - Jika status *DEAD*, Akun *VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
