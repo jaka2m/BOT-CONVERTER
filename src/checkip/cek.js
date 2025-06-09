@@ -20,7 +20,7 @@ const WILDCARD_OPTIONS = Object.entries(WILDCARD_MAP).map(
   ([value, text]) => ({ text, value })
 );
 
-const DEFAULT_HOST = "krikkrik.tech"; 
+const DEFAULT_HOST = "joss.krikkrik.tech";
 const API_URL = "https://api.checker-ip.web.id/check?ip=";
 
 export async function fetchIPData(ip, port) {
@@ -40,9 +40,6 @@ export function createProtocolInlineKeyboard(ip, port) {
       [
         { text: "⚡ VLESS", callback_data: `PROTOCOL|VLESS|${ip}|${port}` },
         { text: "⚡ TROJAN", callback_data: `PROTOCOL|TROJAN|${ip}|${port}` }
-      ],
-      [
-        { text: "⚡ VMESS", callback_data: `PROTOCOL|VMESS|${ip}|${port}` }
       ],
       [
         { text: "⚡ SHADOWSOCKS", callback_data: `PROTOCOL|SHADOWSOCKS|${ip}|${port}` }
@@ -95,54 +92,9 @@ export function generateConfig(config, protocol, wildcardKey = null) {
   const host = wildcardKey ? `${WILDCARD_MAP[wildcardKey]}.${DEFAULT_HOST}` : DEFAULT_HOST;
   const sni = host;
   const uuid = generateUUID();
-  const path = encodeURIComponent(`/Geo-Project/${config.ip}=${config.port}`);
-  const pathh = `/Geo-Project/${config.ip}-${config.port}`;
-  const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1'; // fixed UUID for VMESS
+  const path = encodeURIComponent(`/Free-VPN-CF-Geo-Project/${config.ip}=${config.port}`);
   const ispEncoded = encodeURIComponent(config.isp);
   let qrUrl = "";
-
-  // VMess Config
-  if (protocol === "VMESS") {
-    const vmessTLS = {
-      v: "2",
-      ps: "[VMess-TLS]",
-      add: sni,
-      port: "443",
-      id: uuid1,
-      aid: "0",
-      net: "ws",
-      type: "none",
-      host: host,
-      path: pathh,
-      tls: "tls",
-      sni: sni,
-      scy: "zero"
-    };
-
-    const vmessNTLS = {
-      ...vmessTLS,
-      port: "80",
-      tls: "none",
-      ps: "[VMess-NTLS]"
-    };
-
-
-    const configStringTLS = `vmess://${toBase64(JSON.stringify(vmessTLS))}`;
-    const configStringNTLS = `vmess://${toBase64(JSON.stringify(vmessNTLS))}`;
-    qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(configStringTLS)}&size=400x400`;
-
-    return `
-\`\`\`VMESS-TLS
-${configStringTLS}
-\`\`\`\`\`\`VMESS-NTLS
-${configStringNTLS}
-\`\`\`
-
-👉 [QR Code URL](${qrUrl})
-🌍 [View Google Maps](https://www.google.com/maps?q=${config.latitude},${config.longitude})
-👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
-`;
-  }
 
   if (protocol === "VLESS") {
     const vlessTLS = `vless://${uuid}@${host}:443?encryption=none&security=tls&sni=${sni}&fp=randomized&type=ws&host=${host}&path=${path}#${ispEncoded}`;
@@ -200,4 +152,3 @@ ${configString2}
 
   return "❌ Unknown protocol!";
 }
-
