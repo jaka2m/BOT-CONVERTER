@@ -20,7 +20,7 @@ function generateUUID() {
 // Fungsi utama generate config proxy random
 export async function randomconfig() {
   try {
-    const HOSTKU = 'krikkrik.tech';
+    const HOSTKU = 'joss.krikkrik.tech';
 
     // Ambil list proxy dari file txt
     const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/main/cek/proxyList.txt');
@@ -43,8 +43,7 @@ export async function randomconfig() {
 
     const flag = getFlagEmoji(data.country);
     const status = "✅ ACTIVE";
-    const path = `/Geo-Project/${ip}-${port}`;
-    const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1'; // UUID tetap
+    const path = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
 
     // Base64 encoder yang support Node & Browser
     const toBase64 = (str) => {
@@ -53,33 +52,15 @@ export async function randomconfig() {
     };
 
     const infoMessage = `
-IP       : ${data.ip}
-PORT     : ${data.port}
-ISP      : ${data.isp}
-COUNTRY  : ${data.country} ${flag}
-STATUS   : ${status}
-DELAY    : ${data.delay} ms
-ASN      : ${data.asn}
-ORG      : ${data.org}
+IP      : ${data.ip}
+PORT    : ${data.port}
+ISP     : ${data.isp}
+COUNTRY : ${data.country} ${flag}
+STATUS  : ${status}
+DELAY   : ${data.delay} ms
+ASN     : ${data.asn}
+ORG     : ${data.org}
 `;
-
-    // VMess TLS config
-    const vmessTLS = {
-      v: "2",
-      ps: `${country} - ${provider} [VMess-TLS]`,
-      add: HOSTKU,
-      port: "443",
-      id: uuid1,
-      aid: "0",
-      net: "ws",
-      type: "none",
-      host: HOSTKU,
-      path: path,
-      tls: "tls",
-      sni: HOSTKU,
-      scy: "zero"
-    };
-    const vmessTLSLink = `vmess://${toBase64(JSON.stringify(vmessTLS))}`;
 
     // UUID untuk VLess, Trojan, SS
     const vlessUUID = generateUUID();
@@ -100,9 +81,6 @@ ORG      : ${data.org}
     const configText = `
 \`\`\`INFORMATION
 ${infoMessage}
-\`\`\`
-\`\`\`VMESS-TLS
-${vmessTLSLink}
 \`\`\`
 \`\`\`VLESS-TLS
 ${vlessTLSLink}
