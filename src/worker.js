@@ -5,6 +5,7 @@ import { TelegramProxyBot as Bot4 } from './proxyip/bot3.js';
 import { TelegramWildcardBot as Bot5, KonstantaGlobalbot } from './wildcard/botwild.js';
 import { CekkuotaBotku as Bot6 } from './kuota.js';
 import { Converterbot as Bot7 } from './converter/converter.js';
+import { Sublinkku as Bot8 } from './sublink/sublinkbot.js';
 
 export default {
   async fetch(request, env) {
@@ -82,6 +83,7 @@ export default {
       const bot5 = new Bot5(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot6 = new Bot6(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot7 = new Bot7(token, 'https://api.telegram.org', ownerId, globalBot);
+      const bot8 = new Bot8(token, 'https://api.telegram.org', ownerId, globalBot);
 
       await Promise.all([
         bot1.handleUpdate(update),
@@ -91,6 +93,7 @@ export default {
         bot5.handleUpdate(update),
         bot6.handleUpdate(update),
         bot7.handleUpdate(update),
+        bot8.handleUpdate(update),
       ]);
 
       return new Response('OK', { status: 200 });
