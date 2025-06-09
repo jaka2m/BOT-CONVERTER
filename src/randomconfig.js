@@ -20,7 +20,6 @@ export async function randomconfig() {
     const HOSTKU = 'joss.krikkrik.tech';
     const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/jaka2m/botak/main/cek/';
 
-    // --- Ambil daftar proxy dari GitHub ---
     const proxyResponse = await fetch(`${GITHUB_BASE_URL}proxyList.txt`);
     if (!proxyResponse.ok) {
       return '⚠️ Gagal mengambil daftar proxy.';
@@ -32,12 +31,10 @@ export async function randomconfig() {
       return '⚠️ Daftar proxy kosong atau tidak valid.';
     }
 
-    // --- Pilih proxy secara acak dan dapatkan indeksnya ---
     const randomIndex = Math.floor(Math.random() * ipLines.length);
     const randomProxyLine = ipLines[randomIndex];
     
-    // Angka urutan adalah (indeks + 1)
-    const sequenceNumber = randomIndex + 1; 
+    const sequenceNumber = randomIndex + 1;
 
     const [ip, port, country, provider] = randomProxyLine.split(',');
 
@@ -45,23 +42,28 @@ export async function randomconfig() {
       return '⚠️ Data IP atau Port tidak lengkap dari daftar proxy.';
     }
 
-    // --- Lakukan cek status IP ---
     const checkResponse = await fetch(`https://api.checker-ip.web.id/check?ip=${ip}:${port}`);
     if (!checkResponse.ok) {
       return `⚠️ Gagal cek status IP ${ip}:${port}.`;
     }
-    const data = await checkResponse.json(); // Data ini berisi countryCode, ip, port, dll.
+    const data = await checkResponse.json();
 
     if (data.status?.toUpperCase() !== 'ACTIVE') {
       return `⚠️ IP ${ip}:${port} tidak aktif.`;
     }
     
-    // --- Buat path untuk konfigurasi dengan angka urutan dinamis ---
     const pathIPPORT = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
-    // Menggunakan sequenceNumber yang didapat dari indeks baris
     const pathCD = `/Free-VPN-CF-Geo-Project/${data.countryCode}${sequenceNumber}`;
 
-    const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+    const toBase64 = (str) => {
+      if (typeof btoa === 'function') {
+        return btoa(unescape(encodeURIComponent(str)));
+      } else if (typeof Buffer !== 'undefined') {
+        return Buffer.from(str, 'utf-8').toString('base64');
+      } else {
+        return encodeURIComponent(str);
+      }
+    };
     
     const infoMessage = `
 IP      : ${data.ip}
@@ -72,25 +74,29 @@ DELAY   : ${data.delay}
 STATUS  : ${data.status}
 `;
 
-    // --- Konfigurasi dengan path IP/PORT ---
-    const vlessTLSLink1 = `vless://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
-    const trojanTLSLink1 = `trojan://${generateUUID()}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
-    const ssTLSLink1 = `ss://${toBase64(`none:${generateUUID()}`)}@$${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const vlessUUID = generateUUID();
+    const trojanUUID = generateUUID();
+    const ssPassword = generateUUID();
 
-    // --- Konfigurasi dengan path Country Code + Sequence Number ---
-    const vlessTLSLink2 = `vless://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
-    const trojanTLSLink2 = `trojan://${generateUUID()}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
-    const ssTLSLink2 = `ss://${toBase64(`none:${generateUUID()}`)}@$${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const vlessTLSLink1 = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const trojanTLSLink1 = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const ssTLSLink1 = `ss://${toBase64(`none:${ssPassword}`)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
-    // --- Format output teks ---
+    const vlessTLSLink2 = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const trojanTLSLink2 = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const ssTLSLink2 = `ss://${toBase64(`none:${ssPassword}`)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+
     const configText = `
 \`\`\`INFORMATION
 ${infoMessage}
-\`\`\`\`\`\`VLESS-TLS
+\`\`\`
+\`\`\`VLESS-TLS
 ${vlessTLSLink1}
-\`\`\`\`\`\`TROJAN-TLS
+\`\`\`
+\`\`\`TROJAN-TLS
 ${trojanTLSLink1}
-\`\`\`\`\`\`SHADOWSOCKS-TLS
+\`\`\`
+\`\`\`SHADOWSOCKS-TLS
 ${ssTLSLink1}
 \`\`\`
 
@@ -98,9 +104,11 @@ ${ssTLSLink1}
 
 \`\`\`VLESS-TLS
 ${vlessTLSLink2}
-\`\`\`\`\`\`TROJAN-TLS
+\`\`\`
+\`\`\`TROJAN-TLS
 ${trojanTLSLink2}
-\`\`\`\`\`\`SHADOWSOCKS-TLS
+\`\`\`
+\`\`\`SHADOWSOCKS-TLS
 ${ssTLSLink2}
 \`\`\`
 
