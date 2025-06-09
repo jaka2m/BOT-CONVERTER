@@ -35,7 +35,7 @@ export async function randomconfig() {
     const ipText = await response.text();
     const ipList = ipText.split('\n').filter(line => line.trim() !== '');
     const randomProxy = ipList[Math.floor(Math.random() * ipList.length)];
-    const [ip, port, country, provider] = randomProxy.split(',');
+    const [ip, port, countryFromList, provider] = randomProxy.split(','); // Ubah nama variabel country jadi countryFromList
 
     if (!ip || !port) return '⚠️ Data IP tidak lengkap.';
 
@@ -48,7 +48,7 @@ export async function randomconfig() {
       return `⚠️ IP ${ip}:${port} tidak aktif.`;
     }
 
-    const flag = getFlagEmoji(data.country);
+    const flag = getFlagEmoji(data.country); // Bendera dari data.country
     const status = "✅ ACTIVE";
 
     // UUID untuk VLess, Trojan, SS
@@ -69,25 +69,28 @@ ORG     : ${data.org}
 
     // --- Opsi Path 1: Berdasarkan IP dan Port ---
     const path1 = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
-    const vlessTLSLink1 = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path1)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(IP-PORT)`;
-    const trojanTLSLink1 = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path1)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(IP-PORT)`;
+    // PERBAIKAN DI SINI: Gunakan data.country untuk nama profil
+    const profileNameIPPort = `${encodeURIComponent(provider)}%20${encodeURIComponent(data.country)}%20(IP-PORT)`;
+
+    const vlessTLSLink1 = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path1)}#${profileNameIPPort}`;
+    const trojanTLSLink1 = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path1)}#${profileNameIPPort}`;
     const ssConfig1 = `none:${ssPassword}`;
-    const ssTLSLink1 = `ss://${toBase64(ssConfig1)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path1)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(IP-PORT)`;
+    const ssTLSLink1 = `ss://${toBase64(ssConfig1)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path1)}&security=tls&sni=${HOSTKU}#${profileNameIPPort}`;
 
     // --- Opsi Path 2: Berdasarkan Country Code dengan Variasi Angka ---
-    // Pastikan menggunakan data.country untuk countryCode singkat, bukan variabel 'country' dari randomProxy
-    const countryCodeShort = data.country ? data.country.toUpperCase() : 'UNKNOWN'; 
-    const numCountryPathVariants = 3; // Ubah angka ini untuk jumlah varian path yang Anda inginkan
+    const countryCodeShort = data.country ? data.country.toUpperCase() : 'UNKNOWN';
+    const numCountryPathVariants = 3;
     let countryPathConfigs = '';
 
     for (let i = 1; i <= numCountryPathVariants; i++) {
-        // PERBAIKAN DI SINI: Gunakan countryCodeShort
         const pathCountry = `/Free-VPN-CF-Geo-Project/${countryCodeShort}${i}`;
+        // PERBAIKAN DI SINI: Gunakan data.country untuk nama profil
+        const profileNameCountryCode = `${encodeURIComponent(provider)}%20${encodeURIComponent(countryCodeShort)}%20(Country-Code-${i})`;
 
-        const vlessTLSLinkCountry = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCountry)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(Country-Code-${i})`;
-        const trojanTLSLinkCountry = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCountry)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(Country-Code-${i})`;
+        const vlessTLSLinkCountry = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCountry)}#${profileNameCountryCode}`;
+        const trojanTLSLinkCountry = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCountry)}#${profileNameCountryCode}`;
         const ssConfigCountry = `none:${ssPassword}`;
-        const ssTLSLinkCountry = `ss://${toBase64(ssConfigCountry)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCountry)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}%20(Country-Code-${i})`;
+        const ssTLSLinkCountry = `ss://${toBase64(ssConfigCountry)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCountry)}&security=tls&sni=${HOSTKU}#${profileNameCountryCode}`;
 
         countryPathConfigs += `
 ---
