@@ -1,5 +1,5 @@
 const APIKU = 'https://api.checker-ip.web.id/check?ip='; // Ganti dengan URL asli API status IP
-const DEFAULT_HOST = 'krikkrik.tech'; // Ganti dengan host default
+const DEFAULT_HOST = 'joss.krikkrik.tech'; // Ganti dengan host default
 
 // Simpan pesan yang sudah dikirim ke user (chatId) supaya tidak spam
 const sentMessages = new Map();
@@ -110,7 +110,6 @@ export async function handleProxyipCommand(bot, msg) {
 }
 
 // Handler callback query
-// Handler callback query
 export async function handleCallbackQuery(bot, callbackQuery) {
   const chatId = callbackQuery.message.chat.id;
   const data = callbackQuery.data;
@@ -206,9 +205,6 @@ export async function handleCallbackQuery(bot, callbackQuery) {
           { text: '⚡ TROJAN', callback_data: `config_trojan_${ip}_${port}_${countryCode}_${safeProvider}` }
         ],
         [
-          { text: '⚡ VMESS', callback_data: `config_vmess_${ip}_${port}_${countryCode}_${safeProvider}` }
-        ],
-        [
           { text: '⚡ SHADOWSOCKS', callback_data: `config_ss_${ip}_${port}_${countryCode}_${safeProvider}` }
         ]
       ];
@@ -244,48 +240,15 @@ export async function handleCallbackQuery(bot, callbackQuery) {
 
     try {
       const [_, type, ip, port, countryCode, provider] = data.split('_');
-      const uuid1 = 'f282b878-8711-45a1-8c69-5564172123c1';
       const uuid = generateUUID();
 
-      const path = encodeURIComponent(`/Geo-Project/${ip}=${port}`);
-      const pathh = `/Geo-Project/${ip}-${port}`;
+      const path = encodeURIComponent(`/Free-VPN-CF-Geo-Project/${ip}=${port}`);
       const prov = encodeURIComponent(`${provider} ${getFlagEmoji(countryCode)}`);
-      const prov1 = `${provider} ${getFlagEmoji(countryCode)}`;
       const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
 
       let configText = '';
 
-      if (type === 'vmess') {
-        const vmessJSON_TLS = {
-          v: "2",
-          ps: `${countryCode} - ${prov1} [VMess-TLS]`,
-          add: DEFAULT_HOST,
-          port: "443",
-          id: uuid1,
-          aid: "0",
-          net: "ws",
-          type: "none",
-          host: DEFAULT_HOST,
-          path: pathh,
-          tls: "tls",
-          sni: DEFAULT_HOST,
-          scy: "zero"
-        };
-
-        const vmessJSON_NTLS = {
-          ...vmessJSON_TLS,
-          port: "80",
-          tls: "none",
-          ps: `${countryCode} - ${prov1} [VMess-NTLS]`
-        };
-
-        configText = `\`\`\`VMESS-TLS
-vmess://${toBase64(JSON.stringify(vmessJSON_TLS))}
-\`\`\`\`\`\`VMESS-NTLS
-vmess://${toBase64(JSON.stringify(vmessJSON_NTLS))}
-\`\`\``;
-
-      } else if (type === 'vless') {
+      if (type === 'vless') {
         configText = `\`\`\`VLESS-TLS
 vless://${uuid}@${DEFAULT_HOST}:443?encryption=none&security=tls&sni=${DEFAULT_HOST}&fp=randomized&type=ws&host=${DEFAULT_HOST}&path=${path}#${prov}
 \`\`\`\`\`\`VLESS-NTLS
