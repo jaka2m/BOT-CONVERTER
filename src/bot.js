@@ -5,7 +5,6 @@ import { botku, TelegramBotku } from './randomip/bot2.js';
 import { ProxyCekBot, TelegramProxyCekBot } from './checkip/botCek.js';
 import { proxyBot, TelegramProxyBot } from './proxyip/bot3.js';
 import { TelegramWildcardBot } from './wildcard/botwild.js';
-import { Linkku, Sublinkku } from './sublink/sublinkbot.js';
 
 const HOSTKU = 'joss.krikkrik.tech';
 
