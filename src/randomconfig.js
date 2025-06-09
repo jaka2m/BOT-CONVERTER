@@ -82,13 +82,15 @@ ${trojanTLSLink1}
 ${ssTLSLink1}
 \`\`\`
 
-\`\`\`VLESS-TLS (Country Code Path)
+(Country Code Path)
+
+\`\`\`VLESS-TLS
 ${vlessTLSLink2}
 \`\`\`
-\`\`\`TROJAN-TLS (Country Code Path)
+\`\`\`TROJAN-TLS
 ${trojanTLSLink2}
 \`\`\`
-\`\`\`SHADOWSOCKS-TLS (Country Code Path)
+\`\`\`SHADOWSOCKS-TLS
 ${ssTLSLink2}
 \`\`\`
 
