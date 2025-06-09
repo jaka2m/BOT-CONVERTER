@@ -13,19 +13,14 @@ const userSessions = {};
 import { handleTelegramUpdate } from './sublink.js';
 
 export async function Linkku(link) {
-    console.log("Bot link:", link);
+  console.log("Bot link:", link);
 }
 
 export class Sublinkku {
-    constructor(token, apiUrl, ownerId) {
-        if (!token) {
-            console.error("Kesalahan: Token bot Telegram tidak boleh kosong.");
-            throw new Error("Token bot diperlukan untuk menginisialisasi Sublinkku.");
-        }
-        this.token = token;
-        this.apiUrl = (apiUrl || 'https://api.telegram.org').replace(/\/+$/, '');
-        this.ownerId = ownerId;
-    }
+  constructor(token, apiUrl = 'https://api.telegram.org') {
+    this.token = token;
+    this.apiUrl = apiUrl;
+  }
 
     async sendMessage(chatId, text, options = {}) {
         const url = `${this.apiUrl}/bot${this.token}/sendMessage`;
