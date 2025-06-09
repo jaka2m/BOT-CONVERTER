@@ -1,3 +1,13 @@
+const fileExtensions = {
+    clash: "yaml",
+    singbox: "bpf",
+    surfboard: "conf",
+    nekobox: "json",
+    husi: "json",
+    v2ray: "txt",
+    v2rayng: "txt"
+};
+
 const userSessions = {};
 
 import { handleTelegramUpdate } from './sublink.js';
@@ -12,16 +22,6 @@ export class Sublinkku {
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
   }
-
-const fileExtensions = {
-    clash: "yaml",
-    singbox: "bpf",
-    surfboard: "conf",
-    nekobox: "json",
-    husi: "json",
-    v2ray: "txt",
-    v2rayng: "txt"
-};
 
 const sendMessage = async (chatId, text, options = {}) => {
     const url = `${this.apiUrl}sendMessage`;
