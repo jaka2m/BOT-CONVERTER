@@ -83,23 +83,23 @@ STATUS  : ${ipData.status}
 \`\`\`
 🌟 *ROTATE VLESS TLS* 🌟
 \`\`\`
-vless://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#ROTATE%20VLESS%20${countryCode.toUpperCase()}%20${ipData.country)}%20TLS
+vless://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#ROTATE%20VLESS%20${ipData.isp}%20${ipData.country)}%20TLS
 \`\`\`
 🌟 *ROTATE VLESS NTLS* 🌟
 \`\`\`
-vless://${generateUUID()}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#ROTATE%20VLESS%20${countryCode.toUpperCase()}%20${ipData.country}%20NTLS
+vless://${generateUUID()}@${HOSTKU}:80?path=${path}&security=none&encryption=none&host=${HOSTKU}&fp=randomized&type=ws&sni=${HOSTKU}#ROTATE%20VLESS%20${ipData.isp}%20${ipData.country)}%20NTLS
 \`\`\`
 🌟 *ROTATE TROJAN TLS* 🌟
 \`\`\`
-trojan://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#ROTATE%20TROJAN%20${countryCode.toUpperCase()}%20${ipData.country}%20TLS
+trojan://${generateUUID()}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${path}#ROTATE%20TROJAN%20${ipData.isp}%20${ipData.country)}%20TLS
 \`\`\`
 🌟 *ROTATE SS TLS* 🌟
 \`\`\`
-ss://${toBase64(`none:${generateUUID()}`)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=tls&sni=${HOSTKU}#ROTATE%20SHADOWSOCKS%20${countryCode.toUpperCase()}%20${ipData.country}%20TLS
+ss://${toBase64(`none:${generateUUID()}`)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=tls&sni=${HOSTKU}#ROTATE%20SHADOWSOCKS%20${ipData.isp}%20${ipData.country)}%20TLS
 \`\`\`
 🌟 *ROTATE SS NTLS* 🌟
 \`\`\`
-ss://${toBase64(`none:${generateUUID()}`)}@${HOSTKU}:80?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=none&sni=${HOSTKU}#ROTATE%20SHADOWSOCKS%20${countryCode.toUpperCase()}%20${ipData.country}%20NTLS
+ss://${toBase64(`none:${generateUUID()}`)}@${HOSTKU}:80?encryption=none&type=ws&host=${HOSTKU}&path=${path}&security=none&sni=${HOSTKU}#ROTATE%20SHADOWSOCKS%20${ipData.isp}%20${ipData.country)}%20NTLS
 \`\`\`
 
 👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
