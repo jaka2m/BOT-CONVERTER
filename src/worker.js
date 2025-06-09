@@ -60,16 +60,11 @@ export default {
       const ngasalApiEmail = partsApiEmail.join('');
       const apiEmail = atob(ngasalApiEmail);
 
-      const partsServiceName = ['c2lyZW4='];
-      const ngasalServiceName = partsServiceName.join('');
-      const serviceName = atob(ngasalServiceName);
+      // Mengganti serviceName menjadi "joss"
+      const serviceName = 'joss';
 
-      // Sudah diganti ke krikkrik.tech
-      const partsRootDomain = [
-        'a3Jpa2tyaWsudGVjaA==',
-      ];
-      const ngasalRootDomain = partsRootDomain.join('');
-      const rootDomain = atob(ngasalRootDomain);
+      // Mengganti rootDomain menjadi "joss.krikkrik.tech"
+      const rootDomain = 'joss.krikkrik.tech';
 
       const globalBot = new KonstantaGlobalbot({
         apiKey,
@@ -87,7 +82,7 @@ export default {
       const bot5 = new Bot5(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot6 = new Bot6(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot7 = new Bot7(token, 'https://api.telegram.org', ownerId, globalBot);
-      
+
       await Promise.all([
         bot1.handleUpdate(update),
         bot2.handleUpdate(update),
