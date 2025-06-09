@@ -52,7 +52,7 @@ Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.
         return new Response('OK', { status: 200 });
       }
 
-      if (text.startsWith('/rotate ')) {
+      if (text.startsWith('rotate ')) {
         await rotateconfig.call(this, chatId, text);
         return new Response('OK', { status: 200 });
       }
