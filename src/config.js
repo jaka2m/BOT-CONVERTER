@@ -32,11 +32,7 @@ export async function rotateconfig(chatId, text) {
       .map(line => line.trim())
       .filter(line => line !== "");
 
-    const filteredIpList = ipList
-      .map(line => line.split(","))
-      .filter(parts => parts.length >= 4 && parts[2].toLowerCase() === countryCode);
-
-    if (filteredIpList.length === 0) {
+    if (ipList.length === 0) {
       await this.sendMessage(chatId, `⚠️ *Tidak ada IP untuk negara ${countryCode.toUpperCase()}*`, {
         parse_mode: "Markdown"
       });
@@ -44,7 +40,15 @@ export async function rotateconfig(chatId, text) {
       return;
     }
 
-    const [ip, port, country, provider] = filteredIpList[Math.floor(Math.random() * filteredIpList.length)];
+    const [ip, port, country, provider] = ipList[Math.floor(Math.random() * ipList.length)].split(",");
+
+    if (!ip || !port) {
+      await this.sendMessage(chatId, `⚠️ Data IP atau Port tidak lengkap dari daftar proxy.`, {
+        parse_mode: "Markdown",
+      });
+      await this.deleteMessage(chatId, loadingMessage.result.message_id);
+      return;
+    }
 
     const statusResponse = await fetch(`https://api.checker-ip.web.id/check?ip=${ip}:${port}`);
     const ipData = await statusResponse.json();
