@@ -306,23 +306,25 @@ support.zoom.us
     // 3) /list
     // ================================
     if (text.startsWith('/list')) {
-      let domains = [];
-      try { domains = await this.globalBot.getDomainList(); } catch {}
-      if (!domains.length) {
-        await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
-      } else {
-        const listText = domains.map((d,i) =>
-          `${i+1}\\. ${this.escapeMarkdownV2(d)}`
-        ).join('\n');
-        await this.sendMessage(chatId,
-          `🌐 List Custom Domains :\n\`${listText}\`\n\n📊 Total: *${domains.length}* subdomain${domains.length>1?'s':''}`,
-          { parse_mode: 'MarkdownV2' }
-        );
-        const fileContent = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
-        await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
-      }
-      return new Response('OK', { status: 200 });
-    }
+  let domains = [];
+  try { domains = await this.globalBot.getDomainList(); } catch {}
+  if (!domains.length) {
+    await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
+  } else {
+    // Ubah cara listText dibuat agar setiap domain terbungkus dalam backticknya sendiri
+    const listText = domains.map((d,i) =>
+      `\`${i+1}\\. ${this.escapeMarkdownV2(d)}\`` // Setiap item memiliki backticknya sendiri
+    ).join('\n'); // Kembali menggunakan newline agar setiap item di baris terpisah
+
+    await this.sendMessage(chatId,
+      `🌐 List Custom Domains :\n${listText}\n\n📊 Total: *${domains.length}* subdomain${domains.length>1?'s':''}`,
+      { parse_mode: 'MarkdownV2' }
+    );
+    const fileContent = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
+    await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
+  }
+  return new Response('OK', { status: 200 });
+}
 
     // ================================
     // 4) /approve <subdomain>
