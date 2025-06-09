@@ -83,11 +83,6 @@ STATUS  : ${data.status}
     const trojanTLSLink2 = `trojan://${generateUUID()}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
     const ssTLSLink2 = `ss://${toBase64(`none:${generateUUID()}`)}@$${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
-configText += `\`\`\`SHADOWSOCKS-TLS
-ss://${toBase64(`none:${generateUUID()}`)}@${DEFAULT_HOST}:443?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=tls&sni=${DEFAULT_HOST}#${provider}%20${country}
-\`\`\`\`\`\`SHADOWSOCKS-NTLS
-ss://${toBase64(`none:${generateUUID()}`)}@${DEFAULT_HOST}:80?encryption=none&type=ws&host=${DEFAULT_HOST}&path=${path}&security=none&sni=${DEFAULT_HOST}#${provider}%20${country}
-\`\`\``;
     // --- Format output teks ---
     const configText = `
 \`\`\`INFORMATION
@@ -100,7 +95,7 @@ ${trojanTLSLink1}
 ${ssTLSLink1}
 \`\`\`
 
-(Country Code Path dengan angka urutan: ${data.countryCode}${sequenceNumber})
+(Country Code Path : ${data.countryCode}${sequenceNumber})
 
 \`\`\`VLESS-TLS
 ${vlessTLSLink2}
