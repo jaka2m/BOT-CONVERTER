@@ -1,4 +1,5 @@
-// bot.js
+const userSessions = {};
+
 import { handleTelegramUpdate } from './sublink.js';
 
 export async function Linkku(link) {
@@ -11,8 +12,6 @@ export class Sublinkku {
     this.apiUrl = apiUrl || 'https://api.telegram.org';
     this.ownerId = ownerId;
   }
-
-const userSessions = {};
 
 const fileExtensions = {
     clash: "yaml",
