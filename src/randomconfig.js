@@ -18,33 +18,63 @@ function generateUUID() {
 export async function randomconfig() {
   try {
     const HOSTKU = 'joss.krikkrik.tech';
+    const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/jaka2m/botak/main/cek/';
 
-    const response = await fetch('https://raw.githubusercontent.com/jaka2m/botak/main/cek/proxyList.txt');
-    if (!response.ok) return '⚠️ Gagal mengambil daftar proxy.';
-    const ipText = await response.text();
-    const ipList = ipText.split('\n').filter(line => line.trim() !== '');
-    const randomProxy = ipList[Math.floor(Math.random() * ipList.length)];
-    const [ip, port, country, provider] = randomProxy.split(',');
+    // --- Ambil daftar proxy dari GitHub ---
+    const proxyResponse = await fetch(`${GITHUB_BASE_URL}proxyList.txt`);
+    if (!proxyResponse.ok) {
+      return '⚠️ Gagal mengambil daftar proxy.';
+    }
+    const ipText = await proxyResponse.text();
+    const ipLines = ipText.split('\n').filter(line => line.trim() !== '');
 
-    if (!ip || !port) return '⚠️ Data IP tidak lengkap.';
-
-    const checkResponse = await fetch(`https://api.checker-ip.web.id/check?ip=${ip}:${port}`);
-    if (!checkResponse.ok) return `⚠️ Gagal cek status IP ${ip}:${port}.`;
-    const data = await checkResponse.json();
-
-    if (data.status?.toUpperCase() !== 'ACTIVE') {
-      return `⚠️ IP ${ip}:${port} tidak aktif.`
+    if (ipLines.length === 0) {
+      return '⚠️ Daftar proxy kosong atau tidak valid.';
     }
 
-    const flag = getFlagEmoji(data.country);
-    const pathIPPORT = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
-    const pathCD = `/Free-VPN-CF-Geo-Project/${data.countryCode}1`;
+    // --- Pilih proxy secara acak dan dapatkan indeksnya ---
+    const randomIndex = Math.floor(Math.random() * ipLines.length);
+    const randomProxyLine = ipLines[randomIndex];
+    
+    // Angka urutan adalah (indeks + 1)
+    const sequenceNumber = randomIndex + 1; 
 
+    const [ip, port, country, provider] = randomProxyLine.split(',');
+
+    if (!ip || !port) {
+      return '⚠️ Data IP atau Port tidak lengkap dari daftar proxy.';
+    }
+
+    // --- Lakukan cek status IP ---
+    const checkResponse = await fetch(`https://api.checker-ip.web.id/check?ip=${ip}:${port}`);
+    if (!checkResponse.ok) {
+      return `⚠️ Gagal cek status IP ${ip}:${port}.`;
+    }
+    const data = await checkResponse.json(); // Data ini berisi countryCode, ip, port, dll.
+
+    if (data.status?.toUpperCase() !== 'ACTIVE') {
+      return `⚠️ IP ${ip}:${port} tidak aktif.`;
+    }
+    
+    // --- Buat path untuk konfigurasi dengan angka urutan dinamis ---
+    const pathIPPORT = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
+    // Menggunakan sequenceNumber yang didapat dari indeks baris
+    const pathCD = `/Free-VPN-CF-Geo-Project/${data.countryCode}${sequenceNumber}`;
+
+    // --- Fungsi helper untuk Base64 ---
     const toBase64 = (str) => {
-      if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
-      else return Buffer.from(str, 'utf-8').toString('base64');
+      if (typeof btoa === 'function') {
+        return btoa(unescape(encodeURIComponent(str)));
+      } else if (typeof Buffer !== 'undefined') {
+        return Buffer.from(str, 'utf-8').toString('base64');
+      } else {
+        console.warn("btoa or Buffer not available, base64 encoding might fail.");
+        return encodeURIComponent(str); // Fallback, though not a true base64
+      }
     };
 
+    // --- Siapkan informasi dan UUID ---
+    const flag = getFlagEmoji(data.country); // Meskipun 'flag' tidak digunakan, ini tetap ada dari kode asli.
     const infoMessage = `
 IP      : ${data.ip}
 PORT    : ${data.port}
@@ -57,17 +87,19 @@ STATUS  : ${data.status}
     const vlessUUID = generateUUID();
     const trojanUUID = generateUUID();
     const ssPassword = generateUUID();
-
     const ssConfigValue = `none:${ssPassword}`;
 
+    // --- Konfigurasi dengan path IP/PORT ---
     const vlessTLSLink1 = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
     const trojanTLSLink1 = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
     const ssTLSLink1 = `ss://${toBase64(ssConfigValue)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
+    // --- Konfigurasi dengan path Country Code + Sequence Number ---
     const vlessTLSLink2 = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
     const trojanTLSLink2 = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
     const ssTLSLink2 = `ss://${toBase64(ssConfigValue)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
+    // --- Format output teks ---
     const configText = `
 \`\`\`INFORMATION
 ${infoMessage}
@@ -82,7 +114,7 @@ ${trojanTLSLink1}
 ${ssTLSLink1}
 \`\`\`
 
-(Country Code Path)
+(Country Code Path dengan angka urutan: ${data.countryCode}${sequenceNumber})
 
 \`\`\`VLESS-TLS
 ${vlessTLSLink2}
@@ -97,7 +129,9 @@ ${ssTLSLink2}
 👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
 `;
     return configText;
+
   } catch (error) {
+    console.error("Terjadi kesalahan:", error);
     return `⚠️ Terjadi kesalahan: ${error.message}`;
   }
 }
