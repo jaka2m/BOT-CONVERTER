@@ -6,7 +6,7 @@ import { ProxyCekBot, TelegramProxyCekBot } from './checkip/botCek.js';
 import { proxyBot, TelegramProxyBot } from './proxyip/bot3.js';
 import { TelegramWildcardBot } from './wildcard/botwild.js';
 
-const HOSTKU = 'krikkrik.tech';
+const HOSTKU = 'joss.krikkrik.tech';
 
 export class TelegramBot {
   constructor(token, apiUrl, ownerId) {
