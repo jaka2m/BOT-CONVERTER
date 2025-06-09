@@ -61,9 +61,8 @@ export async function randomconfig() {
     // Menggunakan sequenceNumber yang didapat dari indeks baris
     const pathCD = `/Free-VPN-CF-Geo-Project/${data.countryCode}${sequenceNumber}`;
 
-    const toBase64 = (str) => Buffer.from(str).toString('base64');
-    const btoa = (str) => Buffer.from(str).toString('base64');
-
+    const toBase64 = (str) => btoa(unescape(encodeURIComponent(str)));
+    
     const infoMessage = `
 IP      : ${data.ip}
 PORT    : ${data.port}
