@@ -5,7 +5,6 @@ import { TelegramProxyBot as Bot4 } from './proxyip/bot3.js';
 import { TelegramWildcardBot as Bot5, KonstantaGlobalbot } from './wildcard/botwild.js';
 import { CekkuotaBotku as Bot6 } from './kuota.js';
 import { Converterbot as Bot7 } from './converter/converter.js';
-import { Sublinkku as Bot8 } from './sublink/sublinkbot.js';
 
 export default {
   async fetch(request, env) {
