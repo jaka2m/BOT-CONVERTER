@@ -33,11 +33,12 @@ export async function randomconfig() {
     const data = await checkResponse.json();
 
     if (data.status?.toUpperCase() !== 'ACTIVE') {
-      return `⚠️ IP ${ip}:${port} tidak aktif.`;
+      return `⚠️ IP ${ip}:${port} tidak aktif.`
     }
 
     const flag = getFlagEmoji(data.country);
-    const path = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
+    const pathIPPORT = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
+    const pathCD = `/Free-VPN-CF-Geo-Project/${data.countryCode}1`;
 
     const toBase64 = (str) => {
       if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
@@ -57,25 +58,38 @@ STATUS  : ${data.status}
     const trojanUUID = generateUUID();
     const ssPassword = generateUUID();
 
-    const vlessTLSLink = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const ssConfigValue = `none:${ssPassword}`;
 
-    const trojanTLSLink = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const vlessTLSLink1 = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const trojanTLSLink1 = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const ssTLSLink1 = `ss://${toBase64(ssConfigValue)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathIPPORT)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
-    const ssConfig = `none:${ssPassword}`;
-    const ssTLSLink = `ss://${toBase64(ssConfig)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(path)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const vlessTLSLink2 = `vless://${vlessUUID}@${HOSTKU}:443?encryption=none&security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const trojanTLSLink2 = `trojan://${trojanUUID}@${HOSTKU}:443?security=tls&sni=${HOSTKU}&fp=randomized&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
+    const ssTLSLink2 = `ss://${toBase64(ssConfigValue)}@${HOSTKU}:443?encryption=none&type=ws&host=${HOSTKU}&path=${encodeURIComponent(pathCD)}&security=tls&sni=${HOSTKU}#${encodeURIComponent(provider)}%20${encodeURIComponent(country)}`;
 
     const configText = `
 \`\`\`INFORMATION
 ${infoMessage}
 \`\`\`
 \`\`\`VLESS-TLS
-${vlessTLSLink}
+${vlessTLSLink1}
 \`\`\`
 \`\`\`TROJAN-TLS
-${trojanTLSLink}
+${trojanTLSLink1}
 \`\`\`
 \`\`\`SHADOWSOCKS-TLS
-${ssTLSLink}
+${ssTLSLink1}
+\`\`\`
+
+\`\`\`VLESS-TLS (Country Code Path)
+${vlessTLSLink2}
+\`\`\`
+\`\`\`TROJAN-TLS (Country Code Path)
+${trojanTLSLink2}
+\`\`\`
+\`\`\`SHADOWSOCKS-TLS (Country Code Path)
+${ssTLSLink2}
 \`\`\`
 
 👨‍💻 Modded By : [GEO PROJECT](https://t.me/sampiiiiu)
