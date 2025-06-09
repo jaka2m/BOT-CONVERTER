@@ -37,15 +37,15 @@ export class TelegramBot {
 
 Ketik perintah berikut untuk mendapatkan config rotate berdasarkan negara:
 
-\`\/rotate + kode_negara\`
+\`\rotate + kode_negara\`
 
 Negara tersedia:
 id, sg, my, us, ca, in, gb, ir, ae, fi, tr, md, tw, ch, se, nl, es, ru, ro, pl, al, nz, mx, it, de, fr, am, cy, dk, br, kr, vn, th, hk, cn, jp.
 
 Contoh:
-\`\/rotate id\`
-\`\/rotate sg\`
-\`\/rotate my\`
+\`\rotate id\`
+\`\rotate sg\`
+\`\rotate my\`
 
 Bot akan memilih IP secara acak dari negara tersebut dan mengirimkan config-nya.`;
         await this.sendMessage(chatId, helpMsg, { parse_mode: 'Markdown' });
