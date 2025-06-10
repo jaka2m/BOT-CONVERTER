@@ -72,8 +72,10 @@ export default {
       const host = request.headers.get('host'); // Get the host header from the request
 
       // Determine the active domain based on the host
+      // This is crucial for how the bot responds to commands
+      // and which root domain is considered 'primary' for a given interaction.
       if (host && host.includes(availableRootDomains[1])) {
-        activeRootDomain = availableRootDomains[1]; // Select krikkriks.live
+        activeRootDomain = availableRootDomains[1]; // Select krikkriks.live if its part of the host
       } else {
         activeRootDomain = availableRootDomains[0]; // Default to krikkrik.tech
       }
