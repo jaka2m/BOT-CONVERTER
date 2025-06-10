@@ -9,94 +9,63 @@ export async function WildcardBot(link) {
 // Global Constants & In-Memory Request Storage
 // ========================================
 export class KonstantaGlobalbot {
-  // NEW: Menerima 'zoneIDs' sebagai objek/map, bukan 'zoneID' tunggal
-  constructor({ apiKey, activeRootDomain, availableRootDomains, accountID, zoneIDs, apiEmail, serviceName }) {
-    this.apiKey           = apiKey;
-    this.activeRootDomain = activeRootDomain;
-    this.availableRootDomains = availableRootDomains;
-    this.accountID        = accountID;
-    this.zoneIDs          = zoneIDs; // Menyimpan map Zone ID
-    this.apiEmail         = apiEmail;
-    this.serviceName      = serviceName;
+  constructor({ apiKey, rootDomain, accountID, zoneID, apiEmail, serviceName }) {
+    this.apiKey      = apiKey;
+    this.rootDomain  = rootDomain;
+    this.accountID   = accountID;
+    this.zoneID      = zoneID;
+    this.apiEmail    = apiEmail;
+    this.serviceName = serviceName;
 
     this.headers = {
       'Authorization': `Bearer ${this.apiKey}`,
-      'X-Auth-Email':    this.apiEmail,
-      'X-Auth-Key':      this.apiKey,
-      'Content-Type':    'application/json',
+      'X-Auth-Email':   this.apiEmail,
+      'X-Auth-Key':     this.apiKey,
+      'Content-Type':   'application/json',
     };
 
+    // In-memory storage untuk permintaan subdomain
     if (!globalThis.subdomainRequests) globalThis.subdomainRequests = [];
   }
 
-  // Escape text for MarkdownV2 safety
+  // Escape teks agar aman untuk MarkdownV2
   escapeMarkdownV2(text) {
     return text.replace(/([_\*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
   }
 
-  // Cloudflare API: get list of Workers domains
+  // Cloudflare API: ambil daftar domain Workers
   async getDomainList() {
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const res = await fetch(url, { headers: this.headers });
-    if (!res.ok) {
-      console.error(`Failed to fetch domain list: ${res.status} ${res.statusText}`);
-      return [];
-    }
+    if (!res.ok) return [];
     const json = await res.json();
-    
-    // Filter domain berdasarkan serviceName dan pastikan domain berakhir dengan salah satu availableRootDomains
     return json.result
-      .filter(d =>
-        d.service === this.serviceName &&
-        this.availableRootDomains.some(root => d.hostname.endsWith(`.${root}`))
-      )
+      .filter(d => d.service === this.serviceName)
       .map(d => d.hostname);
   }
 
   // Cloudflare API: tambahkan subdomain
-  async addSubdomain(subdomain, targetRootDomain = this.activeRootDomain) {
-    // Pastikan targetRootDomain ada dalam daftar yang tersedia
-    if (!this.availableRootDomains.includes(targetRootDomain)) {
-      console.error(`Attempted to add subdomain to an invalid root domain: ${targetRootDomain}`);
-      return 400; // Bad Request
-    }
-
-    // NEW: Dapatkan Zone ID yang benar untuk targetRootDomain
-    const targetZoneID = this.zoneIDs[targetRootDomain];
-    if (!targetZoneID) {
-        console.error(`Zone ID not found for target root domain: ${targetRootDomain}`);
-        return 400; // Bad Request jika Zone ID tidak ditemukan
-    }
-
-    const fullDomainName = `${subdomain}.${targetRootDomain}`.toLowerCase();
-    
-    if (!fullDomainName.endsWith(`.${targetRootDomain}`)) {
-        console.error(`Generated domain ${fullDomainName} does not end with ${targetRootDomain}`);
-        return 400;
-    }
+  async addSubdomain(subdomain) {
+    const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
+    if (!domain.endsWith(this.rootDomain)) return 400;
 
     const registered = await this.getDomainList();
-    if (registered.includes(fullDomainName)) return 409; // Konflik - sudah ada
+    if (registered.includes(domain)) return 409;
 
     try {
-      // Uji apakah domain lengkap dapat diakses. Ini bisa gagal jika DNS belum sepenuhnya tersebar.
-      const testRes = await fetch(`https://${fullDomainName}`, { method: 'HEAD', redirect: 'follow' });
-      if (testRes.status === 530) {
-        console.warn(`Cloudflare returned 530 for ${fullDomainName}. This might indicate DNS issues.`);
-      }
-    } catch (e) {
-      console.error(`Error testing subdomain ${fullDomainName}:`, e.message);
-      return 400; 
+      const testRes = await fetch(`https://${subdomain}`);
+      if (testRes.status === 530) return 530;
+    } catch {
+      return 400;
     }
 
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const body = {
       environment: "production",
-      hostname:    fullDomainName,
+      hostname:    domain,
       service:     this.serviceName,
-      zone_id:     targetZoneID // PENTING: Gunakan Zone ID yang benar di sini!
+      zone_id:     this.zoneID
     };
-
     const res = await fetch(url, {
       method:  'PUT',
       headers: this.headers,
@@ -106,41 +75,17 @@ export class KonstantaGlobalbot {
   }
 
   // Cloudflare API: hapus subdomain
-  async deleteSubdomain(subdomain, targetRootDomain = null) {
+  async deleteSubdomain(subdomain) {
+    const domain  = `${subdomain}.${this.rootDomain}`.toLowerCase();
     const listUrl = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const listRes = await fetch(listUrl, { headers: this.headers });
-    if (!listRes.ok) {
-        console.error(`Failed to fetch domain list for deletion: ${listRes.status} ${listRes.statusText}`);
-        return listRes.status;
-    }
+    if (!listRes.ok) return listRes.status;
+
     const json = await listRes.json();
-    
-    let foundObj = null;
+    const obj  = json.result.find(d => d.hostname === domain);
+    if (!obj) return 404;
 
-    // Jika targetRootDomain disediakan, coba cari di sana terlebih dahulu
-    if (targetRootDomain && this.availableRootDomains.includes(targetRootDomain)) {
-        const specificDomain = `${subdomain}.${targetRootDomain}`.toLowerCase();
-        foundObj = json.result.find(d => d.hostname === specificDomain && d.service === this.serviceName);
-    }
-
-    // Jika tidak ditemukan, atau tidak ada targetRootDomain spesifik, cari di semua root domain yang tersedia
-    if (!foundObj) {
-        for (const root of this.availableRootDomains) {
-            const potentialDomain = `${subdomain}.${root}`.toLowerCase();
-            foundObj = json.result.find(d => d.hostname === potentialDomain && d.service === this.serviceName);
-            if (foundObj) {
-                targetRootDomain = root; // Perbarui targetRootDomain agar bisa merujuknya nanti
-                break;
-            }
-        }
-    }
-
-    if (!foundObj) {
-        return 404; // Tidak Ditemukan
-    }
-
-    // URL DELETE sekarang menggunakan ID domain yang ditemukan
-    const res = await fetch(`${listUrl}/${foundObj.id}`, {
+    const res = await fetch(`${listUrl}/${obj.id}`, {
       method:  'DELETE',
       headers: this.headers
     });
@@ -148,25 +93,24 @@ export class KonstantaGlobalbot {
   }
 
   // ========================
-  // In-Memory CRUD for subdomain requests
+  // In-Memory CRUD untuk request subdomain
   // ========================
   saveDomainRequest(request) {
+    // request = { domain, subdomain, requesterId, requesterUsername, requestTime, status }
     globalThis.subdomainRequests.push(request);
   }
 
-  findPendingRequest(subdomain, requesterId = null, rootDomainUsed = null) {
+  findPendingRequest(subdomain, requesterId = null) {
     return globalThis.subdomainRequests.find(r =>
       r.subdomain === subdomain &&
       r.status    === 'pending' &&
-      (requesterId === null || r.requesterId === requesterId) &&
-      (rootDomainUsed === null || r.rootDomainUsed === rootDomainUsed)
+      (requesterId === null || r.requesterId === requesterId)
     );
   }
 
-  updateRequestStatus(subdomain, status, rootDomainUsed = null) {
+  updateRequestStatus(subdomain, status) {
     const r = globalThis.subdomainRequests.find(r =>
-      r.subdomain === subdomain && r.status === 'pending' &&
-      (rootDomainUsed === null || r.rootDomainUsed === rootDomainUsed)
+      r.subdomain === subdomain && r.status === 'pending'
     );
     if (r) r.status = status;
   }
@@ -181,11 +125,12 @@ export class KonstantaGlobalbot {
 // ========================================
 export class TelegramWildcardBot {
   constructor(token, apiUrl, ownerId, globalBot) {
-    this.token     = token;
-    this.apiUrl    = apiUrl || 'https://api.telegram.org';
-    this.ownerId   = ownerId;
-    this.globalBot = globalBot;
+    this.token      = token;
+    this.apiUrl     = apiUrl || 'https://api.telegram.org';
+    this.ownerId    = ownerId;
+    this.globalBot  = globalBot;
 
+    // Flags untuk menandai user yang menunggu kirim daftar
     this.awaitingAddList    = {};
     this.awaitingDeleteList = {};
 
@@ -207,19 +152,19 @@ export class TelegramWildcardBot {
     const now      = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
     // ================================
-    // 1) /add – support single & multi, now to ALL root domains
+    // 1) /add – support single & multi
     // ================================
     if (text.startsWith('/add')) {
-      const lines       = text.split('\n').map(l => l.trim()).filter(Boolean);
+      const lines     = text.split('\n').map(l => l.trim()).filter(Boolean);
       const firstLine = lines[0];
       const restLines = lines.slice(1);
 
       let subdomains = [];
-      // Mode: /add abc def ghi
+      // mode: /add abc def ghi
       if (firstLine.includes(' ') && restLines.length === 0) {
         subdomains = firstLine.split(' ').slice(1).map(s => s.trim()).filter(Boolean);
       }
-      // Mode:
+      // mode:
       // /add
       // abc
       // def
@@ -229,91 +174,77 @@ export class TelegramWildcardBot {
 
       if (subdomains.length === 0) {
         await this.sendMessage(
-          chatId,
-          '```⚠️ \nMohon sertakan satu atau lebih subdomain setelah /add.\n```',
-          { parse_mode: 'Markdown' }
-        );
-        return new Response('OK', { status: 200 });
+  chatId,
+  '```⚠️ \nMohon sertakan satu atau lebih subdomain setelah /add.\n```',
+  { parse_mode: 'Markdown' }
+);
+return new Response('OK', { status: 200 });
       }
 
       const results = [];
-      // Loop untuk setiap subdomain yang dimasukkan (misalnya 'hambaru')
       for (const sd of subdomains) {
         const cleanSd = sd.trim();
-        
-        // Loop untuk SETIAP root domain yang tersedia
-        for (const targetRootDomain of this.globalBot.availableRootDomains) {
-            const fullDomainForDisplay = `${cleanSd}.${targetRootDomain}`;
+        const full    = `${cleanSd}.${this.globalBot.rootDomain}`;
 
-            if (isOwner) {
-                let st = 500;
-                try {
-                    // Owner menambahkan ke SETIAP root domain yang tersedia
-                    st = await this.globalBot.addSubdomain(cleanSd, targetRootDomain);
-                } catch (e) {
-                    console.error(`Error adding subdomain by owner to ${fullDomainForDisplay}: ${e.message}`);
-                }
-                results.push(
-                    st === 200
-                        ? '```✅-Wildcard\n' + this.escapeMarkdownV2(fullDomainForDisplay) + ' berhasil ditambahkan oleh owner.```'
-                        : `❌ Gagal menambahkan domain *${this.escapeMarkdownV2(fullDomainForDisplay)}*, status: ${st}`
-                );
-            } else {
-                try {
-                    // Cek permintaan yang tertunda untuk subdomain spesifik ini di root domain spesifik ini
-                    if (await this.globalBot.findPendingRequest(cleanSd, chatId, targetRootDomain)) {
-                        results.push('```⚠️-Wildcard\n' + this.escapeMarkdownV2(fullDomainForDisplay) + ' sudah direquest dan menunggu approval.```');
-                        continue; // Lewati ke root domain berikutnya jika sudah tertunda
-                    }
-                } catch (e) {
-                    console.error(`Error checking pending request for ${fullDomainForDisplay}: ${e.message}`);
-                }
+        if (isOwner) {
+          let st = 500;
+          try { st = await this.globalBot.addSubdomain(cleanSd); } catch {}
+          results.push(
+  st === 200
+    ? '```✅-Wildcard\n' + full + ' berhasil ditambahkan oleh owner.```'
+    : `❌ Gagal menambahkan domain *${full}*, status: ${st}`
+);
+        } else {
+          try {
+            if (await this.globalBot.findPendingRequest(cleanSd, chatId)) {
+  results.push('```⚠️-Wildcard\n' + full + ' sudah direquest dan menunggu approval.\n```');
+  continue;
+}
+} catch {}
 
-                // Simpan permintaan untuk subdomain dan root domain spesifik ini
-                this.globalBot.saveDomainRequest({
-                    domain:            fullDomainForDisplay,
-                    subdomain:         cleanSd,
-                    requesterId:       chatId,
-                    requesterUsername: username,
-                    requestTime:       now,
-                    status:            'pending',
-                    rootDomainUsed:    targetRootDomain // Simpan root domain spesifik untuk permintaan ini
-                });
+          // simpan request
+          this.globalBot.saveDomainRequest({
+            domain:            full,
+            subdomain:         cleanSd,
+            requesterId:       chatId,
+            requesterUsername: username,
+            requestTime:       now,
+            status:            'pending'
+          });
 
-                results.push(`\`\`\`✅ Request Wildcard ${this.escapeMarkdownV2(fullDomainForDisplay)} berhasil dikirim!\`\`\``);
+          results.push(`\`\`\`✅ Request Wildcard ${full} berhasil dikirim!\`\`\``);
 
-                // Beri tahu owner (hanya jika bukan owner yang membuat permintaan)
-                if (this.ownerId !== chatId) {
-                    await this.sendMessage(this.ownerId,
-                        `📬 Permintaan subdomain baru!
-🔗 Domain: ${this.escapeMarkdownV2(fullDomainForDisplay)}
-👤 Pengguna: @${this.escapeMarkdownV2(username)} (ID: ${this.escapeMarkdownV2(chatId.toString())})
-📅 Waktu: ${this.escapeMarkdownV2(now)}`,
-                        { parse_mode: 'MarkdownV2' }
-                    );
-                }
-            }
-        } // Akhir loop untuk targetRootDomain
-      } // Akhir loop untuk subdomains
+          // notif ke owner
+          if (this.ownerId !== chatId) {
+            await this.sendMessage(this.ownerId,
+`📬 Permintaan subdomain baru!
+
+🔗 Domain: ${full}
+👤 Pengguna: @${username} (ID: ${chatId})
+📅 Waktu: ${now}`);
+          }
+        }
+      }
 
       await this.sendMessage(chatId, results.join('\n\n'), { parse_mode: 'Markdown' });
       return new Response('OK', { status: 200 });
     }
 
     // ================================
-    // 2) /del – support single & multi (admin only)
-    // ================================
-    if (text.startsWith('/del')) {
-      if (!isOwner) {
-        await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
-        return new Response('OK', { status: 200 });
-      }
+// 2) /del – support single & multi (admin only)
+// ================================
+if (text.startsWith('/del')) {
+  if (!isOwner) {
+    await this.sendMessage(chatId, '⛔ Anda tidak berwenang menggunakan perintah ini.');
+    return new Response('OK', { status: 200 });
+  }
 
-      if (text === '/del') {
-        this.awaitingDeleteList[chatId] = true;
-        await this.sendMessage(
-          chatId,
-          `\`\`\`Contoh
+  // handle “/del” tanpa argumen → minta daftar
+  if (text === '/del') {
+    this.awaitingDeleteList[chatId] = true;
+    await this.sendMessage(
+      chatId,
+      `\`\`\`Contoh
 📝 Silakan kirim daftar subdomain yang ingin dihapus (satu per baris).
 
 /del
@@ -321,85 +252,79 @@ ava.game.naver.com
 zaintest.vuclip.com
 support.zoom.us
 \`\`\``,
-          { parse_mode: 'MarkdownV2' }
-        );
-        return new Response('OK', { status: 200 });
-      }
+      { parse_mode: 'MarkdownV2' }
+    );
+    return new Response('OK', { status: 200 });
+  }
 
-      const lines       = text.split('\n').map(l => l.trim()).filter(Boolean);
-      const firstLine = lines[0];
-      const restLines = lines.slice(1);
+  // handle /del abc def ghi  atau multiline
+  const lines     = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const firstLine = lines[0];
+  const restLines = lines.slice(1);
 
-      let toDelete = [];
-      if (firstLine.includes(' ') && restLines.length === 0) {
-        toDelete = firstLine.split(' ').slice(1).map(s => s.trim()).filter(Boolean);
-      }
-      else if (restLines.length > 0) {
-        toDelete = restLines;
-      }
+  let toDelete = [];
+  // mode: /del abc def ghi
+  if (firstLine.includes(' ') && restLines.length === 0) {
+    toDelete = firstLine.split(' ').slice(1).map(s => s.trim()).filter(Boolean);
+  }
+  // mode:
+  // /del
+  // abc
+  // def
+  else if (restLines.length > 0) {
+    toDelete = restLines;
+  }
 
-      if (toDelete.length === 0) {
-        await this.sendMessage(chatId, '⚠️ Mohon sertakan satu atau lebih subdomain setelah /del.');
-        return new Response('OK', { status: 200 });
-      }
+  if (toDelete.length === 0) {
+    await this.sendMessage(chatId, '⚠️ Mohon sertakan satu atau lebih subdomain setelah /del.');
+    return new Response('OK', { status: 200 });
+  }
 
-      const results = [];
-      for (const raw of toDelete) {
-        let d = raw.toLowerCase().trim();
-        let sd;
-        let targetRootDomainForDeletion = null;
-
-        const matchedRoot = this.globalBot.availableRootDomains.find(root => d.endsWith(`.${root}`));
-        if (matchedRoot) {
-            sd = d.slice(0, d.lastIndexOf(`.${matchedRoot}`));
-            targetRootDomainForDeletion = matchedRoot;
-        } else {
-            sd = d;
-            targetRootDomainForDeletion = this.globalBot.activeRootDomain; // Fallback ke domain aktif
-        }
-
-        const fullDomainForDisplay = `${sd}.${targetRootDomainForDeletion}`;
-
-        let st = 500;
-        try {
-            st = await this.globalBot.deleteSubdomain(sd, targetRootDomainForDeletion);
-        } catch (e) {
-            console.error(`Error deleting subdomain: ${e.message}`);
-        }
-        
-        if (st === 200) results.push(`\`\`\`Wildcard\n${this.escapeMarkdownV2(fullDomainForDisplay)} deleted successfully.\`\`\``);
-        else if (st === 404) results.push(`⚠️ Domain *${this.escapeMarkdownV2(fullDomainForDisplay)}* tidak ditemukan.`);
-        else results.push(`❌ Gagal menghapus domain *${this.escapeMarkdownV2(fullDomainForDisplay)}*, status: ${st}.`);
-      }
-
-      await this.sendMessage(chatId, results.join('\n\n'), { parse_mode: 'Markdown' });
-      return new Response('OK', { status: 200 });
+  const results = [];
+  for (const raw of toDelete) {
+    let d = raw.toLowerCase().trim();
+    let sd;
+    if (d.endsWith(`.${this.globalBot.rootDomain}`)) {
+      sd = d.slice(0, d.lastIndexOf(`.${this.globalBot.rootDomain}`));
+    } else {
+      sd = d;
     }
+    const full = `${sd}.${this.globalBot.rootDomain}`;
+
+    let st = 500;
+    try { st = await this.globalBot.deleteSubdomain(sd); } catch {}
+    if      (st === 200) results.push(`\`\`\`Wildcard\n${full}deleted successfully.\`\`\``);
+    else if (st === 404) results.push(`⚠️ Domain *${full}* tidak ditemukan.`);
+    else                 results.push(`❌ Gagal menghapus domain *${full}*, status: ${st}.`);
+  }
+
+  await this.sendMessage(chatId, results.join('\n\n'), { parse_mode: 'Markdown' });
+  return new Response('OK', { status: 200 });
+}
 
     // ================================
     // 3) /list
     // ================================
     if (text.startsWith('/list')) {
-      let domains = [];
-      try { domains = await this.globalBot.getDomainList(); } catch (e) {
-        console.error(`Error getting domain list: ${e.message}`);
-      }
-      if (!domains.length) {
-        await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
-      } else {
-        const listText = domains.map((d,i) =>
-          `${i+1}\\. \`${this.escapeMarkdownV2(d)}\``
-        ).join('\n');
+  let domains = [];
+  try { domains = await this.globalBot.getDomainList(); } catch {}
+  if (!domains.length) {
+    await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
+  } else {
+    // Ubah cara listText dibuat agar hanya domain yang ada di dalam backtick
+    const listText = domains.map((d,i) =>
+      `${i+1}\\. \`${this.escapeMarkdownV2(d)}\`` // Hanya domain yang di-backtick
+    ).join('\n'); // Tetap pakai newline agar per baris
 
-        await this.sendMessage(chatId,
-          `🌐 LIST CUSTOM DOMAIN :\n\n${listText}\n\n📊 Total: *${domains.length}* subdomain${domains.length>1?'s':''}`,
-          { parse_mode: 'MarkdownV2' }
-        );
-        const fileContent = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
-        await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
-      }
-      return new Response('OK', { status: 200 });
-    }
+    await this.sendMessage(chatId,
+      `🌐 LIST CUSTOM DOMAIN :\n\n${listText}\n\n📊 Total: *${domains.length}* subdomain${domains.length>1?'s':''}`,
+      { parse_mode: 'MarkdownV2' }
+    );
+    const fileContent = domains.map((d,i)=>`${i+1}. ${d}`).join('\n');
+    await this.sendDocument(chatId, fileContent, 'wildcard-list.txt', 'text/plain');
+  }
+  return new Response('OK', { status: 200 });
+}
 
     // ================================
     // 4) /approve <subdomain>
@@ -413,40 +338,22 @@ support.zoom.us
 `);
         return new Response('OK', { status: 200 });
       }
-      const parts = text.split(' ');
-      const sd = parts[1]?.trim();
-
+      const sd = text.split(' ')[1]?.trim();
       if (!sd) return new Response('OK', { status: 200 });
-      
-      let fullDomainForDisplay;
-      let req = null;
-
-      // Cari permintaan yang tertunda di semua root domain yang tersedia
-      for (const root of this.globalBot.availableRootDomains) {
-          req = this.globalBot.findPendingRequest(sd, null, root);
-          if (req) {
-              fullDomainForDisplay = req.domain;
-              break;
-          }
-      }
-
+      const full = `${sd}.${this.globalBot.rootDomain}`;
+      const req  = this.globalBot.findPendingRequest(sd);
       if (!req) {
-        await this.sendMessage(chatId, `⚠️ Tidak ada request pending untuk subdomain *${this.escapeMarkdownV2(sd)}*.`, { parse_mode: 'Markdown' });
+        await this.sendMessage(chatId, `⚠️ Tidak ada request pending untuk subdomain *${full}*.`, { parse_mode: 'Markdown' });
       } else {
         let st = 500;
-        try {
-            // Gunakan rootDomainUsed dari permintaan untuk menambahkannya
-            st = await this.globalBot.addSubdomain(req.subdomain, req.rootDomainUsed);
-        } catch (e) {
-            console.error(`Error approving subdomain: ${e.message}`);
-        }
+        try { st = await this.globalBot.addSubdomain(sd); } catch {}
         if (st === 200) {
-          this.globalBot.updateRequestStatus(req.subdomain, 'approved', req.rootDomainUsed);
-          await this.sendMessage(chatId, `\`\`\`\n✅ Wildcard ${this.escapeMarkdownV2(fullDomainForDisplay)} disetujui dan ditambahkan.\n\`\`\``, { parse_mode: 'Markdown' });
+          this.globalBot.updateRequestStatus(sd, 'approved');
+          await this.sendMessage(chatId, `\`\`\`\n✅ Wildcard ${full} disetujui dan ditambahkan.\n\`\`\``, { parse_mode: 'Markdown' });
 
-          await this.sendMessage(req.requesterId, `\`\`\`\n✅ Permintaan Wildcard ${this.escapeMarkdownV2(fullDomainForDisplay)} Anda telah disetujui pada:\n${this.escapeMarkdownV2(now)}\n\`\`\``, { parse_mode: 'Markdown' });
-        } else {
-          await this.sendMessage(chatId, `❌ Gagal menambahkan domain *${this.escapeMarkdownV2(fullDomainForDisplay)}*, status: ${st}`, { parse_mode: 'Markdown' });
+await this.sendMessage(req.requesterId, `\`\`\`\n✅ Permintaan Wildcard ${full} Anda telah disetujui pada:\n${now}\n\`\`\``, { parse_mode: 'Markdown' });
+} else {
+          await this.sendMessage(chatId, `❌ Gagal menambahkan domain *${full}*, status: ${st}`, { parse_mode: 'Markdown' });
         }
       }
       return new Response('OK', { status: 200 });
@@ -458,37 +365,24 @@ support.zoom.us
     if (text.startsWith('/reject ')) {
       if (!isOwner) {
         await this.sendMessage(chatId, '```\n⛔ Anda tidak berwenang menggunakan perintah ini.\n```');
-        return new Response('OK', { status: 200 });
-      }
-      const parts = text.split(' ');
-      const sd = parts[1]?.trim();
-
+return new Response('OK', { status: 200 });
+}
+      const sd = text.split(' ')[1]?.trim();
       if (!sd) return new Response('OK', { status: 200 });
-      
-      let fullDomainForDisplay;
-      let req = null;
-
-      // Cari permintaan yang tertunda di semua root domain yang tersedia
-      for (const root of this.globalBot.availableRootDomains) {
-          req = this.globalBot.findPendingRequest(sd, null, root);
-          if (req) {
-              fullDomainForDisplay = req.domain;
-              break;
-          }
-      }
-
+      const full = `${sd}.${this.globalBot.rootDomain}`;
+      const req  = this.globalBot.findPendingRequest(sd);
       if (!req) {
-        await this.sendMessage(chatId, `⚠️ Tidak ada request pending untuk subdomain *${this.escapeMarkdownV2(sd)}*.`, { parse_mode: 'Markdown' });
+        await this.sendMessage(chatId, `⚠️ Tidak ada request pending untuk subdomain *${full}*.`, { parse_mode: 'Markdown' });
       } else {
-        this.globalBot.updateRequestStatus(sd, 'rejected', req.rootDomainUsed);
-        await this.sendMessage(chatId,
-          "```\n❌ Wildcard " + this.escapeMarkdownV2(fullDomainForDisplay) + " telah ditolak.\n```",
-          { parse_mode: 'Markdown' });
+        this.globalBot.updateRequestStatus(sd, 'rejected');
+        await this.sendMessage(chatId, 
+  "```\n❌ Wildcard " + full + " telah ditolak.\n```", 
+  { parse_mode: 'Markdown' });
 
-        await this.sendMessage(req.requesterId,
-          "```\n❌ Permintaan Wildcard " + this.escapeMarkdownV2(fullDomainForDisplay) + " Anda telah ditolak pada:\n" + this.escapeMarkdownV2(now) + "\n```",
-          { parse_mode: 'Markdown' });
-      }
+await this.sendMessage(req.requesterId, 
+  "```\n❌ Permintaan Wildcard " + full + " Anda telah ditolak pada:\n" + now + "\n```", 
+  { parse_mode: 'Markdown' });
+}
       return new Response('OK', { status: 200 });
     }
 
@@ -506,17 +400,15 @@ support.zoom.us
       } else {
         let lines = '';
         all.forEach((r, i) => {
-          const domain        = this.escapeMarkdownV2(r.domain);
-          const status        = this.escapeMarkdownV2(r.status);
-          const requester     = this.escapeMarkdownV2(r.requesterUsername);
-          const requesterId   = this.escapeMarkdownV2(r.requesterId.toString());
-          const time          = this.escapeMarkdownV2(r.requestTime);
-          const rootDomainUsed= this.escapeMarkdownV2(r.rootDomainUsed || 'N/A');
+          const domain      = this.escapeMarkdownV2(r.domain);
+          const status      = this.escapeMarkdownV2(r.status);
+          const requester   = this.escapeMarkdownV2(r.requesterUsername);
+          const requesterId = this.escapeMarkdownV2(r.requesterId.toString());
+          const time        = this.escapeMarkdownV2(r.requestTime);
 
           lines += `*${i+1}\\. ${domain}* — _${status}_\n`;
-          lines += `   requester: @${requester} \\(ID: ${requesterId}\\)\n`;
-          lines += `   waktu: ${time}\n`;
-          lines += `   root domain: ${rootDomainUsed}\n\n`;
+          lines += `   requester: @${requester} \\(ID: ${requesterId}\\)\n`;
+          lines += `   waktu: ${time}\n\n`;
         });
         const message = `📋 *Daftar Semua Request:*\n\n${lines}`;
         await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
