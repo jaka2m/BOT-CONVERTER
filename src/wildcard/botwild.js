@@ -74,10 +74,6 @@ export class KonstantaGlobalbot {
     const registered = await this.getDomainList(); // getDomainList already filters for all root domains
     if (registered.includes(fullDomainName)) return 409; // Conflict - already exists
 
-    // Note: The previous fetch test here (`https://${subdomain}`) was incorrect
-    // as it tried to resolve `subdomain` directly, not `fullDomainName`.
-    // It's also likely to fail if the domain isn't fully propagated yet.
-    // We'll keep the test to prevent 530, but it might still return 400 if the domain isn't reachable yet.
     try {
       // Test if the full domain is accessible (this might fail if DNS is not yet propagated)
       const testRes = await fetch(`https://${fullDomainName}`, { method: 'HEAD', redirect: 'follow' });
@@ -167,7 +163,7 @@ export class KonstantaGlobalbot {
       r.subdomain === subdomain &&
       r.status    === 'pending' &&
       (requesterId === null || r.requesterId === requesterId) &&
-      (rootDomainUsed === null || r.rootDomainUsed === r.rootDomainUsed) // Match if rootDomainUsed is null (don't care) or matches
+      (rootDomainUsed === null || r.rootDomainUsed === rootDomainUsed) // Match if rootDomainUsed is null (don't care) or matches
     );
   }
 
@@ -175,7 +171,7 @@ export class KonstantaGlobalbot {
   updateRequestStatus(subdomain, status, rootDomainUsed = null) {
     const r = globalThis.subdomainRequests.find(r =>
       r.subdomain === subdomain && r.status === 'pending' &&
-      (rootDomainUsed === null || r.rootDomainUsed === r.rootDomainUsed) // Match if rootDomainUsed is null (don't care) or matches
+      (rootDomainUsed === null || r.rootDomainUsed === rootDomainUsed) // Match if rootDomainUsed is null (don't care) or matches
     );
     if (r) r.status = status;
   }
@@ -216,11 +212,8 @@ export class TelegramWildcardBot {
     const isOwner  = chatId === this.ownerId;
     const now      = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
-    // Use activeRootDomain for display purposes
-    const currentDisplayRootDomain = this.globalBot.activeRootDomain;
-
     // ================================
-    // 1) /add – support single & multi
+    // 1) /add – support single & multi, now to ALL root domains
     // ================================
     if (text.startsWith('/add')) {
       const lines       = text.split('\n').map(l => l.trim()).filter(Boolean);
@@ -250,59 +243,64 @@ export class TelegramWildcardBot {
       }
 
       const results = [];
+      // Loop through each submitted subdomain (e.g., 'hambaru')
       for (const sd of subdomains) {
         const cleanSd = sd.trim();
-        const fullDomainForDisplay = `${cleanSd}.${currentDisplayRootDomain}`;
+        
+        // This is the new core logic: iterate over ALL available root domains
+        for (const targetRootDomain of this.globalBot.availableRootDomains) {
+            const fullDomainForDisplay = `${cleanSd}.${targetRootDomain}`;
 
-        if (isOwner) {
-          let st = 500;
-          try {
-            // Owner adds to the activeRootDomain
-            st = await this.globalBot.addSubdomain(cleanSd, currentDisplayRootDomain);
-          } catch (e) {
-            console.error(`Error adding subdomain by owner: ${e.message}`);
-          }
-          results.push(
-            st === 200
-              ? '```✅-Wildcard\n' + this.escapeMarkdownV2(fullDomainForDisplay) + ' berhasil ditambahkan oleh owner.```'
-              : `❌ Gagal menambahkan domain *${this.escapeMarkdownV2(fullDomainForDisplay)}*, status: ${st}`
-          );
-        } else {
-          try {
-            // Check for pending requests, specifically for the active root domain
-            if (await this.globalBot.findPendingRequest(cleanSd, chatId, currentDisplayRootDomain)) {
-              results.push('```⚠️-Wildcard\n' + this.escapeMarkdownV2(fullDomainForDisplay) + ' sudah direquest dan menunggu approval.```');
-              continue;
-            }
-          } catch (e) {
-            console.error(`Error checking pending request: ${e.message}`);
-          }
+            if (isOwner) {
+                let st = 500;
+                try {
+                    // Owner adds to EACH available root domain
+                    st = await this.globalBot.addSubdomain(cleanSd, targetRootDomain);
+                } catch (e) {
+                    console.error(`Error adding subdomain by owner to ${fullDomainForDisplay}: ${e.message}`);
+                }
+                results.push(
+                    st === 200
+                        ? '```✅-Wildcard\n' + this.escapeMarkdownV2(fullDomainForDisplay) + ' berhasil ditambahkan oleh owner.```'
+                        : `❌ Gagal menambahkan domain *${this.escapeMarkdownV2(fullDomainForDisplay)}*, status: ${st}`
+                );
+            } else {
+                try {
+                    // Check for pending requests for this specific subdomain on this specific root domain
+                    if (await this.globalBot.findPendingRequest(cleanSd, chatId, targetRootDomain)) {
+                        results.push('```⚠️-Wildcard\n' + this.escapeMarkdownV2(fullDomainForDisplay) + ' sudah direquest dan menunggu approval.```');
+                        continue; // Skip to the next root domain if already pending
+                    }
+                } catch (e) {
+                    console.error(`Error checking pending request for ${fullDomainForDisplay}: ${e.message}`);
+                }
 
-          // Save the request, including the rootDomainUsed
-          this.globalBot.saveDomainRequest({
-            domain:            fullDomainForDisplay, // Store the full domain as requested
-            subdomain:         cleanSd,
-            requesterId:       chatId,
-            requesterUsername: username,
-            requestTime:       now,
-            status:            'pending',
-            rootDomainUsed:    currentDisplayRootDomain // Store the root domain used for this request
-          });
+                // Save the request for this specific subdomain and root domain
+                this.globalBot.saveDomainRequest({
+                    domain:            fullDomainForDisplay,
+                    subdomain:         cleanSd,
+                    requesterId:       chatId,
+                    requesterUsername: username,
+                    requestTime:       now,
+                    status:            'pending',
+                    rootDomainUsed:    targetRootDomain // Store the specific root domain for this request
+                });
 
-          results.push(`\`\`\`✅ Request Wildcard ${this.escapeMarkdownV2(fullDomainForDisplay)} berhasil dikirim!\`\`\``);
+                results.push(`\`\`\`✅ Request Wildcard ${this.escapeMarkdownV2(fullDomainForDisplay)} berhasil dikirim!\`\`\``);
 
-          // Notify the owner
-          if (this.ownerId !== chatId) {
-            await this.sendMessage(this.ownerId,
-              `📬 Permintaan subdomain baru!
+                // Notify the owner (only if not the owner making the request)
+                if (this.ownerId !== chatId) {
+                    await this.sendMessage(this.ownerId,
+                        `📬 Permintaan subdomain baru!
 🔗 Domain: ${this.escapeMarkdownV2(fullDomainForDisplay)}
 👤 Pengguna: @${this.escapeMarkdownV2(username)} (ID: ${this.escapeMarkdownV2(chatId.toString())})
 📅 Waktu: ${this.escapeMarkdownV2(now)}`,
-              { parse_mode: 'MarkdownV2' }
-            );
-          }
-        }
-      }
+                        { parse_mode: 'MarkdownV2' }
+                    );
+                }
+            }
+        } // End of loop for targetRootDomain
+      } // End of loop for subdomains
 
       await this.sendMessage(chatId, results.join('\n\n'), { parse_mode: 'Markdown' });
       return new Response('OK', { status: 200 });
@@ -372,7 +370,7 @@ support.zoom.us
         } else {
             // If it doesn't match a registered root domain, assume it's a subdomain for the active root domain
             sd = d; // Assume input is just the subdomain, e.g., "mywildcard"
-            targetRootDomainForDeletion = currentDisplayRootDomain;
+            targetRootDomainForDeletion = this.globalBot.activeRootDomain; // Fallback to active
         }
 
         const fullDomainForDisplay = `${sd}.${targetRootDomainForDeletion}`; // For message display
@@ -499,7 +497,7 @@ support.zoom.us
       if (!req) {
         await this.sendMessage(chatId, `⚠️ Tidak ada request pending untuk subdomain *${this.escapeMarkdownV2(sd)}*.`, { parse_mode: 'Markdown' });
       } else {
-        this.globalBot.updateRequestStatus(req.subdomain, 'rejected', req.rootDomainUsed);
+        this.globalBot.updateRequestStatus(sd, 'rejected', req.rootDomainUsed);
         await this.sendMessage(chatId,
           "```\n❌ Wildcard " + this.escapeMarkdownV2(fullDomainForDisplay) + " telah ditolak.\n```",
           { parse_mode: 'Markdown' });
