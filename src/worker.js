@@ -62,20 +62,24 @@ export default {
 
       const serviceName = 'joss';
 
-      // --- Perubahan dimulai di sini ---
-      let rootDomain;
-      const host = request.headers.get('Host');
+      // --- Perubahan di sini ---
+      // Definisikan kedua root domain
+      const rootDomains = ['krikkrik.tech', 'krikkriks.live'];
 
-      if (host.includes('krikkrik.tech')) {
-        rootDomain = 'krikkrik.tech';
-      } else if (host.includes('krikkriks.live')) {
-        rootDomain = 'krikkriks.live';
+      // Contoh logika untuk memilih domain:
+      // Anda bisa menggunakan header request, path URL, atau bahkan secara acak.
+      // Untuk contoh ini, kita akan memilih 'krikkrik.tech' sebagai default.
+      // Jika Anda ingin memilih 'krikkriks.live' berdasarkan kondisi tertentu,
+      // Anda bisa menambahkan logika di sini.
+      let selectedRootDomain;
+      const host = request.headers.get('host');
+
+      if (host && host.includes(rootDomains[1])) { // Cek apakah host mengandung domain kedua
+        selectedRootDomain = `joss.${rootDomains[1]}`;
       } else {
-        // Handle case where host is neither of the expected domains,
-        // you might want to set a default or return an error
-        return new Response('Domain not recognized', { status: 400 });
+        selectedRootDomain = `joss.${rootDomains[0]}`;
       }
-      // --- Perubahan berakhir di sini ---
+      // --- Akhir Perubahan ---
 
       const globalBot = new KonstantaGlobalbot({
         apiKey,
@@ -83,7 +87,7 @@ export default {
         zoneID,
         apiEmail,
         serviceName,
-        rootDomain, // rootDomain akan dipilih berdasarkan host
+        rootDomain: selectedRootDomain, // Gunakan domain yang sudah dipilih
       });
 
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId, globalBot);
