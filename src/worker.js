@@ -20,7 +20,7 @@ export default {
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
-      // Decode API Key, Account ID, Zone ID, and API Email parts
+      // Decode API Key, Account ID, and API Email parts
       // It's highly recommended to store these as Environment Variables in Cloudflare Workers
       const partsApiKey = [
         'MDI4NDYy',
@@ -44,17 +44,6 @@ export default {
       const ngasalAccountID = partsAccountID.join('');
       const accountID = atob(ngasalAccountID);
 
-      const partsZoneID = [
-        'ZDMzYTcx',
-        'YzI0YmY5',
-        'YzQ2ZDYz',
-        'NGY4NjFl',
-        'NTg4YWI4',
-        'ODc=',
-      ];
-      const ngasalZoneID = partsZoneID.join('');
-      const zoneID = atob(ngasalZoneID); // This assumes both root domains are in the same zone. If not, you'll need logic to select the correct zoneID.
-
       const partsApiEmail = [
         'ZGVzYWxl',
         'a29uZzI0',
@@ -66,32 +55,42 @@ export default {
 
       const serviceName = 'joss'; // Service name used
 
-      // --- Logic to select the rootDomain based on the request host ---
-      const availableRootDomains = ['krikkrik.tech', 'krikkriks.live']; // List of all available root domains
-      let activeRootDomain;
-      const host = request.headers.get('host'); // Get the host header from the request
+      // --- PENTING: Petakan root domain ke Zone ID spesifiknya ---
+      // Pastikan Anda sudah mendapatkan Zone ID untuk krikkrik.tech DAN krikkriks.live
+      // Anda bisa menyimpannya sebagai Environment Variable di Cloudflare Worker untuk keamanan.
+      // Contoh: env.KRIKKRIK_TECH_ZONE_ID dan env.KRIKKRIKS_LIVE_ZONE_ID
+      const zoneIDs = {
+          'krikkrik.tech': env.KRIKKRIK_TECH_ZONE_ID, // Ganti dengan Zone ID krikkrik.tech Anda
+          'krikkriks.live': env.KRIKKRIKS_LIVE_ZONE_ID // Ganti dengan Zone ID krikkriks.live Anda
+      };
 
-      // Determine the active domain based on the host
-      // This is crucial for how the bot responds to commands
-      // and which root domain is considered 'primary' for a given interaction.
-      if (host && host.includes(availableRootDomains[1])) {
-        activeRootDomain = availableRootDomains[1]; // Select krikkriks.live if its part of the host
+      const availableRootDomains = Object.keys(zoneIDs); // Ambil daftar domain dari keys zoneIDs
+
+      // Tentukan activeRootDomain berdasarkan host dari request webhook saat ini
+      let activeRootDomain;
+      const host = request.headers.get('host');
+      if (host && host.includes('krikkriks.live')) {
+        activeRootDomain = 'krikkriks.live';
+      } else if (host && host.includes('krikkrik.tech')) {
+        activeRootDomain = 'krikkrik.tech';
       } else {
-        activeRootDomain = availableRootDomains[0]; // Default to krikkrik.tech
+        // Fallback jika host tidak cocok, bisa default ke yang pertama atau tangani error
+        activeRootDomain = availableRootDomains[0]; 
+        console.warn(`Host "${host}" tidak cocok dengan domain root yang tersedia. Menggunakan fallback: ${activeRootDomain}`);
       }
       
-      // Initialize KonstantaGlobalbot with the determined activeRootDomain and all availableRootDomains
+      // Inisialisasi KonstantaGlobalbot dengan activeRootDomain, availableRootDomains, dan map zoneIDs
       const globalBot = new KonstantaGlobalbot({
         apiKey,
         accountID,
-        zoneID,
+        zoneIDs: zoneIDs, // Teruskan map zoneIDs lengkap
         apiEmail,
         serviceName,
-        activeRootDomain: activeRootDomain,       // The root domain that the current webhook request came from
-        availableRootDomains: availableRootDomains, // All root domains supported by your bot
+        activeRootDomain: activeRootDomain,
+        availableRootDomains: availableRootDomains,
       });
 
-      // Initialize all bot instances
+      // Inisialisasi semua instance bot
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId, globalBot);
@@ -100,7 +99,7 @@ export default {
       const bot6 = new Bot6(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot7 = new Bot7(token, 'https://api.telegram.org', ownerId, globalBot);
 
-      // Run handleUpdate for each bot in parallel
+      // Jalankan handleUpdate untuk setiap bot secara paralel
       await Promise.all([
         bot1.handleUpdate(update),
         bot2.handleUpdate(update),
@@ -113,9 +112,10 @@ export default {
 
       return new Response('OK', { status: 200 });
     } catch (error) {
-      // Handle errors and return a JSON error response
+      // Tangani error dan kembalikan respons JSON error
+      console.error("Error in fetch handler:", error);
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: error.message || "An unexpected error occurred." }),
         {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
