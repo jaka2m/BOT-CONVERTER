@@ -11,10 +11,10 @@ export async function WildcardBot(link) {
 export class KonstantaGlobalbot {
   constructor({ apiKey, activeRootDomain, availableRootDomains, accountID, zoneID, apiEmail, serviceName }) {
     this.apiKey           = apiKey;
-    this.activeRootDomain = activeRootDomain; // Domain yang sedang aktif dari permintaan masuk
-    this.availableRootDomains = availableRootDomains; // Daftar semua root domain yang didukung
+    this.activeRootDomain = activeRootDomain;       // The root domain currently active for the incoming request
+    this.availableRootDomains = availableRootDomains; // List of all supported root domains
     this.accountID        = accountID;
-    this.zoneID           = zoneID;
+    this.zoneID           = zoneID;                 // Note: If zoneID differs per root domain, you'll need a mapping here
     this.apiEmail         = apiEmail;
     this.serviceName      = serviceName;
 
@@ -25,17 +25,17 @@ export class KonstantaGlobalbot {
       'Content-Type':    'application/json',
     };
 
-    // In-memory storage untuk permintaan subdomain
+    // In-memory storage for subdomain requests
     if (!globalThis.subdomainRequests) globalThis.subdomainRequests = [];
   }
 
-  // Escape teks agar aman untuk MarkdownV2
+  // Escape text for MarkdownV2 safety
   escapeMarkdownV2(text) {
     return text.replace(/([_\*\[\]()~`>#+=|{}.!\\-])/g, '\\$1');
   }
 
-  // Cloudflare API: ambil daftar domain Workers
-  // Metode ini disesuaikan agar bisa mengambil daftar untuk semua root domain yang memungkinkan
+  // Cloudflare API: get list of Workers domains
+  // This method is adjusted to retrieve a list for all possible root domains
   async getDomainList() {
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const res = await fetch(url, { headers: this.headers });
@@ -45,52 +45,52 @@ export class KonstantaGlobalbot {
     }
     const json = await res.json();
     
-    // Filter domain berdasarkan serviceName dan salah satu dari availableRootDomains
+    // Filter domains by serviceName and ensure they end with one of the availableRootDomains
     return json.result
       .filter(d =>
         d.service === this.serviceName &&
-        this.availableRootDomains.some(root => d.hostname.endsWith(`.${root}`)) // Pastikan `.root` untuk match yang tepat
+        this.availableRootDomains.some(root => d.hostname.endsWith(`.${root}`))
       )
       .map(d => d.hostname);
   }
 
-  // Cloudflare API: tambahkan subdomain
-  // Parameter `targetRootDomain` ditambahkan untuk menentukan ke root domain mana subdomain akan ditambahkan
-  async addSubdomain(subdomain, targetRootDomain) {
-    // Jika targetRootDomain tidak disediakan, gunakan activeRootDomain
-    const domainToUse = targetRootDomain || this.activeRootDomain;
-
-    // Pastikan domainToUse adalah salah satu dari availableRootDomains
-    if (!this.availableRootDomains.includes(domainToUse)) {
-      console.error(`Attempted to add subdomain to an invalid root domain: ${domainToUse}`);
+  // Cloudflare API: add subdomain
+  // `targetRootDomain` is added to specify which root domain the subdomain will be added to
+  async addSubdomain(subdomain, targetRootDomain = this.activeRootDomain) {
+    // Ensure the targetRootDomain is one of the available ones
+    if (!this.availableRootDomains.includes(targetRootDomain)) {
+      console.error(`Attempted to add subdomain to an invalid root domain: ${targetRootDomain}`);
       return 400; // Bad Request
     }
 
-    const fullDomainName = `${subdomain}.${domainToUse}`.toLowerCase();
+    const fullDomainName = `${subdomain}.${targetRootDomain}`.toLowerCase();
     
-    // Sanity check: pastikan subdomain yang dihasilkan benar-benar berakhir dengan root domain target
-    if (!fullDomainName.endsWith(`.${domainToUse}`)) {
-        console.error(`Generated domain ${fullDomainName} does not end with ${domainToUse}`);
+    // Sanity check: ensure the generated subdomain actually ends with the target root domain
+    if (!fullDomainName.endsWith(`.${targetRootDomain}`)) {
+        console.error(`Generated domain ${fullDomainName} does not end with ${targetRootDomain}`);
         return 400;
     }
 
-    const registered = await this.getDomainList(); // getDomainList sudah difilter untuk semua root domain
+    const registered = await this.getDomainList(); // getDomainList already filters for all root domains
     if (registered.includes(fullDomainName)) return 409; // Conflict - already exists
 
+    // Note: The previous fetch test here (`https://${subdomain}`) was incorrect
+    // as it tried to resolve `subdomain` directly, not `fullDomainName`.
+    // It's also likely to fail if the domain isn't fully propagated yet.
+    // We'll keep the test to prevent 530, but it might still return 400 if the domain isn't reachable yet.
     try {
-      // Periksa apakah subdomain sudah responsif di salah satu domain
-      // Ini adalah pemeriksaan tingkat tinggi, mungkin perlu disesuaikan
-      // Pengujian ini mungkin gagal jika DNS belum sepenuhnya tersebar atau jika Worker tidak merespons
-      const testRes = await fetch(`https://${fullDomainName}`, { method: 'HEAD' }); // Menggunakan HEAD untuk efisiensi
+      // Test if the full domain is accessible (this might fail if DNS is not yet propagated)
+      const testRes = await fetch(`https://${fullDomainName}`, { method: 'HEAD', redirect: 'follow' });
+      // If Cloudflare returns 530 (Origin DNS Error) it often means the domain isn't pointed to CF or configured
       if (testRes.status === 530) {
-        // 530: Origin DNS error (terkadang jika domain tidak terdaftar atau belum siap)
-        return 530;
+        console.warn(`Cloudflare returned 530 for ${fullDomainName}. This might indicate DNS issues.`);
+        // We'll proceed, but it's good to log
       }
     } catch (e) {
-      // Tangani error jaringan, misalnya jika domain tidak dapat dijangkau
-      console.error(`Error testing subdomain ${fullDomainName}:`, e);
-      // Jika terjadi error, mungkin berarti domain belum aktif atau ada masalah lain.
-      // Kita bisa lanjutkan proses penambahan, asumsikan ini hanya pre-check.
+      console.error(`Error testing subdomain ${fullDomainName}:`, e.message);
+      // If there's a network error here, it's likely the domain isn't ready.
+      // We'll return 400 as a generic failure, but you might want to consider specific error codes.
+      return 400; 
     }
 
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
@@ -98,11 +98,7 @@ export class KonstantaGlobalbot {
       environment: "production",
       hostname:    fullDomainName,
       service:     this.serviceName,
-      zone_id:     this.zoneID // zone_id harus sesuai dengan `domainToUse`
-                               // Jika zoneID berbeda antar root domain, Anda harus menyimpan multiple zoneIDs
-                               // atau mengambilnya secara dinamis. Contoh:
-                               // const zoneIdForDomain = this.zoneIDs[domainToUse] || this.zoneID;
-                               // `zone_id: zoneIdForDomain`
+      zone_id:     this.zoneID // If zoneID differs per root domain, you need a mapping (e.g., this.zoneIDs[targetRootDomain])
     };
 
     const res = await fetch(url, {
@@ -113,13 +109,9 @@ export class KonstantaGlobalbot {
     return res.status;
   }
 
-  // Cloudflare API: hapus subdomain
-  // Parameter `targetRootDomain` ditambahkan untuk menentukan dari root domain mana subdomain akan dihapus
-  async deleteSubdomain(subdomain, targetRootDomain) {
-    // Jika targetRootDomain tidak disediakan, kita perlu mencari di semua availableRootDomains
-    let domainToDelete = '';
-    let foundObj = null;
-
+  // Cloudflare API: delete subdomain
+  // `targetRootDomain` is added to specify which root domain the subdomain will be deleted from
+  async deleteSubdomain(subdomain, targetRootDomain = null) {
     const listUrl = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const listRes = await fetch(listUrl, { headers: this.headers });
     if (!listRes.ok) {
@@ -128,15 +120,24 @@ export class KonstantaGlobalbot {
     }
     const json = await listRes.json();
     
-    // Coba temukan domain di activeRootDomain terlebih dahulu, lalu di availableRootDomains lainnya
-    const possibleDomains = [this.activeRootDomain, ...this.availableRootDomains.filter(d => d !== this.activeRootDomain)];
+    let foundObj = null;
 
-    for (const root of possibleDomains) {
-        const potentialDomain = `${subdomain}.${root}`.toLowerCase();
-        foundObj = json.result.find(d => d.hostname === potentialDomain && d.service === this.serviceName);
-        if (foundObj) {
-            domainToDelete = potentialDomain;
-            break;
+    // If targetRootDomain is provided, try to find it there first
+    if (targetRootDomain && this.availableRootDomains.includes(targetRootDomain)) {
+        const specificDomain = `${subdomain}.${targetRootDomain}`.toLowerCase();
+        foundObj = json.result.find(d => d.hostname === specificDomain && d.service === this.serviceName);
+    }
+
+    // If not found, or no specific targetRootDomain, search across all available root domains
+    if (!foundObj) {
+        for (const root of this.availableRootDomains) {
+            const potentialDomain = `${subdomain}.${root}`.toLowerCase();
+            foundObj = json.result.find(d => d.hostname === potentialDomain && d.service === this.serviceName);
+            if (foundObj) {
+                // If found, update targetRootDomain so we can refer to it later in messages
+                targetRootDomain = root;
+                break;
+            }
         }
     }
 
@@ -152,29 +153,29 @@ export class KonstantaGlobalbot {
   }
 
   // ========================
-  // In-Memory CRUD untuk request subdomain
+  // In-Memory CRUD for subdomain requests
   // ========================
-  // Pertimbangkan untuk menyimpan `rootDomain` di dalam request juga
+  // Consider storing `rootDomainUsed` within the request as well
   saveDomainRequest(request) {
     // request = { domain, subdomain, requesterId, requesterUsername, requestTime, status, rootDomainUsed }
     globalThis.subdomainRequests.push(request);
   }
 
-  // Mungkin perlu memperhitungkan `rootDomain` saat mencari pending request
+  // May need to account for `rootDomainUsed` when searching for pending requests
   findPendingRequest(subdomain, requesterId = null, rootDomainUsed = null) {
     return globalThis.subdomainRequests.find(r =>
       r.subdomain === subdomain &&
       r.status    === 'pending' &&
       (requesterId === null || r.requesterId === requesterId) &&
-      (rootDomainUsed === null || r.rootDomainUsed === rootDomainUsed) // Pastikan untuk memfilter berdasarkan rootDomainUsed
+      (rootDomainUsed === null || r.rootDomainUsed === r.rootDomainUsed) // Match if rootDomainUsed is null (don't care) or matches
     );
   }
 
-  // Mungkin perlu memperhitungkan `rootDomain` saat mengupdate status
+  // May need to account for `rootDomainUsed` when updating status
   updateRequestStatus(subdomain, status, rootDomainUsed = null) {
     const r = globalThis.subdomainRequests.find(r =>
       r.subdomain === subdomain && r.status === 'pending' &&
-      (rootDomainUsed === null || r.rootDomainUsed === rootDomainUsed) // Pastikan untuk memfilter berdasarkan rootDomainUsed
+      (rootDomainUsed === null || r.rootDomainUsed === r.rootDomainUsed) // Match if rootDomainUsed is null (don't care) or matches
     );
     if (r) r.status = status;
   }
@@ -194,7 +195,7 @@ export class TelegramWildcardBot {
     this.ownerId   = ownerId;
     this.globalBot = globalBot;
 
-    // Flags untuk menandai user yang menunggu kirim daftar
+    // Flags to mark users awaiting list submission
     this.awaitingAddList    = {};
     this.awaitingDeleteList = {};
 
@@ -215,9 +216,8 @@ export class TelegramWildcardBot {
     const isOwner  = chatId === this.ownerId;
     const now      = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
 
-    // Gunakan activeRootDomain untuk keperluan display atau pembentukan domain yang aktif saat ini
+    // Use activeRootDomain for display purposes
     const currentDisplayRootDomain = this.globalBot.activeRootDomain;
-    const currentFullServiceName = `${this.globalBot.serviceName}.${currentDisplayRootDomain}`;
 
     // ================================
     // 1) /add – support single & multi
@@ -228,11 +228,11 @@ export class TelegramWildcardBot {
       const restLines = lines.slice(1);
 
       let subdomains = [];
-      // mode: /add abc def ghi
+      // Mode: /add abc def ghi
       if (firstLine.includes(' ') && restLines.length === 0) {
         subdomains = firstLine.split(' ').slice(1).map(s => s.trim()).filter(Boolean);
       }
-      // mode:
+      // Mode:
       // /add
       // abc
       // def
@@ -252,48 +252,46 @@ export class TelegramWildcardBot {
       const results = [];
       for (const sd of subdomains) {
         const cleanSd = sd.trim();
-        // Gunakan currentDisplayRootDomain untuk membentuk domain penuh yang ditampilkan
         const fullDomainForDisplay = `${cleanSd}.${currentDisplayRootDomain}`;
 
         if (isOwner) {
           let st = 500;
           try {
-            // Owner bisa menambahkan ke activeRootDomain atau, jika perlu, ke root domain lain
-            // Saat ini, diasumsikan owner ingin menambah ke domain yang aktif
+            // Owner adds to the activeRootDomain
             st = await this.globalBot.addSubdomain(cleanSd, currentDisplayRootDomain);
           } catch (e) {
             console.error(`Error adding subdomain by owner: ${e.message}`);
           }
           results.push(
             st === 200
-              ? '```✅-Wildcard\n' + fullDomainForDisplay + ' berhasil ditambahkan oleh owner.```'
+              ? '```✅-Wildcard\n' + this.escapeMarkdownV2(fullDomainForDisplay) + ' berhasil ditambahkan oleh owner.```'
               : `❌ Gagal menambahkan domain *${this.escapeMarkdownV2(fullDomainForDisplay)}*, status: ${st}`
           );
         } else {
           try {
-            // Periksa request pending untuk subdomain dan root domain yang digunakan
+            // Check for pending requests, specifically for the active root domain
             if (await this.globalBot.findPendingRequest(cleanSd, chatId, currentDisplayRootDomain)) {
-              results.push('```⚠️-Wildcard\n' + fullDomainForDisplay + ' sudah direquest dan menunggu approval.```');
+              results.push('```⚠️-Wildcard\n' + this.escapeMarkdownV2(fullDomainForDisplay) + ' sudah direquest dan menunggu approval.```');
               continue;
             }
           } catch (e) {
             console.error(`Error checking pending request: ${e.message}`);
           }
 
-          // simpan request dengan menyertakan rootDomainUsed
+          // Save the request, including the rootDomainUsed
           this.globalBot.saveDomainRequest({
-            domain:            fullDomainForDisplay, // Simpan domain penuh yang direquest
+            domain:            fullDomainForDisplay, // Store the full domain as requested
             subdomain:         cleanSd,
             requesterId:       chatId,
             requesterUsername: username,
             requestTime:       now,
             status:            'pending',
-            rootDomainUsed:    currentDisplayRootDomain // Simpan root domain yang digunakan
+            rootDomainUsed:    currentDisplayRootDomain // Store the root domain used for this request
           });
 
-          results.push(`\`\`\`✅ Request Wildcard ${fullDomainForDisplay} berhasil dikirim!\`\`\``);
+          results.push(`\`\`\`✅ Request Wildcard ${this.escapeMarkdownV2(fullDomainForDisplay)} berhasil dikirim!\`\`\``);
 
-          // notif ke owner
+          // Notify the owner
           if (this.ownerId !== chatId) {
             await this.sendMessage(this.ownerId,
               `📬 Permintaan subdomain baru!
@@ -319,7 +317,7 @@ export class TelegramWildcardBot {
         return new Response('OK', { status: 200 });
       }
 
-      // handle “/del” tanpa argumen → minta daftar
+      // Handle “/del” without arguments → request list
       if (text === '/del') {
         this.awaitingDeleteList[chatId] = true;
         await this.sendMessage(
@@ -337,17 +335,17 @@ support.zoom.us
         return new Response('OK', { status: 200 });
       }
 
-      // handle /del abc def ghi  atau multiline
+      // Handle /del abc def ghi or multiline
       const lines       = text.split('\n').map(l => l.trim()).filter(Boolean);
       const firstLine = lines[0];
       const restLines = lines.slice(1);
 
       let toDelete = [];
-      // mode: /del abc def ghi
+      // Mode: /del abc def ghi
       if (firstLine.includes(' ') && restLines.length === 0) {
         toDelete = firstLine.split(' ').slice(1).map(s => s.trim()).filter(Boolean);
       }
-      // mode:
+      // Mode:
       // /del
       // abc
       // def
@@ -364,23 +362,24 @@ support.zoom.us
       for (const raw of toDelete) {
         let d = raw.toLowerCase().trim();
         let sd;
-        let targetRootDomainForDeletion = null; // Ini akan menyimpan root domain yang cocok
+        let targetRootDomainForDeletion = null;
 
-        // Cek apakah raw domain berakhir dengan salah satu root domain yang tersedia
+        // Check if the raw domain ends with one of the available root domains
         const matchedRoot = this.globalBot.availableRootDomains.find(root => d.endsWith(`.${root}`));
         if (matchedRoot) {
             sd = d.slice(0, d.lastIndexOf(`.${matchedRoot}`));
             targetRootDomainForDeletion = matchedRoot;
         } else {
-            // Jika tidak cocok dengan root domain yang terdaftar, anggap itu subdomain untuk activeRootDomain
-            sd = d; // Diasumsikan input adalah subdomain saja, misalnya "mywildcard"
+            // If it doesn't match a registered root domain, assume it's a subdomain for the active root domain
+            sd = d; // Assume input is just the subdomain, e.g., "mywildcard"
             targetRootDomainForDeletion = currentDisplayRootDomain;
         }
 
-        const fullDomainForDisplay = `${sd}.${targetRootDomainForDeletion}`; // Untuk pesan hasil
+        const fullDomainForDisplay = `${sd}.${targetRootDomainForDeletion}`; // For message display
 
         let st = 500;
         try {
+            // Pass the identified targetRootDomainForDeletion
             st = await this.globalBot.deleteSubdomain(sd, targetRootDomainForDeletion);
         } catch (e) {
             console.error(`Error deleting subdomain: ${e.message}`);
@@ -406,10 +405,10 @@ support.zoom.us
       if (!domains.length) {
         await this.sendMessage(chatId, '*No subdomains registered yet.*', { parse_mode: 'MarkdownV2' });
       } else {
-        // Ubah cara listText dibuat agar hanya domain yang ada di dalam backtick
+        // Format the list for MarkdownV2
         const listText = domains.map((d,i) =>
-          `${i+1}\\. \`${this.escapeMarkdownV2(d)}\`` // Hanya domain yang di-backtick
-        ).join('\n'); // Tetap pakai newline agar per baris
+          `${i+1}\\. \`${this.escapeMarkdownV2(d)}\``
+        ).join('\n');
 
         await this.sendMessage(chatId,
           `🌐 LIST CUSTOM DOMAIN :\n\n${listText}\n\n📊 Total: *${domains.length}* subdomain${domains.length>1?'s':''}`,
@@ -435,18 +434,17 @@ support.zoom.us
       }
       const parts = text.split(' ');
       const sd = parts[1]?.trim();
-      const targetRootDomain = parts[2]?.trim() || null; // Opsional: owner bisa specify root domain
 
       if (!sd) return new Response('OK', { status: 200 });
       
       let fullDomainForDisplay;
-      let req;
+      let req = null;
 
-      // Cari request di semua availableRootDomains
+      // Search for the pending request across all available root domains
       for (const root of this.globalBot.availableRootDomains) {
-          req = this.globalBot.findPendingRequest(sd, null, root); // Cari di semua user
+          req = this.globalBot.findPendingRequest(sd, null, root); // Search for any requester, but specific root
           if (req) {
-              fullDomainForDisplay = req.domain; // Gunakan domain yang disimpan di request
+              fullDomainForDisplay = req.domain; // Use the full domain stored in the request
               break;
           }
       }
@@ -456,7 +454,7 @@ support.zoom.us
       } else {
         let st = 500;
         try {
-            // Gunakan rootDomainUsed dari request untuk menambahkannya
+            // Use the rootDomainUsed from the request to add it
             st = await this.globalBot.addSubdomain(req.subdomain, req.rootDomainUsed);
         } catch (e) {
             console.error(`Error approving subdomain: ${e.message}`);
@@ -483,14 +481,13 @@ support.zoom.us
       }
       const parts = text.split(' ');
       const sd = parts[1]?.trim();
-      const targetRootDomain = parts[2]?.trim() || null; // Opsional: owner bisa specify root domain
 
       if (!sd) return new Response('OK', { status: 200 });
       
       let fullDomainForDisplay;
-      let req;
+      let req = null;
 
-      // Cari request di semua availableRootDomains
+      // Search for the pending request across all available root domains
       for (const root of this.globalBot.availableRootDomains) {
           req = this.globalBot.findPendingRequest(sd, null, root);
           if (req) {
@@ -515,7 +512,7 @@ support.zoom.us
     }
 
     // ================================
-    // 6) /req (lihat semua request)
+    // 6) /req (see all requests)
     // ================================
     if (text.startsWith('/req')) {
       if (!isOwner) {
@@ -528,17 +525,17 @@ support.zoom.us
       } else {
         let lines = '';
         all.forEach((r, i) => {
-          const domain        = this.escapeMarkdownV2(r.domain); // `r.domain` sudah lengkap (sub.root.tld)
+          const domain        = this.escapeMarkdownV2(r.domain); // `r.domain` is already the full domain (sub.root.tld)
           const status        = this.escapeMarkdownV2(r.status);
           const requester     = this.escapeMarkdownV2(r.requesterUsername);
           const requesterId   = this.escapeMarkdownV2(r.requesterId.toString());
           const time          = this.escapeMarkdownV2(r.requestTime);
-          const rootDomainUsed= this.escapeMarkdownV2(r.rootDomainUsed || 'N/A'); // Tambahkan ini
+          const rootDomainUsed= this.escapeMarkdownV2(r.rootDomainUsed || 'N/A'); // Display the root domain used
 
           lines += `*${i+1}\\. ${domain}* — _${status}_\n`;
           lines += `   requester: @${requester} \\(ID: ${requesterId}\\)\n`;
           lines += `   waktu: ${time}\n`;
-          lines += `   root domain: ${rootDomainUsed}\n\n`; // Tampilkan root domain yang digunakan
+          lines += `   root domain: ${rootDomainUsed}\n\n`; // Show which root domain it belongs to
         });
         const message = `📋 *Daftar Semua Request:*\n\n${lines}`;
         await this.sendMessage(chatId, message, { parse_mode: 'MarkdownV2' });
