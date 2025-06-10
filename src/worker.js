@@ -8,6 +8,7 @@ import { Converterbot as Bot7 } from './converter/converter.js';
 
 export default {
   async fetch(request, env) {
+    // Hanya izinkan permintaan POST
     if (request.method !== 'POST') {
       return new Response('Method Not Allowed', { status: 405 });
     }
@@ -15,9 +16,12 @@ export default {
     try {
       const update = await request.json();
 
+      // Ambil token bot dan ID pemilik dari Environment Variables
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
+      // Dekode bagian-bagian API Key, Account ID, Zone ID, dan API Email
+      // Sangat disarankan untuk menyimpan ini sebagai Environment Variables di Cloudflare Workers
       const partsApiKey = [
         'MDI4NDYy',
         'ZTg1MTc3',
@@ -60,36 +64,37 @@ export default {
       const ngasalApiEmail = partsApiEmail.join('');
       const apiEmail = atob(ngasalApiEmail);
 
-      const serviceName = 'joss';
+      const serviceName = 'joss'; // Nama layanan yang digunakan
 
-      // --- Perubahan di sini ---
-      // Definisikan kedua root domain
-      const rootDomains = ['krikkrik.tech', 'krikkriks.live'];
-
-      // Contoh logika untuk memilih domain:
-      // Anda bisa menggunakan header request, path URL, atau bahkan secara acak.
-      // Untuk contoh ini, kita akan memilih 'krikkrik.tech' sebagai default.
-      // Jika Anda ingin memilih 'krikkriks.live' berdasarkan kondisi tertentu,
-      // Anda bisa menambahkan logika di sini.
+      // --- Logika untuk memilih rootDomain berdasarkan request host ---
+      const rootDomains = ['krikkrik.tech', 'krikkriks.live']; // Daftar semua root domain yang tersedia
       let selectedRootDomain;
-      const host = request.headers.get('host');
+      const host = request.headers.get('host'); // Ambil header host dari permintaan
 
-      if (host && host.includes(rootDomains[1])) { // Cek apakah host mengandung domain kedua
-        selectedRootDomain = `joss.${rootDomains[1]}`;
+      // Tentukan domain aktif berdasarkan host
+      if (host && host.includes(rootDomains[1])) {
+        selectedRootDomain = rootDomains[1]; // Pilih krikkriks.live
       } else {
-        selectedRootDomain = `joss.${rootDomains[0]}`;
+        selectedRootDomain = rootDomains[0]; // Default ke krikkrik.tech
       }
-      // --- Akhir Perubahan ---
+      
+      // Penting: Pastikan `rootDomain` yang diteruskan ke `KonstantaGlobalbot` adalah root domain dasar,
+      // bukan subdomain penuh seperti "joss.krikkrik.tech"
+      const currentRootDomain = selectedRootDomain;
 
+
+      // Inisialisasi KonstantaGlobalbot dengan rootDomain yang telah dipilih
       const globalBot = new KonstantaGlobalbot({
         apiKey,
         accountID,
         zoneID,
         apiEmail,
         serviceName,
-        rootDomain: selectedRootDomain, // Gunakan domain yang sudah dipilih
+        activeRootDomain: currentRootDomain, // root domain yang sedang aktif
+        availableRootDomains: rootDomains,   // semua root domain yang didukung
       });
 
+      // Inisialisasi semua instance bot
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId, globalBot);
@@ -98,6 +103,7 @@ export default {
       const bot6 = new Bot6(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot7 = new Bot7(token, 'https://api.telegram.org', ownerId, globalBot);
 
+      // Jalankan handleUpdate untuk setiap bot secara paralel
       await Promise.all([
         bot1.handleUpdate(update),
         bot2.handleUpdate(update),
@@ -110,6 +116,7 @@ export default {
 
       return new Response('OK', { status: 200 });
     } catch (error) {
+      // Tangani error dan kembalikan respons error JSON
       return new Response(
         JSON.stringify({ error: error.message }),
         {
