@@ -8,7 +8,6 @@ import { Converterbot as Bot7 } from './converter/converter.js';
 
 export default {
   async fetch(request, env) {
-    // Only allow POST requests
     if (request.method !== 'POST') {
       return new Response('Method Not Allowed', { status: 405 });
     }
@@ -16,12 +15,9 @@ export default {
     try {
       const update = await request.json();
 
-      // Get bot token and owner ID from Environment Variables
       const token = env.TELEGRAM_BOT_TOKEN;
       const ownerId = Number(env.OWNER_ID);
 
-      // Decode API Key, Account ID, and API Email parts
-      // It's highly recommended to store these as Environment Variables in Cloudflare Workers
       const partsApiKey = [
         'MDI4NDYy',
         'ZTg1MTc3',
@@ -44,6 +40,17 @@ export default {
       const ngasalAccountID = partsAccountID.join('');
       const accountID = atob(ngasalAccountID);
 
+      const partsZoneID = [
+        'ZDMzYTcx',
+        'YzI0YmY5',
+        'YzQ2ZDYz',
+        'NGY4NjFl',
+        'NTg4YWI4',
+        'ODc=',
+      ];
+      const ngasalZoneID = partsZoneID.join('');
+      const zoneID = atob(ngasalZoneID);
+
       const partsApiEmail = [
         'ZGVzYWxl',
         'a29uZzI0',
@@ -53,44 +60,21 @@ export default {
       const ngasalApiEmail = partsApiEmail.join('');
       const apiEmail = atob(ngasalApiEmail);
 
-      const serviceName = 'joss'; // Service name used
+      // Mengganti serviceName menjadi "joss"
+      const serviceName = 'joss';
 
-      // --- PENTING: Petakan root domain ke Zone ID spesifiknya ---
-      // Pastikan Anda sudah mendapatkan Zone ID untuk krikkrik.tech DAN krikkriks.live
-      // Anda bisa menyimpannya sebagai Environment Variable di Cloudflare Worker untuk keamanan.
-      // Contoh: env.KRIKKRIK_TECH_ZONE_ID dan env.KRIKKRIKS_LIVE_ZONE_ID
-      const zoneIDs = {
-          'krikkrik.tech': env.KRIKKRIK_TECH_ZONE_ID, // Ganti dengan Zone ID krikkrik.tech Anda
-          'krikkriks.live': env.KRIKKRIKS_LIVE_ZONE_ID // Ganti dengan Zone ID krikkriks.live Anda
-      };
+      // Mengganti rootDomain menjadi "joss.krikkrik.tech"
+      const rootDomain = 'joss.krikkrik.tech';
 
-      const availableRootDomains = Object.keys(zoneIDs); // Ambil daftar domain dari keys zoneIDs
-
-      // Tentukan activeRootDomain berdasarkan host dari request webhook saat ini
-      let activeRootDomain;
-      const host = request.headers.get('host');
-      if (host && host.includes('krikkriks.live')) {
-        activeRootDomain = 'krikkriks.live';
-      } else if (host && host.includes('krikkrik.tech')) {
-        activeRootDomain = 'krikkrik.tech';
-      } else {
-        // Fallback jika host tidak cocok, bisa default ke yang pertama atau tangani error
-        activeRootDomain = availableRootDomains[0]; 
-        console.warn(`Host "${host}" tidak cocok dengan domain root yang tersedia. Menggunakan fallback: ${activeRootDomain}`);
-      }
-      
-      // Inisialisasi KonstantaGlobalbot dengan activeRootDomain, availableRootDomains, dan map zoneIDs
       const globalBot = new KonstantaGlobalbot({
         apiKey,
         accountID,
-        zoneIDs: zoneIDs, // Teruskan map zoneIDs lengkap
+        zoneID,
         apiEmail,
         serviceName,
-        activeRootDomain: activeRootDomain,
-        availableRootDomains: availableRootDomains,
+        rootDomain,
       });
 
-      // Inisialisasi semua instance bot
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot2 = new Bot2(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot3 = new Bot3(token, 'https://api.telegram.org', ownerId, globalBot);
@@ -99,7 +83,6 @@ export default {
       const bot6 = new Bot6(token, 'https://api.telegram.org', ownerId, globalBot);
       const bot7 = new Bot7(token, 'https://api.telegram.org', ownerId, globalBot);
 
-      // Jalankan handleUpdate untuk setiap bot secara paralel
       await Promise.all([
         bot1.handleUpdate(update),
         bot2.handleUpdate(update),
@@ -112,10 +95,8 @@ export default {
 
       return new Response('OK', { status: 200 });
     } catch (error) {
-      // Tangani error dan kembalikan respons JSON error
-      console.error("Error in fetch handler:", error);
       return new Response(
-        JSON.stringify({ error: error.message || "An unexpected error occurred." }),
+        JSON.stringify({ error: error.message }),
         {
           status: 500,
           headers: { 'Content-Type': 'application/json' },
