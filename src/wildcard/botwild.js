@@ -9,19 +9,20 @@ export async function WildcardBot(link) {
 // Global Constants & In-Memory Request Storage
 // ========================================
 export class KonstantaGlobalbot {
-  constructor({ apiKey, rootDomain, accountID, zoneID, apiEmail, serviceName }) {
-    this.apiKey      = apiKey;
-    this.rootDomain  = rootDomain;
-    this.accountID   = accountID;
-    this.zoneID      = zoneID;
-    this.apiEmail    = apiEmail;
-    this.serviceName = serviceName;
+  constructor({ apiKey, activeRootDomain, availableRootDomains, accountID, zoneID, apiEmail, serviceName }) {
+    this.apiKey           = apiKey;
+    this.activeRootDomain = activeRootDomain; // Domain yang sedang aktif dari permintaan masuk
+    this.availableRootDomains = availableRootDomains; // Daftar semua root domain yang didukung
+    this.accountID        = accountID;
+    this.zoneID           = zoneID;
+    this.apiEmail         = apiEmail;
+    this.serviceName      = serviceName;
 
     this.headers = {
       'Authorization': `Bearer ${this.apiKey}`,
-      'X-Auth-Email':   this.apiEmail,
-      'X-Auth-Key':     this.apiKey,
-      'Content-Type':   'application/json',
+      'X-Auth-Email':    this.apiEmail,
+      'X-Auth-Key':      this.apiKey,
+      'Content-Type':    'application/json',
     };
 
     // In-memory storage untuk permintaan subdomain
@@ -34,29 +35,50 @@ export class KonstantaGlobalbot {
   }
 
   // Cloudflare API: ambil daftar domain Workers
+  // Metode ini perlu disesuaikan agar bisa mengambil daftar untuk semua root domain yang memungkinkan
   async getDomainList() {
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const res = await fetch(url, { headers: this.headers });
     if (!res.ok) return [];
     const json = await res.json();
+    
+    // Filter domain berdasarkan serviceName dan salah satu dari availableRootDomains
     return json.result
-      .filter(d => d.service === this.serviceName)
+      .filter(d => 
+        d.service === this.serviceName &&
+        this.availableRootDomains.some(root => d.hostname.endsWith(root))
+      )
       .map(d => d.hostname);
   }
 
   // Cloudflare API: tambahkan subdomain
-  async addSubdomain(subdomain) {
-    const domain = `${subdomain}.${this.rootDomain}`.toLowerCase();
-    if (!domain.endsWith(this.rootDomain)) return 400;
+  // Parameter `targetRootDomain` ditambahkan untuk menentukan ke root domain mana subdomain akan ditambahkan
+  async addSubdomain(subdomain, targetRootDomain = this.activeRootDomain) {
+    // Pastikan targetRootDomain adalah salah satu dari availableRootDomains
+    if (!this.availableRootDomains.includes(targetRootDomain)) {
+      console.error(`Attempted to add subdomain to an invalid root domain: ${targetRootDomain}`);
+      return 400; // Bad Request
+    }
 
-    const registered = await this.getDomainList();
-    if (registered.includes(domain)) return 409;
+    const domain = `${subdomain}.${targetRootDomain}`.toLowerCase();
+    if (!domain.endsWith(targetRootDomain)) return 400; // Sanity check
+
+    const registered = await this.getDomainList(); // getDomainList sudah difilter untuk semua root domain
+    if (registered.includes(domain)) return 409; // Conflict - already exists
 
     try {
-      const testRes = await fetch(`https://${subdomain}`);
-      if (testRes.status === 530) return 530;
-    } catch {
-      return 400;
+      // Periksa apakah subdomain sudah responsif di salah satu domain
+      // Ini adalah pemeriksaan tingkat tinggi, mungkin perlu disesuaikan
+      const testRes = await fetch(`https://${domain}`);
+      if (testRes.status === 530) {
+        // 530: Origin DNS error (terkadang jika domain tidak terdaftar atau belum siap)
+        // Ini bisa menjadi indikator yang ambigu, mungkin perlu validasi DNS yang lebih baik
+        return 530; 
+      }
+    } catch (e) {
+      // Tangani error jaringan, misalnya jika domain tidak dapat dijangkau
+      console.error(`Error testing subdomain ${domain}:`, e);
+      return 400; // Bad Request atau error lain
     }
 
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
@@ -64,8 +86,17 @@ export class KonstantaGlobalbot {
       environment: "production",
       hostname:    domain,
       service:     this.serviceName,
-      zone_id:     this.zoneID
+      zone_id:     this.zoneID // zone_id harus sesuai dengan `targetRootDomain`
+                               // Jika zoneID berbeda antar root domain, Anda harus menyimpan multiple zoneIDs
+                               // atau mengambilnya secara dinamis
     };
+
+    // Catatan: Jika krikkrik.tech dan krikkriks.live memiliki Zone ID yang berbeda,
+    // Anda perlu memetakan `targetRootDomain` ke `zone_id` yang benar di sini.
+    // Untuk saat ini, saya asumsikan mereka berada di zone_id yang sama.
+    // Jika tidak, Anda perlu menambahkan properti `zoneIDs: { 'krikkrik.tech': 'ID1', 'krikkriks.live': 'ID2' }`
+    // ke konstruktor dan menggunakannya di sini: `zone_id: this.zoneIDs[targetRootDomain]`
+
     const res = await fetch(url, {
       method:  'PUT',
       headers: this.headers,
@@ -75,14 +106,21 @@ export class KonstantaGlobalbot {
   }
 
   // Cloudflare API: hapus subdomain
-  async deleteSubdomain(subdomain) {
-    const domain  = `${subdomain}.${this.rootDomain}`.toLowerCase();
+  // Parameter `targetRootDomain` ditambahkan untuk menentukan dari root domain mana subdomain akan dihapus
+  async deleteSubdomain(subdomain, targetRootDomain = this.activeRootDomain) {
+    if (!this.availableRootDomains.includes(targetRootDomain)) {
+      console.error(`Attempted to delete subdomain from an invalid root domain: ${targetRootDomain}`);
+      return 400;
+    }
+
+    const domain  = `${subdomain}.${targetRootDomain}`.toLowerCase();
     const listUrl = `https://api.cloudflare.com/client/v4/accounts/${this.accountID}/workers/domains`;
     const listRes = await fetch(listUrl, { headers: this.headers });
     if (!listRes.ok) return listRes.status;
 
     const json = await listRes.json();
-    const obj  = json.result.find(d => d.hostname === domain);
+    // Cari objek domain yang cocok (termasuk root domain yang spesifik)
+    const obj   = json.result.find(d => d.hostname === domain);
     if (!obj) return 404;
 
     const res = await fetch(`${listUrl}/${obj.id}`, {
@@ -95,22 +133,27 @@ export class KonstantaGlobalbot {
   // ========================
   // In-Memory CRUD untuk request subdomain
   // ========================
+  // Pertimbangkan untuk menyimpan `rootDomain` di dalam request juga
   saveDomainRequest(request) {
-    // request = { domain, subdomain, requesterId, requesterUsername, requestTime, status }
+    // request = { domain, subdomain, requesterId, requesterUsername, requestTime, status, rootDomainUsed }
     globalThis.subdomainRequests.push(request);
   }
 
-  findPendingRequest(subdomain, requesterId = null) {
+  // Mungkin perlu memperhitungkan `rootDomain` saat mencari pending request
+  findPendingRequest(subdomain, requesterId = null, rootDomainUsed = null) {
     return globalThis.subdomainRequests.find(r =>
       r.subdomain === subdomain &&
       r.status    === 'pending' &&
-      (requesterId === null || r.requesterId === requesterId)
+      (requesterId === null || r.requesterId === requesterId) &&
+      (rootDomainUsed === null || r.rootDomainUsed === rootDomainUsed)
     );
   }
 
-  updateRequestStatus(subdomain, status) {
+  // Mungkin perlu memperhitungkan `rootDomain` saat mengupdate status
+  updateRequestStatus(subdomain, status, rootDomainUsed = null) {
     const r = globalThis.subdomainRequests.find(r =>
-      r.subdomain === subdomain && r.status === 'pending'
+      r.subdomain === subdomain && r.status === 'pending' &&
+      (rootDomainUsed === null || r.rootDomainUsed === rootDomainUsed)
     );
     if (r) r.status = status;
   }
