@@ -12,20 +12,35 @@ export async function WildcardBot(link) {
  */
 export class GlobalBotConstants {
   constructor() {
+    // --- PENTING: SARAN KEAMANAN (ulangi dari sebelumnya) ---
     // Pastikan nilai-nilai ini diambil dari environment variables atau konfigurasi yang aman
-    // Untuk tujuan demonstrasi, saya biarkan hardcoded seperti skrip asli Anda.
+    // Untuk tujuan demonstrasi, saya biarkan hardcoded seperti skrip asli Anda,
+    // namun sekarang dalam struktur yang lebih terorganisir untuk multiple domains.
+    // --------------------------------------------------------
+
     this.apiKey = "5fae9fcb9c193ce65de4b57689a94938b708e";
-    // Mengubah rootDomain menjadi array untuk mendukung multiple domains
-    this.rootDomains = ["joss.krikkrik.tech", "joss.krikkriks.live"];
-    this.accountId = "e9930d5ca683b0461f73477050fee0c7";
-    this.zoneId = "80423e7547d2fa85e13796a1f41deced";
     this.apiEmail = "ambebalong@gmail.com";
     this.serviceName = "joss";
+
+    // Struktur baru untuk mengelola multiple root domains dengan Account ID dan Zone ID-nya
+    this.domainConfigs = [
+      {
+        rootDomain: "joss.krikkrik.tech",
+        accountId: "d7660aa2e06f4af1d5becb80c0358522", // Account ID untuk joss.krikkrik.tech
+        zoneId: "d33a71c24bf9c46d634f861e588ab887", // Zone ID untuk joss.krikkrik.tech
+      },
+      {
+        rootDomain: "joss.krikkriks.live", // Contoh root domain kedua
+        accountId: "d7660aa2e06f4af1d5becb80c0358522", // GANTI dengan Account ID yang benar untuk live
+        zoneId: "7d3291ebb2fc3d4b95e0d46c81c138f0", // GANTI dengan Zone ID yang benar untuk live
+      },
+      // Tambahkan lebih banyak objek jika ada root domain lain
+    ];
 
     this.headers = {
       Authorization: `Bearer ${this.apiKey}`,
       "X-Auth-Email": this.apiEmail,
-      "X-Auth-Key": this.apiKey, // X-Auth-Key biasanya tidak dibutuhkan jika Authorization Bearer digunakan, tapi saya pertahankan sesuai skrip asli.
+      "X-Auth-Key": this.apiKey,
       "Content-Type": "application/json",
     };
 
@@ -40,77 +55,87 @@ export class GlobalBotConstants {
    */
   escapeMarkdownV2(text) {
     // Regex yang lebih komprehensif untuk MarkdownV2
-    return text.replace(
-      /([_\*\[\]()~`>#+\-=|{}.!\\!?])/g,
-      "\\$1"
-    );
+    return text.replace(/([_\*\[\]()~`>#+\-=|{}.!\\!?])/g, "\\$1");
   }
 
   /**
-   * Mengambil daftar domain Workers dari Cloudflare.
+   * Mengambil konfigurasi domain berdasarkan root domain.
+   * @param {string} rootDomain - Root domain yang dicari.
+   * @returns {object|undefined} Objek konfigurasi domain jika ditemukan, undefined jika tidak.
+   */
+  getDomainConfig(rootDomain) {
+    return this.domainConfigs.find(config => config.rootDomain === rootDomain);
+  }
+
+  /**
+   * Mengambil daftar domain Workers dari Cloudflare untuk semua account/zone yang dikonfigurasi.
    * @returns {Promise<string[]>} Array berisi nama-nama host domain Workers.
    */
   async getWorkerDomainList() {
-    const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/workers/domains`;
-    try {
-      const response = await fetch(url, { headers: this.headers });
-      if (!response.ok) {
-        console.error(
-          `Failed to fetch worker domains: ${response.status} ${response.statusText}`
-        );
-        return [];
+    let allDomains = [];
+    for (const config of this.domainConfigs) {
+      const url = `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/workers/domains`;
+      try {
+        const response = await fetch(url, { headers: this.headers });
+        if (!response.ok) {
+          console.error(
+            `Failed to fetch worker domains for ${config.rootDomain}: ${response.status} ${response.statusText}`
+          );
+          continue; // Lanjutkan ke konfigurasi domain berikutnya
+        }
+        const data = await response.json();
+        const domainsForThisConfig = data.result
+          .filter((d) => d.service === this.serviceName)
+          .map((d) => d.hostname);
+        allDomains = allDomains.concat(domainsForThisConfig);
+      } catch (error) {
+        console.error(`Error getting worker domain list for ${config.rootDomain}:`, error);
       }
-      const data = await response.json();
-      return data.result
-        .filter((d) => d.service === this.serviceName)
-        .map((d) => d.hostname);
-    } catch (error) {
-      console.error("Error getting worker domain list:", error);
-      return [];
     }
+    return allDomains;
   }
 
   /**
    * Menambahkan subdomain ke Cloudflare Workers.
    * @param {string} subdomain - Nama subdomain yang akan ditambahkan (misalnya "test").
-   * @param {string} rootDomain - Root domain yang akan digunakan (misalnya "krikkrik.tech").
+   * @param {string} targetRootDomain - Root domain yang akan digunakan (misalnya "krikkrik.tech").
    * @returns {Promise<number>} Status code dari operasi penambahan.
    */
-  async addSubdomain(subdomain, rootDomain) {
-    const fullDomain = `${subdomain}.${rootDomain}`.toLowerCase();
+  async addSubdomain(subdomain, targetRootDomain) {
+    const domainConfig = this.getDomainConfig(targetRootDomain);
+    if (!domainConfig) {
+      console.error(`Configuration not found for root domain: ${targetRootDomain}`);
+      return 400; // Bad Request atau konfigurasi tidak ditemukan
+    }
+
+    const fullDomain = `${subdomain}.${targetRootDomain}`.toLowerCase();
 
     // Validasi dasar
-    if (!fullDomain.endsWith(`.${rootDomain}`)) {
+    if (!fullDomain.endsWith(`.${targetRootDomain}`)) {
       return 400; // Bad Request
     }
 
-    // Cek apakah sudah terdaftar
+    // Cek apakah sudah terdaftar di semua konfigurasi
     const registeredDomains = await this.getWorkerDomainList();
     if (registeredDomains.includes(fullDomain)) {
       return 409; // Conflict
     }
 
     // Coba akses subdomain untuk verifikasi awal (meskipun tidak selalu valid untuk semua kasus)
-    // Perhatikan: ini bisa memakan waktu dan mungkin tidak selalu diperlukan
     try {
       const testRes = await fetch(`https://${fullDomain}`);
-      // Jika status 530 (Origin DNS Error) atau lainnya yang mengindikasikan masalah DNS/ketersediaan
       if (testRes.status === 530) return 530;
     } catch (error) {
       console.warn(`Initial check for ${fullDomain} failed:`, error.message);
-      // Ini bisa berarti domain belum ada atau ada masalah koneksi.
-      // Kita bisa lanjutkan proses penambahan jika ini adalah yang diharapkan.
-      // Namun, jika tujuannya untuk mencegah penambahan domain yang tidak valid,
-      // maka kembalikan 400 atau 500. Saya kembalikan 400 sesuai skrip asli.
       return 400;
     }
 
-    const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/workers/domains`;
+    const url = `https://api.cloudflare.com/client/v4/accounts/${domainConfig.accountId}/workers/domains`;
     const body = {
       environment: "production",
       hostname: fullDomain,
       service: this.serviceName,
-      zone_id: this.zoneId,
+      zone_id: domainConfig.zoneId,
     };
 
     try {
@@ -129,18 +154,24 @@ export class GlobalBotConstants {
   /**
    * Menghapus subdomain dari Cloudflare Workers.
    * @param {string} subdomain - Nama subdomain yang akan dihapus (misalnya "test").
-   * @param {string} rootDomain - Root domain yang akan digunakan (misalnya "krikkrik.tech").
+   * @param {string} targetRootDomain - Root domain yang akan digunakan (misalnya "krikkrik.tech").
    * @returns {Promise<number>} Status code dari operasi penghapusan.
    */
-  async deleteSubdomain(subdomain, rootDomain) {
-    const fullDomain = `${subdomain}.${rootDomain}`.toLowerCase();
-    const listUrl = `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/workers/domains`;
+  async deleteSubdomain(subdomain, targetRootDomain) {
+    const domainConfig = this.getDomainConfig(targetRootDomain);
+    if (!domainConfig) {
+      console.error(`Configuration not found for root domain: ${targetRootDomain}`);
+      return 400; // Bad Request atau konfigurasi tidak ditemukan
+    }
+
+    const fullDomain = `${subdomain}.${targetRootDomain}`.toLowerCase();
+    const listUrl = `https://api.cloudflare.com/client/v4/accounts/${domainConfig.accountId}/workers/domains`;
 
     try {
       const listRes = await fetch(listUrl, { headers: this.headers });
       if (!listRes.ok) {
         console.error(
-          `Failed to get domain list for deletion: ${listRes.status} ${listRes.statusText}`
+          `Failed to get domain list for deletion from ${targetRootDomain}: ${listRes.status} ${listRes.statusText}`
         );
         return listRes.status;
       }
@@ -334,12 +365,14 @@ export class TelegramWildcardBot {
       const results = [];
       for (const sd of inputSubdomains) {
         const cleanSd = sd.trim();
-        let added = false;
+        let addedSuccessfully = false;
         let rootDomainUsed = "";
 
-        // Loop melalui setiap root domain yang tersedia
-        for (const rDomain of this.globalBot.rootDomains) {
+        // Loop melalui setiap konfigurasi root domain yang tersedia
+        for (const config of this.globalBot.domainConfigs) {
+          const rDomain = config.rootDomain;
           const fullDomain = `${cleanSd}.${rDomain}`;
+
           if (isOwner) {
             let status = 500;
             try {
@@ -354,9 +387,18 @@ export class TelegramWildcardBot {
                   `✅ Wildcard ${fullDomain} berhasil ditambahkan oleh owner.`
                 )
               );
-              added = true;
+              addedSuccessfully = true;
               rootDomainUsed = rDomain;
-              break; // Keluar dari loop rootDomains jika berhasil
+              break; // Keluar dari loop domainConfigs jika berhasil
+            } else if (status === 409) {
+                results.push(
+                    this.globalBot.escapeMarkdownV2(
+                        `⚠️ Wildcard ${fullDomain} sudah terdaftar.`
+                    )
+                );
+                addedSuccessfully = true; // Dianggap berhasil karena sudah ada
+                rootDomainUsed = rDomain;
+                break; // Keluar dari loop domainConfigs
             } else {
               results.push(
                 this.globalBot.escapeMarkdownV2(
@@ -372,10 +414,11 @@ export class TelegramWildcardBot {
                   `⚠️ Wildcard ${fullDomain} sudah direquest dan menunggu approval.`
                 )
               );
-              added = true;
+              addedSuccessfully = true;
               break;
             }
 
+            // Simpan permintaan
             this.globalBot.saveDomainRequest({
               domain: fullDomain,
               subdomain: cleanSd,
@@ -391,22 +434,22 @@ export class TelegramWildcardBot {
                 `✅ Permintaan Wildcard ${fullDomain} berhasil dikirim!`
               )
             );
-            added = true;
+            addedSuccessfully = true;
             rootDomainUsed = rDomain;
-            break; // Keluar dari loop rootDomains jika berhasil
+            break; // Keluar dari loop domainConfigs jika berhasil
           }
         }
-        if (!added && !isOwner) {
+        if (!addedSuccessfully && !isOwner) {
           // Jika tidak berhasil ditambahkan/direquest di root domain manapun
           results.push(
             this.globalBot.escapeMarkdownV2(
-              `⚠️ Tidak dapat memproses permintaan untuk ${cleanSd}.`
+              `⚠️ Tidak dapat memproses permintaan untuk ${cleanSd}. Pastikan subdomain valid dan root domain tersedia.`
             )
           );
         }
 
         // Notifikasi ke owner jika ada permintaan baru
-        if (!isOwner && added && rootDomainUsed) {
+        if (!isOwner && addedSuccessfully && rootDomainUsed) {
           await this.sendMessage(
             this.ownerId,
             this.globalBot.escapeMarkdownV2(
@@ -434,9 +477,9 @@ export class TelegramWildcardBot {
         return new Response("OK", { status: 200 });
       }
 
-      const inputSubdomains = this.extractSubdomainsFromText(text);
+      const inputDomains = this.extractSubdomainsFromText(text); // Menggunakan "Domains" karena bisa full domain
 
-      if (inputSubdomains.length === 0) {
+      if (inputDomains.length === 0) {
         this.awaitingDeleteList[chatId] = true;
         await this.sendMessage(
           chatId,
@@ -454,27 +497,27 @@ support.zoom.us`
       }
 
       const results = [];
-      for (const rawDomain of inputSubdomains) {
+      for (const rawDomain of inputDomains) {
         const cleanDomain = rawDomain.toLowerCase().trim();
-        let deleted = false;
+        let deletedSuccessfully = false;
 
         // Coba identifikasi root domain dari input
         let targetRootDomain = null;
         let subdomainOnly = cleanDomain;
 
-        for (const rDomain of this.globalBot.rootDomains) {
-          if (cleanDomain.endsWith(`.${rDomain}`)) {
-            targetRootDomain = rDomain;
-            subdomainOnly = cleanDomain.slice(0, cleanDomain.lastIndexOf(`.${rDomain}`));
-            break;
+        for (const config of this.globalBot.domainConfigs) {
+          if (cleanDomain.endsWith(`.${config.rootDomain}`)) {
+            targetRootDomain = config.rootDomain;
+            subdomainOnly = cleanDomain.slice(0, cleanDomain.lastIndexOf(`.${config.rootDomain}`));
+            break; // Ditemukan root domain yang cocok
           }
         }
 
         if (!targetRootDomain) {
-            results.push(
-                this.globalBot.escapeMarkdownV2(`⚠️ Domain ${cleanDomain} tidak sesuai dengan root domain terdaftar.`)
-            );
-            continue;
+          results.push(
+            this.globalBot.escapeMarkdownV2(`⚠️ Domain ${cleanDomain} tidak sesuai dengan root domain terdaftar.`)
+          );
+          continue; // Lanjut ke domain berikutnya jika root domain tidak cocok
         }
 
         let status = 500;
@@ -490,7 +533,7 @@ support.zoom.us`
               `✅ Wildcard ${cleanDomain} berhasil dihapus.`
             )
           );
-          deleted = true;
+          deletedSuccessfully = true;
         } else if (status === 404) {
           results.push(
             this.globalBot.escapeMarkdownV2(
@@ -652,7 +695,7 @@ support.zoom.us`
               continue;
           }
 
-          this.globalBot.updateRequestStatus(req.subdomain, "rejected");
+          this.globalBot.updateRequestStatus(sdInput, "rejected"); // Menggunakan sdInput karena ini yang dicari findPendingRequest
           results.push(
               this.globalBot.escapeMarkdownV2(
                   `❌ Wildcard ${req.domain} telah ditolak.`
@@ -779,24 +822,24 @@ Untuk menolak permintaan subdomain. (Misalnya, \`/reject beta\`).
   /**
    * Mengekstrak subdomain dari teks perintah, mendukung format spasi dan multiline.
    * @param {string} text - Teks perintah dari pengguna.
-   * @returns {string[]} Array berisi subdomain yang diekstrak.
+   * @returns {string[]} Array berisi subdomain/domain yang diekstrak.
    */
   extractSubdomainsFromText(text) {
     const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
     const firstLine = lines[0];
     const restLines = lines.slice(1);
 
-    let subdomains = [];
+    let items = [];
 
     // Jika perintah ada di baris pertama dan diikuti spasi (misal: /add abc def)
     if (firstLine.includes(" ")) {
-        subdomains = firstLine.split(" ").slice(1).map((s) => s.trim()).filter(Boolean);
+        items = firstLine.split(" ").slice(1).map((s) => s.trim()).filter(Boolean);
     }
 
     // Jika ada baris selanjutnya (misal: /add \n abc \n def)
     if (restLines.length > 0) {
-        subdomains = [...subdomains, ...restLines];
+        items = [...items, ...restLines];
     }
-    return subdomains;
+    return items;
   }
 }
