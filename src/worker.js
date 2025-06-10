@@ -60,11 +60,22 @@ export default {
       const ngasalApiEmail = partsApiEmail.join('');
       const apiEmail = atob(ngasalApiEmail);
 
-      // Mengganti serviceName menjadi "joss"
       const serviceName = 'joss';
 
-      // Mengganti rootDomain menjadi "joss.krikkrik.tech"
-      const rootDomain = 'joss.krikkrik.tech';
+      // --- Perubahan dimulai di sini ---
+      let rootDomain;
+      const host = request.headers.get('Host');
+
+      if (host.includes('krikkrik.tech')) {
+        rootDomain = 'krikkrik.tech';
+      } else if (host.includes('krikkriks.live')) {
+        rootDomain = 'krikkriks.live';
+      } else {
+        // Handle case where host is neither of the expected domains,
+        // you might want to set a default or return an error
+        return new Response('Domain not recognized', { status: 400 });
+      }
+      // --- Perubahan berakhir di sini ---
 
       const globalBot = new KonstantaGlobalbot({
         apiKey,
@@ -72,7 +83,7 @@ export default {
         zoneID,
         apiEmail,
         serviceName,
-        rootDomain,
+        rootDomain, // rootDomain akan dipilih berdasarkan host
       });
 
       const bot1 = new Bot1(token, 'https://api.telegram.org', ownerId, globalBot);
