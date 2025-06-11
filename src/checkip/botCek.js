@@ -77,14 +77,14 @@ Please wait while it is being processed...
         return new Response('OK', { status: 200 });
       }
 
-      const { isp, country, delay, proxyip } = data;
+      const { isp, country, delay, status } = data;
       const infoText = `\`\`\`INFORMATION
 IP     : ${ip}
 PORT   : ${port}
 ISP    : ${isp}
 Country: ${country || '-'}
 Delay  : ${delay || '-'}
-Status : ${proxyip || '-'}
+Status : ${status || '-'}
 \`\`\`
 Pilih protokol:`;
 
@@ -200,7 +200,7 @@ PORT   : ${port}
 ISP    : ${dataInfo.isp}
 Country: ${dataInfo.country}
 Delay  : ${dataInfo.delay}
-Status : ${dataInfo.proxyip}
+Status : ${dataInfo.status}
 \`\`\`
 Pilih protokol:`;
 
