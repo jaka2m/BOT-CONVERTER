@@ -200,7 +200,7 @@ PORT   : ${port}
 ISP    : ${dataInfo.isp}
 Country: ${dataInfo.country}
 Delay  : ${dataInfo.delay}
-Status : ${dataInfo.status}
+Status : ${dataInfo.proxyip}
 \`\`\`
 Pilih protokol:`;
 
