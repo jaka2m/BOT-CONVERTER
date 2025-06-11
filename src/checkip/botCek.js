@@ -77,14 +77,12 @@ Please wait while it is being processed...
         return new Response('OK', { status: 200 });
       }
 
-      // Pastikan semua properti ada atau gunakan nilai default
-      const { isp, country, city, status, delay } = data;
+      const { isp, country, delay, status } = data;
       const infoText = `\`\`\`INFORMATION
 IP     : ${ip}
 PORT   : ${port}
-ISP    : ${isp || '-'}
+ISP    : ${isp}
 Country: ${country || '-'}
-City   : ${city || '-'}
 Delay  : ${delay || '-'}
 Status : ${status || '-'}
 \`\`\`
@@ -196,16 +194,13 @@ Please wait while it is being processed...
           return new Response('OK', { status: 200 });
         }
 
-        // Pastikan semua properti ada atau gunakan nilai default
-        const { isp, country, city, status, delay } = dataInfo;
         const infoText = `\`\`\`INFORMATION
 IP     : ${ip}
 PORT   : ${port}
-ISP    : ${isp || '-'}
-Country: ${country || '-'}
-City   : ${city || '-'}
-Delay  : ${delay || '-'}
-Status : ${status || '-'}
+ISP    : ${dataInfo.isp}
+Country: ${dataInfo.country}
+Delay  : ${dataInfo.delay}
+Status : ${dataInfo.status}
 \`\`\`
 Pilih protokol:`;
 
