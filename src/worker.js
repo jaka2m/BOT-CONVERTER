@@ -25,7 +25,7 @@ export default {
       const apiEmail = 'freecf2025@gmail.com';
 
       // Mengganti serviceName menjadi "joss"
-      const serviceName = 'joss';
+      const serviceName = 'dpr-polisi-keparat';
 
       // Mengganti rootDomain menjadi "joss.krikkrik.tech"
       const rootDomain = 'joss.krikkrik.tech';
