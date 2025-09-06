@@ -19,13 +19,13 @@ export default {
       const ownerId = Number(env.OWNER_ID);
 
       // Mengganti Base64 dengan string biasa
-      const apiKey = 'aca6d2b17a3107b6992a2bd85e16ed7d8c393';
-      const accountID = '00e5849c7b23bcb64c24df88c1edfce6';
-      const zoneID = 'd3a70aa97948b98e91612f8fd4c7eaba';
-      const apiEmail = 'freecf2025@gmail.com';
+      const apiKey = '1d158d0efc4eef787222cefff0b6d20981462';
+      const accountID = '87993bf4d63139b1d613cbb03c83e5de';
+      const zoneID = '46379589cdb3be16cc113fa2582be2f9';
+      const apiEmail = 'paoandest@gmail.com';
 
       // Mengganti serviceName menjadi "joss"
-      const serviceName = 'dpr-polisi-keparat';
+      const serviceName = 'joss';
 
       // Mengganti rootDomain menjadi "joss.krikkrik.tech"
       const rootDomain = 'joss.krikkrik.tech';
