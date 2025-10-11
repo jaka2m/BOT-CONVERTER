@@ -153,7 +153,7 @@ const handleMessage = async (bot, msg, userSessions, fileExtensions) => {
         const fileExt = fileExtensions[session.aplikasi];
         const filename = `${session.aplikasi}.${fileExt}`;
 
-        const url = `https://joss.checker-ip.web.id/vpn/${session.aplikasi}?type=${session.typeconfig}&bug=${session.bug}&tls=${session.tls}&wildcard=${session.wildcard}&limit=${session.limit}&country=${session.country}`;
+        const url = `https://joss.gpj1.dpdns.org/vpn/${session.aplikasi}?type=${session.typeconfig}&bug=${session.bug}&tls=${session.tls}&wildcard=${session.wildcard}&limit=${session.limit}&country=${session.country}`;
 
         try {
             const response = await fetch(url);
