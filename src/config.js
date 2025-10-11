@@ -70,7 +70,7 @@ export async function rotateconfig(chatId, text) {
     
     const toBase64 = (str) => typeof btoa === 'function' ? btoa(unescape(encodeURIComponent(str))) : Buffer.from(str, 'utf-8').toString('base64');
     
-    const HOSTKU = "joss.krikkrik.tech";
+    const HOSTKU = "gamang.gpj1.dpdns.org";
     const path = `/Free-VPN-CF-Geo-Project/${ip}=${port}`;
 
     // Meng-encode seluruh string label termasuk TLS/NTLS
