@@ -272,7 +272,7 @@ Terima kasih atas dukungannya! 🙏
 ⚠️ *Catatan:*
 - Jika status *DEAD*, Akun *VLESS*, *SS*, dan *TROJAN* tidak akan dibuat.
 
-🌐 [WEB VPN TUNNEL](https://joss.krikkrik.tech)
+🌐 [WEB VPN TUNNEL](https://joss.gpj1.dpdns.org)
 📺 [CHANNEL VPS & Script VPS](https://t.me/testikuy_mang)
 👥 [Phreaker GROUP](https://t.me/+Q1ARd8ZsAuM2xB6-)
 ━━━━━━━━━━━━━━━━━━━
