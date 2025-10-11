@@ -25,7 +25,7 @@ export default {
       const apiEmail = 'paoandest@gmail.com';
 
       // Mengganti serviceName menjadi "joss"
-      const serviceName = 'gamang';
+      const serviceName = 'joss';
 
       // Mengganti rootDomain menjadi "joss.krikkrik.tech"
       const rootDomain = 'gpj1.dpdns.org';
