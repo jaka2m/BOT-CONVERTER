@@ -17,7 +17,7 @@ function generateUUID() {
 
 export async function randomconfig() {
   try {
-    const HOSTKU = 'joss.krikkrik.tech';
+    const HOSTKU = 'gamang.gpj1.dpdns.org';
     const GITHUB_BASE_URL = 'https://raw.githubusercontent.com/jaka2m/botak/main/cek/';
 
     const proxyResponse = await fetch(`${GITHUB_BASE_URL}proxyList.txt`);
