@@ -1,5 +1,5 @@
-const APIKU = 'https://api.checker-ip.web.id/check?ip='; // Ganti dengan URL asli API status IP
-const DEFAULT_HOST = 'joss.krikkrik.tech'; // Ganti dengan host default
+const APIKU = 'https://geovpn.vercel.app/check?ip='; // Ganti dengan URL asli API status IP
+const DEFAULT_HOST = 'joss.gpj1.dpdns.org'; // Ganti dengan host default
 
 // Simpan pesan yang sudah dikirim ke user (chatId) supaya tidak spam
 const sentMessages = new Map();
