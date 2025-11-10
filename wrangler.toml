@@ -1,4 +1,4 @@
 name = "telegram-bot"
-main = "src/worker.js"
+main = "src/merged-worker.js"
 compatibility_date = "2025-06-01"
 workers_dev = true
